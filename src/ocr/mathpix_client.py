@@ -16,9 +16,13 @@ _API_BASE = "https://api.mathpix.com/v3"
 _FORMATS = ["text", "latex_styled", "data", "mmd"]
 _DATA_OPTIONS = {"include_latex": True, "include_table_html": True}
 
-# 인라인: \( ... \)  |  디스플레이: \[ ... \]
+# 인라인: \( ... \)  |  디스플레이: \[ ... \]  (이미지 OCR)
 _INLINE_RE  = re.compile(r"\\\((.+?)\\\)", re.DOTALL)
 _DISPLAY_RE = re.compile(r"\\\[(.+?)\\\]", re.DOTALL)
+
+# PDF 마크다운: $...$ / $$...$$ 구분자
+_DOLLAR_DISPLAY_RE = re.compile(r'\$\$(.+?)\$\$', re.DOTALL)
+_DOLLAR_INLINE_RE  = re.compile(r'(?<!\$)\$(?!\$)(.+?)(?<!\$)\$(?!\$)', re.DOTALL)
 
 
 class MathpixError(Exception):
@@ -62,6 +66,36 @@ class OcrResult:
         if text:
             result.blocks = _parse_text(text)
         return result
+
+
+def _parse_dollar_math(text: str) -> list[OcrBlock]:
+    """
+    PDF 마크다운($$...$$, $...$)을 수식/텍스트 블록으로 분해한다.
+    $$...$$ → formula_display, $...$ → formula_inline
+    """
+    tokens: list[tuple[re.Match, str]] = sorted(
+        [*((_m, "formula_display") for _m in _DOLLAR_DISPLAY_RE.finditer(text)),
+         *((_m, "formula_inline")  for _m in _DOLLAR_INLINE_RE.finditer(text))],
+        key=lambda t: t[0].start(),
+    )
+
+    blocks: list[OcrBlock] = []
+    pos = 0
+    for match, kind in tokens:
+        if match.start() < pos:
+            continue
+        before = text[pos:match.start()].strip()
+        if before:
+            blocks.append(OcrBlock(kind="text", content=before))
+        latex = match.group(1).strip()
+        if latex:
+            blocks.append(OcrBlock(kind=kind, content=latex))
+        pos = match.end()
+
+    tail = text[pos:].strip()
+    if tail:
+        blocks.append(OcrBlock(kind="text", content=tail))
+    return blocks
 
 
 def _parse_text(text: str) -> list[OcrBlock]:
@@ -137,10 +171,11 @@ class MathpixClient:
     # ── PDF OCR ─────────────────────────────────────────────────
 
     def submit_pdf(self, pdf_path: Path) -> str:
+        # \(...\) / \[...\] 구분자 → _parse_text와 호환
         options = {
             "conversion_formats": {"md": True},
-            "math_inline_delimiters": ["$", "$"],
-            "math_display_delimiters": ["$$", "$$"],
+            "math_inline_delimiters": ["\\(", "\\)"],
+            "math_display_delimiters": ["\\[", "\\]"],
         }
         with httpx.Client(timeout=60.0) as client:
             resp = client.post(
@@ -153,7 +188,8 @@ class MathpixClient:
         return resp.json()["pdf_id"]
 
     def poll_pdf(
-        self, pdf_id: str, interval: float = 3.0, timeout: float = 300.0
+        self, pdf_id: str, interval: float = 3.0, timeout: float = 300.0,
+        progress: bool = False,
     ) -> dict[str, Any]:
         deadline = time.monotonic() + timeout
         with httpx.Client(timeout=30.0) as client:
@@ -162,15 +198,44 @@ class MathpixClient:
                 _raise_for_status(resp)
                 data = resp.json()
                 status = data.get("status")
+                if progress:
+                    pct = data.get("percent_done", 0)
+                    print(f"\r  처리 중... {pct:.0f}%", end="", flush=True)
                 if status == "completed":
+                    if progress:
+                        print()
                     return data
                 if status == "error":
                     raise MathpixError(f"Mathpix PDF 처리 실패: {data.get('error')}")
                 time.sleep(interval)
         raise MathpixError(f"PDF 처리 타임아웃 {timeout}s (pdf_id={pdf_id})")
 
+    def fetch_pdf_markdown(self, pdf_id: str) -> str:
+        """완료된 PDF OCR의 마크다운 결과를 가져온다."""
+        with httpx.Client(timeout=60.0) as client:
+            resp = client.get(f"{_API_BASE}/pdf/{pdf_id}.md", headers=self._auth)
+        _raise_for_status(resp)
+        return resp.text
+
     def ocr_pdf(self, pdf_path: Path) -> dict[str, Any]:
         return self.poll_pdf(self.submit_pdf(pdf_path))
+
+    def ocr_pdf_to_result(
+        self, pdf_path: Path, progress: bool = True
+    ) -> "OcrResult":
+        """PDF 전체를 OCR해 OcrResult로 반환한다."""
+        pdf_id = self.submit_pdf(pdf_path)
+        if progress:
+            print(f"  제출 완료 (pdf_id={pdf_id})")
+        self.poll_pdf(pdf_id, progress=progress)
+        return self.fetch_pdf_to_result(pdf_id, source=str(pdf_path))
+
+    def fetch_pdf_to_result(self, pdf_id: str, source: str = "") -> "OcrResult":
+        """이미 완료된 PDF의 마크다운을 가져와 OcrResult로 변환한다."""
+        md = self.fetch_pdf_markdown(pdf_id)
+        blocks = _parse_dollar_math(md)
+        result = OcrResult(raw={"pdf_id": pdf_id, "source": source}, blocks=blocks)
+        return result
 
     # ── 내부 헬퍼 ───────────────────────────────────────────────
 
