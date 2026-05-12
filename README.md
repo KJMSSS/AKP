@@ -48,7 +48,7 @@ document.hwpx
 
 - [x] 프로젝트 셋업 (폴더 구조, 가상환경, README, .env.example)
 - [x] Mathpix API 연동 (`src/ocr/mathpix_client.py`)
-- [ ] HWPX 템플릿 분석 (`docs/hwpx_structure.md`)
+- [x] HWPX 템플릿 분석 (`docs/hwpx_structure.md`) — 실제 파일 검증 후 보완
 - [ ] 변환 파이프라인 구현 (`src/pipeline.py`)
 - [ ] 수식 객체 자동 생성 (`src/hwpx/formula_builder.py`)
 
