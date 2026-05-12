@@ -1,6 +1,7 @@
 import base64
 import json
 import os
+import re
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -12,8 +13,12 @@ from dotenv import load_dotenv
 load_dotenv()
 
 _API_BASE = "https://api.mathpix.com/v3"
-_FORMATS = ["text", "latex_styled", "data"]
+_FORMATS = ["text", "latex_styled", "data", "mmd"]
 _DATA_OPTIONS = {"include_latex": True, "include_table_html": True}
+
+# 인라인: \( ... \)  |  디스플레이: \[ ... \]
+_INLINE_RE  = re.compile(r"\\\((.+?)\\\)", re.DOTALL)
+_DISPLAY_RE = re.compile(r"\\\[(.+?)\\\]", re.DOTALL)
 
 
 class MathpixError(Exception):
@@ -22,55 +27,79 @@ class MathpixError(Exception):
 
 @dataclass
 class OcrBlock:
-    kind: str    # "text" | "formula_display" | "table"
-    content: str # LaTeX for formulas, plain text otherwise, HTML for tables
+    kind: str    # "text" | "formula_inline" | "formula_display" | "table"
+    content: str
 
 
 @dataclass
 class OcrResult:
     raw: dict[str, Any]
-    blocks: list[OcrBlock] = field(default_factory=list)
+    blocks: list[OcrBlock]         = field(default_factory=list)
+    raw_text: str                  = ""
+    mmd: str                       = ""          # Mathpix Markdown (있을 경우)
+    confidence: float              = 0.0
+    image_width: int               = 0
+    image_height: int              = 0
+    is_printed: bool               = False
+    is_handwritten: bool           = False
+    raw_data: list[dict[str, Any]] = field(default_factory=list)
 
     @classmethod
     def from_response(cls, data: dict[str, Any]) -> "OcrResult":
-        result = cls(raw=data)
-
-        # data["data"] 가 list 인지 dict 인지 실제 응답 보고 분기
-        # (list 형태가 확인되면 이 로직을 교체할 예정)
-        data_field = data.get("data")
-        if isinstance(data_field, dict):
-            lines = data_field.get("lines", [])
-        elif isinstance(data_field, list):
-            lines = data_field          # list 자체가 line 배열인 경우
-        else:
-            lines = []
-
-        if lines:
-            for line in lines:
-                if isinstance(line, dict):
-                    result.blocks.extend(_parse_line(line))
-        else:
-            text = data.get("text", "").strip()
-            if text:
-                result.blocks.append(OcrBlock(kind="text", content=text))
+        raw_data = data.get("data")
+        result = cls(
+            raw            = data,
+            raw_text       = data.get("text", ""),
+            mmd            = data.get("mmd", ""),
+            confidence     = float(data.get("confidence", 0.0)),
+            image_width    = int(data.get("image_width", 0)),
+            image_height   = int(data.get("image_height", 0)),
+            is_printed     = bool(data.get("is_printed", False)),
+            is_handwritten = bool(data.get("is_handwritten", False)),
+            raw_data       = raw_data if isinstance(raw_data, list) else [],
+        )
+        text = data.get("text", "").strip()
+        if text:
+            result.blocks = _parse_text(text)
         return result
 
 
-def _parse_line(line: dict[str, Any]) -> list[OcrBlock]:
-    kind = line.get("type", "text")
-    if kind == "math":
-        latex = line.get("latex", "")
-        return [OcrBlock(kind="formula_display", content=latex)] if latex else []
-    if kind == "table":
-        html = line.get("html", "")
-        return [OcrBlock(kind="table", content=html)] if html else []
-    text = line.get("text", "").strip()
-    return [OcrBlock(kind="text", content=text)] if text else []
+def _parse_text(text: str) -> list[OcrBlock]:
+    """
+    Mathpix text 필드를 스캔해 텍스트·인라인수식·디스플레이수식 블록으로 분해한다.
+    \\( ... \\) → formula_inline
+    \\[ ... \\] → formula_display
+    그 외       → text
+    """
+    # 두 패턴을 위치 순으로 정렬해 한 번에 처리
+    tokens: list[tuple[re.Match, str]] = sorted(
+        [*((_m, "formula_inline")  for _m in _INLINE_RE.finditer(text)),
+         *((_m, "formula_display") for _m in _DISPLAY_RE.finditer(text))],
+        key=lambda t: t[0].start(),
+    )
+
+    blocks: list[OcrBlock] = []
+    pos = 0
+    for match, kind in tokens:
+        if match.start() < pos:     # 중첩 구간 skip
+            continue
+        before = text[pos:match.start()].strip()
+        if before:
+            blocks.append(OcrBlock(kind="text", content=before))
+        latex = match.group(1).strip()
+        if latex:
+            blocks.append(OcrBlock(kind=kind, content=latex))
+        pos = match.end()
+
+    tail = text[pos:].strip()
+    if tail:
+        blocks.append(OcrBlock(kind="text", content=tail))
+    return blocks
 
 
 class MathpixClient:
     def __init__(self) -> None:
-        self.app_id = os.getenv("MATHPIX_APP_ID")
+        self.app_id  = os.getenv("MATHPIX_APP_ID")
         self.app_key = os.getenv("MATHPIX_APP_KEY")
         if not self.app_id or not self.app_key:
             raise MathpixError(
@@ -84,29 +113,30 @@ class MathpixClient:
     # ── 이미지 OCR ──────────────────────────────────────────────
 
     def ocr_image(self, image_path: Path, retries: int = 3) -> OcrResult:
-        data = self._raw_ocr_image(image_path, retries=retries)
-        return OcrResult.from_response(data)
+        return OcrResult.from_response(self._raw_ocr_image(image_path, retries))
 
     def raw_ocr_image(self, image_path: Path, retries: int = 3) -> dict[str, Any]:
-        """파싱 없이 Mathpix 원본 JSON을 그대로 반환한다 (디버그용)."""
-        return self._raw_ocr_image(image_path, retries=retries)
+        """파싱 없이 Mathpix 원본 JSON 반환 (디버그용)."""
+        return self._raw_ocr_image(image_path, retries)
 
     def _raw_ocr_image(self, image_path: Path, retries: int = 3) -> dict[str, Any]:
         suffix = image_path.suffix.lower().lstrip(".")
         if suffix == "jpg":
             suffix = "jpeg"
         b64 = base64.b64encode(image_path.read_bytes()).decode()
-        payload = {
-            "src": f"data:image/{suffix};base64,{b64}",
-            "formats": _FORMATS,
-            "data_options": _DATA_OPTIONS,
-        }
-        return self._post_json("/text", payload, retries=retries)
+        return self._post_json(
+            "/text",
+            {
+                "src": f"data:image/{suffix};base64,{b64}",
+                "formats": _FORMATS,
+                "data_options": _DATA_OPTIONS,
+            },
+            retries=retries,
+        )
 
-    # ── PDF OCR (비동기 폴링 방식) ──────────────────────────────
+    # ── PDF OCR ─────────────────────────────────────────────────
 
     def submit_pdf(self, pdf_path: Path) -> str:
-        """PDF를 Mathpix에 제출하고 pdf_id를 반환한다."""
         options = {
             "conversion_formats": {"md": True},
             "math_inline_delimiters": ["$", "$"],
@@ -125,7 +155,6 @@ class MathpixClient:
     def poll_pdf(
         self, pdf_id: str, interval: float = 3.0, timeout: float = 300.0
     ) -> dict[str, Any]:
-        """처리 완료까지 폴링하고 최종 응답을 반환한다."""
         deadline = time.monotonic() + timeout
         with httpx.Client(timeout=30.0) as client:
             while time.monotonic() < deadline:
@@ -141,9 +170,7 @@ class MathpixClient:
         raise MathpixError(f"PDF 처리 타임아웃 {timeout}s (pdf_id={pdf_id})")
 
     def ocr_pdf(self, pdf_path: Path) -> dict[str, Any]:
-        """submit_pdf + poll_pdf를 순서대로 실행하는 편의 메서드."""
-        pdf_id = self.submit_pdf(pdf_path)
-        return self.poll_pdf(pdf_id)
+        return self.poll_pdf(self.submit_pdf(pdf_path))
 
     # ── 내부 헬퍼 ───────────────────────────────────────────────
 
@@ -164,6 +191,4 @@ class MathpixClient:
 
 def _raise_for_status(resp: httpx.Response) -> None:
     if resp.status_code >= 400:
-        raise MathpixError(
-            f"Mathpix API {resp.status_code}: {resp.text[:300]}"
-        )
+        raise MathpixError(f"Mathpix API {resp.status_code}: {resp.text[:300]}")

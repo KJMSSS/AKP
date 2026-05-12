@@ -87,19 +87,36 @@ def main() -> None:
     print(f"총 블록 수: {len(result.blocks)}\n")
     sep = "─" * 60
 
+    # ── 메타데이터 요약 ───────────────────────────────────────────
+    print(f"신뢰도   : {result.confidence:.1%}")
+    print(f"이미지   : {result.image_width} × {result.image_height}px"
+          f"  {'인쇄체' if result.is_printed else ''}"
+          f"{'손글씨' if result.is_handwritten else ''}")
+    print(f"총 블록  : {len(result.blocks)}개"
+          f"  (추출 수식 {len(result.raw_data)}개)\n")
+
+    LABELS = {
+        "text":            "[텍스트       ]",
+        "formula_inline":  "[수식 inline  ]",
+        "formula_display": "[수식 display ]",
+        "table":           "[표           ]",
+    }
+
     for i, block in enumerate(result.blocks, 1):
-        label = {"text": "텍스트", "formula_display": "수식(display)",
-                 "table": "표"}.get(block.kind, block.kind)
-        print(f"{sep}\n[블록 {i}] {label}\n{block.content}")
+        label = LABELS.get(block.kind, f"[{block.kind}]")
+        print(f"{sep}")
+        print(f"블록 {i:02d}  {label}")
+        print(block.content)
 
     print(sep)
 
-    if latex := raw.get("latex_styled"):
-        print(f"\n[raw] latex_styled:\n{latex}")
+    if result.mmd:
+        print(f"\n[mmd — Mathpix Markdown]:\n{result.mmd}")
+    elif raw.get("latex_styled"):
+        print(f"\n[latex_styled]:\n{raw['latex_styled']}")
 
-    # 파싱 결과가 비어 있으면 raw data 구조 힌트 출력
     if not result.blocks:
-        print("\n[힌트] 블록이 0개입니다. --raw --save 로 응답 구조를 확인하세요.")
+        print("\n[힌트] 블록 0개. --raw --save 로 응답 구조 확인하세요.")
         _show_keys(raw)
 
 
