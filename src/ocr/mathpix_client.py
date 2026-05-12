@@ -34,10 +34,21 @@ class OcrResult:
     @classmethod
     def from_response(cls, data: dict[str, Any]) -> "OcrResult":
         result = cls(raw=data)
-        lines = (data.get("data") or {}).get("lines", [])
+
+        # data["data"] 가 list 인지 dict 인지 실제 응답 보고 분기
+        # (list 형태가 확인되면 이 로직을 교체할 예정)
+        data_field = data.get("data")
+        if isinstance(data_field, dict):
+            lines = data_field.get("lines", [])
+        elif isinstance(data_field, list):
+            lines = data_field          # list 자체가 line 배열인 경우
+        else:
+            lines = []
+
         if lines:
             for line in lines:
-                result.blocks.extend(_parse_line(line))
+                if isinstance(line, dict):
+                    result.blocks.extend(_parse_line(line))
         else:
             text = data.get("text", "").strip()
             if text:
@@ -73,6 +84,14 @@ class MathpixClient:
     # ── 이미지 OCR ──────────────────────────────────────────────
 
     def ocr_image(self, image_path: Path, retries: int = 3) -> OcrResult:
+        data = self._raw_ocr_image(image_path, retries=retries)
+        return OcrResult.from_response(data)
+
+    def raw_ocr_image(self, image_path: Path, retries: int = 3) -> dict[str, Any]:
+        """파싱 없이 Mathpix 원본 JSON을 그대로 반환한다 (디버그용)."""
+        return self._raw_ocr_image(image_path, retries=retries)
+
+    def _raw_ocr_image(self, image_path: Path, retries: int = 3) -> dict[str, Any]:
         suffix = image_path.suffix.lower().lstrip(".")
         if suffix == "jpg":
             suffix = "jpeg"
@@ -82,8 +101,7 @@ class MathpixClient:
             "formats": _FORMATS,
             "data_options": _DATA_OPTIONS,
         }
-        data = self._post_json("/text", payload, retries=retries)
-        return OcrResult.from_response(data)
+        return self._post_json("/text", payload, retries=retries)
 
     # ── PDF OCR (비동기 폴링 방식) ──────────────────────────────
 
