@@ -14,10 +14,10 @@ import sys
 from pathlib import Path
 
 sys.stdout.reconfigure(encoding="utf-8")
-sys.path.insert(0, str(Path(__file__).parent.parent))
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from src.hwpx.builder import _extract_zip, _pack_zip
-from src.hwpx.pdf_filler import remove_highlights
+from src.template_based.builder import _extract_zip, _pack_zip
+from src.template_based.pdf_filler import remove_highlights
 
 _SECTION = "Contents/section0.xml"
 

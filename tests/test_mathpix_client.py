@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from src.ocr.mathpix_client import (
+from src.common.ocr.mathpix_client import (
     MathpixClient,
     MathpixError,
     OcrBlock,
@@ -187,7 +187,7 @@ def test_ocr_image_returns_ocr_result(tmp_path):
     }
     with patch.dict(os.environ, {"MATHPIX_APP_ID": "id", "MATHPIX_APP_KEY": "key"}):
         client = MathpixClient()
-    with patch("src.ocr.mathpix_client.httpx.Client") as M:
+    with patch("src.common.ocr.mathpix_client.httpx.Client") as M:
         M.return_value.__enter__.return_value.post.return_value = _mock_response(payload)
         result = client.ocr_image(img)
 
@@ -206,8 +206,8 @@ def test_ocr_image_retries_on_429(tmp_path):
 
     with patch.dict(os.environ, {"MATHPIX_APP_ID": "id", "MATHPIX_APP_KEY": "key"}):
         client = MathpixClient()
-    with patch("src.ocr.mathpix_client.httpx.Client") as M:
-        with patch("src.ocr.mathpix_client.time.sleep"):
+    with patch("src.common.ocr.mathpix_client.httpx.Client") as M:
+        with patch("src.common.ocr.mathpix_client.time.sleep"):
             M.return_value.__enter__.return_value.post.side_effect = [rate_limited, ok]
             result = client.ocr_image(img, retries=3)
 

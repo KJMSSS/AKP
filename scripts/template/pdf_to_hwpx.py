@@ -25,16 +25,16 @@ import sys
 from pathlib import Path
 
 sys.stdout.reconfigure(encoding="utf-8")
-sys.path.insert(0, str(Path(__file__).parent.parent))
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from dotenv import load_dotenv
 load_dotenv()
 
-from src.ocr.mathpix_client import MathpixClient, MathpixError
-from src.ocr.pdf_parser import parse_pdf_markdown
-from src.hwpx.slot_analyzer import analyze_slots, build_slot_map
-from src.hwpx.pdf_filler import fill_hwpx_from_pdf_markdown
-from src.hwpx.change_log import write_change_log, write_review_report
+from src.common.ocr.mathpix_client import MathpixClient, MathpixError
+from src.template_based.pdf_parser import parse_pdf_markdown
+from src.template_based.slot_analyzer import analyze_slots, build_slot_map
+from src.template_based.pdf_filler import fill_hwpx_from_pdf_markdown
+from src.template_based.change_log import write_change_log, write_review_report
 
 import zipfile
 
@@ -98,6 +98,18 @@ def main():
         print(f"  pdf_id: {pdf_id}")
 
     print(f"  마크다운 크기: {len(md):,}자")
+
+    # 디버그: 마크다운을 출력 폴더에 함께 저장 (다음에 진단할 때 사용)
+    try:
+        md_dump_path = output_path.parent / (output_path.stem + ".mathpix.md")
+        md_dump_path.parent.mkdir(parents=True, exist_ok=True)
+        md_dump_path.write_text(md, encoding="utf-8")
+        print(f"  마크다운 저장: {md_dump_path.name}")
+        if pdf_id:
+            id_path = output_path.parent / (output_path.stem + ".pdf_id.txt")
+            id_path.write_text(pdf_id, encoding="utf-8")
+    except Exception as e:
+        print(f"  [경고] 마크다운 저장 실패: {e}")
 
     # ── 2. PDF 파싱 ─────────────────────────────────────────────
     print()

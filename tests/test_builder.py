@@ -3,8 +3,8 @@ from pathlib import Path
 
 import pytest
 
-from src.hwpx.latex_to_hwp import convert
-from src.hwpx.builder import (
+from src.common.latex_to_hwp import convert
+from src.template_based.builder import (
     fill_template,
     count_empty_scripts,
     count_all_scripts,
@@ -13,7 +13,7 @@ from src.hwpx.builder import (
     _fill_all,
     _formula_blocks,
 )
-from src.ocr.mathpix_client import OcrBlock, OcrResult
+from src.common.ocr.mathpix_client import OcrBlock, OcrResult
 
 
 # ════════════════════════════════════════════════════════════════

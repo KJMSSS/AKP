@@ -10,10 +10,10 @@ import zipfile
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from src.hwpx.builder import _extract_zip, _pack_zip, _xml_escape
-from src.hwpx.change_log import ChangeRecord
-from src.hwpx.slot_analyzer import SlotGroup, SlotInfo, analyze_slots, build_slot_map
-from src.ocr.pdf_parser import PdfToken, ProblemTokens, parse_pdf_markdown
+from src.template_based.builder import _extract_zip, _pack_zip, _xml_escape
+from src.template_based.change_log import ChangeRecord
+from src.template_based.slot_analyzer import SlotGroup, SlotInfo, analyze_slots, build_slot_map
+from src.template_based.pdf_parser import PdfToken, ProblemTokens, parse_pdf_markdown
 
 _SECTION = "Contents/section0.xml"
 _SCRIPT_RE  = re.compile(r'<hp:script>(.*?)</hp:script>', re.DOTALL)

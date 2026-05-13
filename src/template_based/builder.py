@@ -11,8 +11,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
 
-from src.hwpx.latex_to_hwp import convert as latex_to_hwp
-from src.ocr.mathpix_client import OcrResult
+from src.common.latex_to_hwp import convert as latex_to_hwp
+from src.common.ocr.mathpix_client import OcrResult
 
 # section0.xml 경로 (HWPX 표준 위치)
 _SECTION = "Contents/section0.xml"

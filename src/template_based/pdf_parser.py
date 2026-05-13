@@ -14,7 +14,7 @@ import re
 from dataclasses import dataclass, field
 from typing import Any
 
-from src.hwpx.latex_to_hwp import convert as latex_to_hwp
+from src.common.latex_to_hwp import convert as latex_to_hwp
 
 # ── 정규식 패턴 ──────────────────────────────────────────────────
 
