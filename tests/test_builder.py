@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 
 from src.common.latex_to_hwp import convert
-from src.text_only.text_builder import _to_circled
+from src.text_only.text_builder import _to_circled, _postprocess_lines
 from src.template_based.builder import (
     fill_template,
     count_empty_scripts,
@@ -478,3 +478,104 @@ class TestToCircled:
         # LaTeX 수식 내용은 _to_circled 호출 대상이 아니지만
         # text 세그먼트가 수식이 아닐 때도 수식처럼 보이는 문자열 보호 확인
         assert _to_circled("f(3) = 0") == "f(3) = 0"  # 앞이 f(비공백)
+
+
+# ════════════════════════════════════════════════════════════════
+# 줄 후처리 (_postprocess_lines)
+# ════════════════════════════════════════════════════════════════
+
+class TestPostprocessLines:
+
+    # ── 문항 번호 앞 빈 줄 ──────────────────────────────────────
+
+    def test_blank_before_second_question(self):
+        lines = ['1. 첫 문제', '답', '2. 두 번째 문제']
+        out = _postprocess_lines(lines)
+        idx = out.index('2. 두 번째 문제')
+        assert out[idx - 1].strip() == ''
+
+    def test_no_blank_before_first_question(self):
+        lines = ['제목', '1. 첫 문제']
+        out = _postprocess_lines(lines)
+        idx = out.index('1. 첫 문제')
+        # 첫 문항 앞엔 빈 줄 삽입 없음 → 바로 앞이 '제목'
+        assert out[idx - 1].strip() != ''
+
+    def test_blank_between_consecutive_questions(self):
+        lines = ['1. A', '2. B', '3. C']
+        out = _postprocess_lines(lines)
+        non_empty = [l for l in out if l.strip()]
+        assert non_empty == ['1. A', '2. B', '3. C']
+        # 각 문항 사이에 빈 줄 존재
+        assert out.count('') == 2
+
+    # ── 점수 앞 빈 줄 ───────────────────────────────────────────
+
+    def test_blank_before_score(self):
+        lines = ['1. 문제 본문', '[4.5점]', '(1) 답']
+        out = _postprocess_lines(lines)
+        idx = out.index('[4.5점]')
+        assert out[idx - 1].strip() == ''
+
+    def test_blank_before_integer_score(self):
+        lines = ['본문', '[5점]']
+        out = _postprocess_lines(lines)
+        idx = out.index('[5점]')
+        assert out[idx - 1].strip() == ''
+
+    # ── display math 앞뒤 빈 줄 ─────────────────────────────────
+
+    def test_blank_around_display_math(self):
+        lines = ['본문', '$$x+1$$', '다음 줄']
+        out = _postprocess_lines(lines)
+        idx = out.index('$$x+1$$')
+        assert out[idx - 1].strip() == ''
+        assert out[idx + 1].strip() == ''
+
+    def test_no_double_blank_if_already_blank(self):
+        lines = ['본문', '', '$$x$$', '', '다음']
+        out = _postprocess_lines(lines)
+        # 연속 빈 줄은 최대 1개
+        for i in range(len(out) - 1):
+            assert not (out[i].strip() == '' and out[i + 1].strip() == '')
+
+    # ── 복수 선택지 줄 분리 ─────────────────────────────────────
+
+    def test_split_two_choices_on_one_line(self):
+        lines = ['(1) $4\\sqrt{13}$ (2) $4\\sqrt{14}$']
+        out = _postprocess_lines(lines)
+        non_empty = [l for l in out if l.strip()]
+        assert len(non_empty) == 2
+        assert non_empty[0].startswith('(1)')
+        assert non_empty[1].startswith('(2)')
+
+    def test_split_three_choices(self):
+        lines = ['(1) 가 (2) 나 (3) 다']
+        out = _postprocess_lines(lines)
+        non_empty = [l for l in out if l.strip()]
+        assert len(non_empty) == 3
+
+    def test_no_split_single_choice(self):
+        lines = ['(1) $-2<x<4$']
+        out = _postprocess_lines(lines)
+        assert out == ['(1) $-2<x<4$']
+
+    def test_fullwidth_choice_split(self):
+        lines = ['（1） 7 （2） 8 （3） 9']
+        out = _postprocess_lines(lines)
+        non_empty = [l for l in out if l.strip()]
+        assert len(non_empty) == 3
+
+    def test_no_split_dash_before_choice(self):
+        # (ㄹ)-(1)-(ㄴ) — 앞이 '-', 공백 아님
+        lines = ['(ㄹ)-(1)-(ㄴ)']
+        out = _postprocess_lines(lines)
+        assert out == ['(ㄹ)-(1)-(ㄴ)']
+
+    # ── 연속 빈 줄 압축 ─────────────────────────────────────────
+
+    def test_consecutive_blanks_compressed(self):
+        lines = ['a', '', '', 'b']
+        out = _postprocess_lines(lines)
+        blank_count = sum(1 for l in out if not l.strip())
+        assert blank_count <= 1

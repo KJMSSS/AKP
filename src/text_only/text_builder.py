@@ -62,6 +62,68 @@ def _to_circled(text: str) -> str:
     return text
 
 
+# ── 줄 구조 분석 패턴 ────────────────────────────────────────────────
+_PROB_LINE_RE    = re.compile(r'^\d{1,2}[.．]\s')          # "1. " "2. " …
+_SCORE_LINE_RE   = re.compile(r'^\[\d+(?:\.\d+)?점\]')     # "[4.5점]" "[5점]"
+# 공백 뒤에 (N) 또는 （N） 이 나타나는 위치 — 두 번째 선택지부터 분리
+_CHOICE_BOUND_RE = re.compile(
+    r'(?<=\s)(?=(?:\((?:10|[1-9])\)|（[1-5]）)(?:\s|$))'
+)
+
+
+def _postprocess_lines(lines: list[str]) -> list[str]:
+    """
+    문항 번호·점수 앞 빈 줄 삽입, display math 앞뒤 빈 줄 보장,
+    복수 선택지 한 줄 분리.
+    """
+    out: list[str] = []
+    first_q = False
+
+    for raw in lines:
+        s = raw.strip()
+
+        # 문항 번호 줄: 첫 번째 제외하고 앞에 빈 줄
+        if _PROB_LINE_RE.match(s):
+            if first_q:
+                out.append('')
+            first_q = True
+            out.append(raw)
+            continue
+
+        # [N점] 줄: 앞에 빈 줄 (본문에 바로 붙지 않도록)
+        if _SCORE_LINE_RE.match(s):
+            out.append('')
+            out.append(raw)
+            continue
+
+        # display math 줄: 앞뒤 빈 줄 보장
+        if s.startswith('$$'):
+            out.append('')
+            out.append(raw)
+            out.append('')
+            continue
+
+        # 복수 선택지 한 줄 분리: "(1) … (2) …" → 별도 줄
+        parts = _CHOICE_BOUND_RE.split(s)
+        if len(parts) > 1:
+            for p in parts:
+                p = p.strip()
+                if p:
+                    out.append(p)
+            continue
+
+        out.append(raw)
+
+    # 연속 빈 줄 → 최대 1개로 압축
+    deduped: list[str] = []
+    for line in out:
+        if not line.strip() and deduped and not deduped[-1].strip():
+            continue
+        deduped.append(line)
+
+    return deduped
+
+
 # ── 수식 패턴 ($$...$$ 우선, $...$ 후순위) ──────────────────────────
 # display: [\s\S]+ (개행 포함, 최소 1자), inline: [^$\n]+ (달러/개행 제외)
 _MATH_RE = re.compile(
@@ -236,6 +298,7 @@ class _HwpxWriter:
 
     def build_section(self, lines: list[str]) -> str:
         paras: list[str] = [self._secpr_para()]
+        lines = _postprocess_lines(lines)
 
         for raw in lines:
             # 마크다운 헤더 기호 제거
