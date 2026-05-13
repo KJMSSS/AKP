@@ -32,15 +32,15 @@ _NS = (
     'xmlns:config="urn:oasis:names:tc:opendocument:xmlns:config:1.0"'
 )
 
-# ── 페이지 설정 (HWP 단위 = 1/7200 inch) ────────────────────────────
-# A3 세로(297×420mm): 워드초벌과 동일한 크기
-_PW = 84188    # 297mm
-_PH = 119052   # 420mm
-_ML = 8504     # 좌 여백 ≈ 30mm
-_MR = 8504     # 우 여백
+# ── 페이지 설정 (HWP 단위 = 1/7200 inch ≒ 0.003528 mm) ──────────────
+# A4 세로(210×297mm), 20mm 여백
+_PW = 59527    # 210mm
+_PH = 84189    # 297mm
+_ML = 5669     # 좌 여백 ≈ 20mm
+_MR = 5669     # 우 여백 ≈ 20mm
 _MT = 5669     # 상 여백 ≈ 20mm
-_MB = 4252     # 하 여백 ≈ 15mm
-_TW = _PW - _ML - _MR   # 본문 폭 = 67180
+_MB = 5669     # 하 여백 ≈ 20mm
+_TW = _PW - _ML - _MR   # 본문 폭 = 48189 (≈170mm)
 
 # ── 수식 패턴 ($$...$$ 우선, $...$ 후순위) ──────────────────────────
 # display: [\s\S]+ (개행 포함, 최소 1자), inline: [^$\n]+ (달러/개행 제외)
@@ -160,7 +160,7 @@ class _HwpxWriter:
             f'<hp:run charPrIDRef="{cpr}"/>'
         )
         return (
-            f'<hp:p id="{self._pid()}" paraPrIDRef="0" styleIDRef="0" '
+            f'<hp:p id="{self._pid()}" paraPrIDRef="8" styleIDRef="0" '
             f'pageBreak="0" columnBreak="0" merged="0">'
             f'{run}'
             f'{self._lineseg(empty=not parts)}'
@@ -171,7 +171,7 @@ class _HwpxWriter:
 
     def _secpr_para(self) -> str:
         return (
-            '<hp:p id="1" paraPrIDRef="0" styleIDRef="0" '
+            '<hp:p id="1" paraPrIDRef="8" styleIDRef="0" '
             'pageBreak="0" columnBreak="0" merged="0">'
             '<hp:run charPrIDRef="0">'
             '<hp:secPr id="" textDirection="HORIZONTAL" spaceColumns="1200" '
@@ -183,10 +183,11 @@ class _HwpxWriter:
             'border="SHOW_ALL" fill="SHOW_ALL" hideFirstPageNum="0" '
             'hideFirstEmptyLine="0" showLineNumber="0"/>'
             '<hp:lineNumberShape restartType="0" countBy="0" distance="0" startNumber="0"/>'
-            f'<hp:pagePr landscape="WIDELY" width="{_PW}" height="{_PH}" gutterType="LEFT_ONLY">'
+            f'<hp:pagePr landscape="NONE" width="{_PW}" height="{_PH}" gutterType="LEFT_ONLY">'
             f'<hp:margin header="{_MT}" footer="{_MB}" gutter="0" '
             f'left="{_ML}" right="{_MR}" top="{_MT}" bottom="{_MB}"/>'
             '</hp:pagePr>'
+            '<hp:colPr id="" type="NEWSPAPER" layout="LEFT" colCount="1" sameSz="1" sameGap="0"/>'
             '<hp:footNotePr>'
             '<hp:autoNumFormat type="DIGIT" userChar="" prefixChar="" suffixChar=")" supscript="0"/>'
             '<hp:noteLine length="-1" type="SOLID" width="0.12 mm" color="#000000"/>'
@@ -224,10 +225,8 @@ class _HwpxWriter:
                 paras.append(self._para([]))
                 continue
 
-            is_bold = bool(_PROB_NUM_RE.match(line.strip()))
             segs = _parse_segments(line)
-            # charPrIDRef: 3 = bold (수상_동성고 헤더 분석 결과, id=3에 bold 있음)
-            paras.append(self._para(segs, cpr=3 if is_bold else 0))
+            paras.append(self._para(segs, cpr=0))
 
         return (
             '<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>'

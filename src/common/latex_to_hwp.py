@@ -165,9 +165,13 @@ _SYMBOLS: list[tuple[str, str]] = [
     # 공백 명령
     (r'\\,|\\;|\\!|\\quad\b|\\qquad\b', '~'),
     (r'\\ ',                '~'),
-    # \left / \right → left / right (백슬래시만 제거, 키워드는 보존)
-    (r'\\left\s*',          'left '),
-    (r'\\right\s*',         'right '),
+    # \left / \right delimiter → 실제 기호 (\{ 는 앞 단계에서 이미 { 로 변환됨)
+    (r'\\left\s*\(',     '('),    (r'\\right\s*\)',    ')'),
+    (r'\\left\s*\[',     '['),    (r'\\right\s*\]',    ']'),
+    (r'\\left\s*\{',     '{'),    (r'\\right\s*\}',    '}'),
+    (r'\\left\s*\|',     '|'),    (r'\\right\s*\|',    '|'),
+    (r'\\left\s*\.',     ''),     (r'\\right\s*\.',     ''),
+    (r'\\left\s*<',      '<'),    (r'\\right\s*>',      '>'),
     # \text{...} 언래핑
     (r'\\text\{([^}]*)\}',  r'\1'),
     (r'\\mathrm\{([^}]*)\}', r'\1'),

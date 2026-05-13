@@ -127,23 +127,29 @@ class TestLatexToHwp:
         result = convert(r"y=-2 x^{2}+a x+4")
         assert "x^{2}" in result
 
-    def test_left_right_preserved_as_keywords(self):
+    def test_left_right_to_delimiters(self):
         result = convert(r"\left( x+1 \right)")
-        assert "\\left" not in result        # 백슬래시 제거
+        assert "\\left" not in result
         assert "\\right" not in result
-        assert "left (" in result            # 키워드로 보존
-        assert "right )" in result
-        assert "x+1" in result
+        assert result == "( x+1 )"
 
     def test_left_brace(self):
         result = convert(r"\left\{ a_n \right\}")
-        assert "left {" in result
-        assert "right }" in result
+        assert result == "{ a_n }"
 
     def test_left_abs(self):
         result = convert(r"\left| x \right|")
-        assert "left |" in result
-        assert "right |" in result
+        assert result == "| x |"
+
+    def test_left_dot_removed(self):
+        result = convert(r"c\left(\frac{a}{b}\right.")
+        assert "left" not in result
+        assert "right" not in result
+        assert result == "c({a} over {b}"  # \right. → empty (no closing delimiter)
+
+    def test_left_bracket(self):
+        result = convert(r"\left[ x \right]")
+        assert result == "[ x ]"
 
     def test_text_unwrapped(self):
         result = convert(r"\text{단위}")
