@@ -42,6 +42,26 @@ _MT = 5669     # 상 여백 ≈ 20mm
 _MB = 5669     # 하 여백 ≈ 20mm
 _TW = _PW - _ML - _MR   # 본문 폭 = 48189 (≈170mm)
 
+# ── 선택지 원문자 변환 ───────────────────────────────────────────────
+# OCR(Mathpix)은 ①~⑩을 (1)~(10) 또는 （1）~（5）로 출력한다.
+# 공백·줄시작 앞 / 공백·줄끝 뒤 조건이 맞는 text 세그먼트에서만 치환.
+_CIRCLE_MAP: dict[str, str] = {
+    '1': '①', '2': '②', '3': '③', '4': '④', '5': '⑤',
+    '6': '⑥', '7': '⑦', '8': '⑧', '9': '⑨', '10': '⑩',
+}
+# ASCII (1)~(10): 앞은 줄시작 또는 공백, 뒤는 공백 또는 줄끝
+_CHOICE_ASCII_RE = re.compile(r'(?:^|(?<=\s))\((10|[1-9])\)(?=\s|$)')
+# 전각 （1）~（5）: 동일 조건
+_CHOICE_WIDE_RE  = re.compile(r'(?:^|(?<=\s))（(10|[1-5])）(?=\s|$)')
+
+
+def _to_circled(text: str) -> str:
+    """선택지 (N)/（N） → 원문자. text 세그먼트 전용 (수식 블록 보호)."""
+    text = _CHOICE_ASCII_RE.sub(lambda m: _CIRCLE_MAP[m.group(1)], text)
+    text = _CHOICE_WIDE_RE.sub(lambda m: _CIRCLE_MAP[m.group(1)], text)
+    return text
+
+
 # ── 수식 패턴 ($$...$$ 우선, $...$ 후순위) ──────────────────────────
 # display: [\s\S]+ (개행 포함, 최소 1자), inline: [^$\n]+ (달러/개행 제외)
 _MATH_RE = re.compile(
@@ -150,7 +170,7 @@ class _HwpxWriter:
         for kind, content in segs:
             if kind == 'text':
                 if content:
-                    parts.append(f'<hp:t>{_xe(content)}</hp:t>')
+                    parts.append(f'<hp:t>{_xe(_to_circled(content))}</hp:t>')
             else:
                 parts.append(self._equation(content))
 

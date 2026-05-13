@@ -4,6 +4,7 @@ from pathlib import Path
 import pytest
 
 from src.common.latex_to_hwp import convert
+from src.text_only.text_builder import _to_circled
 from src.template_based.builder import (
     fill_template,
     count_empty_scripts,
@@ -411,3 +412,69 @@ def test_count_all_scripts(tmp_path):
     )
     hwpx = _make_mock_hwpx(tmp_path, section)
     assert count_all_scripts(hwpx) == 3
+
+
+# ════════════════════════════════════════════════════════════════
+# 선택지 원문자 변환 (_to_circled)
+# ════════════════════════════════════════════════════════════════
+
+class TestToCircled:
+
+    # ── 변환되어야 할 케이스 ─────────────────────────────────────
+
+    def test_ascii_single_at_start(self):
+        assert _to_circled("(1) -2<x<4") == "① -2<x<4"
+
+    def test_ascii_all_five(self):
+        for n, c in [("1","①"),("2","②"),("3","③"),("4","④"),("5","⑤")]:
+            assert _to_circled(f"({n}) text") == f"{c} text"
+
+    def test_ascii_six_to_ten(self):
+        for n, c in [("6","⑥"),("7","⑦"),("8","⑧"),("9","⑨"),("10","⑩")]:
+            assert _to_circled(f"({n}) text") == f"{c} text"
+
+    def test_ascii_multiple_on_one_line(self):
+        result = _to_circled("(1) foo (2) bar (3) baz")
+        assert result == "① foo ② bar ③ baz"
+
+    def test_ascii_at_end_of_string(self):
+        assert _to_circled("답: (3)") == "답: ③"
+
+    def test_ascii_choice_only(self):
+        assert _to_circled("(5)") == "⑤"
+
+    def test_fullwidth_basic(self):
+        for n, c in [("1","①"),("2","②"),("3","③"),("4","④"),("5","⑤")]:
+            assert _to_circled(f"（{n}） text") == f"{c} text"
+
+    def test_fullwidth_at_line_start(self):
+        assert _to_circled("（3） 9") == "③ 9"
+
+    # ── 변환되지 않아야 할 케이스 ────────────────────────────────
+
+    def test_no_space_after_not_converted(self):
+        # 수식 내 (3)-\sqrt{b} 패턴: 뒤에 공백 없음
+        assert _to_circled(r"(3)-\sqrt{b}=x+1") == r"(3)-\sqrt{b}=x+1"
+
+    def test_preceded_by_dash_not_converted(self):
+        # 수직선 레이블 (ㄹ)-(1)-(ㄴ): 앞이 -
+        assert _to_circled("(ㄹ)-(1)-(ㄴ)") == "(ㄹ)-(1)-(ㄴ)"
+
+    def test_out_of_range_not_converted(self):
+        # 6자리 이상 번호 or 0
+        assert _to_circled("(676)") == "(676)"
+        assert _to_circled("(0) text") == "(0) text"
+        assert _to_circled("(11) text") == "(11) text"
+
+    def test_embedded_in_word_not_converted(self):
+        # 앞뒤에 공백 없이 단어에 붙어있는 경우
+        assert _to_circled("abc(2)def") == "abc(2)def"
+
+    def test_korean_jamo_not_converted(self):
+        # (ㄱ), (ᄂ) 등 한글 자모 — 숫자가 아님
+        assert _to_circled("(ᄀ) text") == "(ᄀ) text"
+
+    def test_math_latex_untouched(self):
+        # LaTeX 수식 내용은 _to_circled 호출 대상이 아니지만
+        # text 세그먼트가 수식이 아닐 때도 수식처럼 보이는 문자열 보호 확인
+        assert _to_circled("f(3) = 0") == "f(3) = 0"  # 앞이 f(비공백)
