@@ -176,11 +176,78 @@ _SYMBOLS: list[tuple[str, str]] = [
 ]
 _SYMBOL_PATS = [(re.compile(p), r) for p, r in _SYMBOLS]
 
+# ── LaTeX 환경 (\begin{...}...\end{...}) ────────────────────────────
+# 시험 OCR에서 나타나는 환경: array, gathered, aligned, cases, *matrix 계열
+# 반드시 다른 변환보다 먼저 처리해야 내부 수식이 이후 패스에서 올바르게 변환된다.
+
+_ENV_RE = re.compile(
+    r'\\begin\{(array|gathered|aligned|cases|(?:p|b|v)?matrix)\}'
+    r'(?:\{[^}]*\})?'    # array 열 스펙 {lll}, {ll|l} 등 선택적 무시
+    r'([\s\S]*?)'
+    r'\\end\{\1\}',
+)
+
+
+def _sub_env(m: re.Match) -> str:
+    """LaTeX 환경 블록 → HWP script (행/열 구조 보존)."""
+    env  = m.group(1)
+    body = m.group(2).strip()
+
+    # \\ 기준 행 분리
+    rows = [r.strip() for r in re.split(r'\\\\', body) if r.strip()]
+    if not rows:
+        return ''
+
+    if env in ('gathered', 'aligned'):
+        # 정렬 마커 & 제거 후 atop 적층
+        cleaned = []
+        for row in rows:
+            row = re.sub(r'^\s*&+\s*', '', row)   # 행 앞 & 제거
+            row = re.sub(r'\s*&+\s*', ' ', row)   # 나머지 & → 공백
+            row = row.strip()
+            if row:
+                cleaned.append(row)
+        return ' atop '.join(cleaned) if cleaned else ''
+
+    elif env == 'cases':
+        cleaned = []
+        for row in rows:
+            row = re.sub(r'\s*&+\s*', ' ', row).strip()
+            if row:
+                cleaned.append(row)
+        return 'lbrace cases{ ' + ' ## '.join(cleaned) + ' }'
+
+    else:  # array, matrix, pmatrix, bmatrix, vmatrix
+        has_cols = any('&' in row for row in rows)
+
+        if not has_cols:
+            # 단일 열 → atop 적층
+            return ' atop '.join(rows)
+
+        # 다중 열 → matrix{} 표현
+        matrix_rows = []
+        for row in rows:
+            cells = [c.strip() for c in row.split('&')]
+            matrix_rows.append(' # '.join(cells))
+        inner = ' ## '.join(matrix_rows)
+
+        if env == 'pmatrix':
+            return f'lparen matrix{{ {inner} }} rparen'
+        elif env == 'bmatrix':
+            return f'lbracket matrix{{ {inner} }} rbracket'
+        elif env == 'vmatrix':
+            return f'lline matrix{{ {inner} }} rline'
+        else:
+            return f'matrix{{ {inner} }}'
+
+
 # ── 공개 API ─────────────────────────────────────────────────────
 
 def convert(latex: str) -> str:
     """LaTeX 수식 문자열을 HWP hp:script 표기로 변환한다."""
     s = latex.strip()
+    # 환경 블록을 먼저 처리 (내부 수식은 이후 패스가 담당)
+    s = _ENV_RE.sub(_sub_env, s)
     for _ in range(3):          # 중첩 표현을 위한 다중 패스
         prev = s
         s = _FRAC_RE.sub(_sub_frac, s)
