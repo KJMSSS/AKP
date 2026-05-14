@@ -1,6 +1,60 @@
-# 인계 노트 — 2026-05-12
+# 인계 노트 — 2026-05-12 (2026-05-14 추가)
 
 다음 세션 또는 다른 작업자를 위한 현재 상태 요약.
+
+---
+
+## 2026-05-14 업데이트 — OCR fallback 정책 전환
+
+### 배경
+이전 세션에서 `src/text_only/ocr_fallback.py`가 손상 영역을 Claude
+Vision으로 자동 재처리하는 방식이었으나, 환각 사례가 발견됨:
+- `y=√a` → `y=√6`
+- `nroot126` → `nroot46`
+
+학원 운영에서 수식 환각은 치명적이므로 "자동 복구" 대신 "감지 + 사람이
+PDF 보고 직접 확인" 정책으로 전환.
+
+### 현재 동작
+1. **`src/text_only/ocr_fallback.py`**
+   - `ENABLE_VISION_FALLBACK = False` (Vision 비활성, 코드는 보존)
+   - 4가지 손상 패턴 감지: Mathpix CDN 이미지, 인라인 수식 한글, 디스플레이 한글 ≥30%, 빈 함수 정의
+   - 손상 영역마다 `[★ OCR 실패 영역 — 원본 PDF 참조]` 플레이스홀더 삽입
+   - 페이지 마커(`\page{N}`)가 있으면 `[★ OCR 실패 영역 — 원본 PDF p.{N} 참조]` 형태
+
+2. **`src/text_only/handwriting_filter.py`** (Claude AI 기반)
+   - 시스템 프롬프트 최상위에 "★ 플레이스홀더 절대 보존" 규칙 추가
+   - 강화 후에도 60% 정도(6/10)만 자연 보존됨
+
+3. **`reinforce_placeholders(filtered_md, raw_md)`** (신규)
+   - 필터가 누락한 ★ 마커를 코드 로직으로 강제 재삽입
+   - 문항 단위(선택형 N., 서술형 N)로 손상 카운트 vs ★ 카운트 비교
+   - 부족분만큼 해당 문항 블록 끝에 ★ 삽입 → 위치 정밀도는 떨어지지만 "어느 문항에 OCR 실패가 있었는가" 정보는 100% 보존
+
+4. **`scripts/text/pdf_to_text.py`**
+   - 흐름: Mathpix OCR → `apply_fallback` → `filter_handwriting` → `reinforce_placeholders` → HWPX 빌드
+   - filter 후 보강 로그: `[reinforce] 필터가 누락한 ★ 마커 N건 재삽입`
+
+### 광주고 공수1 (2026-1-1) 검증 결과
+- raw OCR: 10,508자, Mathpix CDN 이미지 9건, 빈 함수 정의 1건
+- fallback 후: 플레이스홀더 10건 삽입
+- 손글씨 필터 후: ★ 6건 자연 보존 (4건 누락)
+- reinforce 후: **★ 10건 완전 복원** (서술형 2에 1건, 서술형 3에 3건 재삽입)
+- 수식 내 한글 잔재: 0건 ✅
+- 출력: `samples/output_text_(광주)[2026_1_1_a_공수1_광주고]_v2.hwpx` (문단 202, 수식 123)
+
+### 알려진 한계
+- **HandwritingFilter도 LLM 추론을 함** — 환각 위험 존재 (이번 세션에서 발견)
+  - 예: 광주고 문제 19 ②: raw 선택지에 `-58`이 없는데 필터가 수열 추론으로 채워넣음
+  - 예: 광주고 문제 12: raw 조건 4개 → 필터가 2개만 남기고 재배치
+  - 다음 작업: 필터 프롬프트에 "추론 금지" 강화 또는 필터 자체 비활성 옵션
+- ★ 재삽입은 문항 끝에 들어감 — 그림이 본문 중간에 있던 경우 위치 손실
+
+### 재활성화 시 체크리스트 (Vision fallback)
+1. Vision 응답에 환각 검사 단계 추가 (raw OCR과 비교, 새로 등장한 수식 토큰 자동 점검)
+2. 의심 영역만 골라 부분 Vision 호출하는 인터페이스 (전체 재처리 X)
+3. 사람이 검토하는 diff 리포트
+4. 그 뒤 `ENABLE_VISION_FALLBACK = True` 전환
 
 ---
 

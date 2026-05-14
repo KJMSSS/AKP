@@ -1,0 +1,25 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//c/Users/user/.claude/projects/d--f1-AKP/memory/**)",
+      "Bash(git -C d:/f1/AKP status)",
+      "Bash(git -C d:/f1/AKP log --oneline -10)",
+      "Bash(git -C d:/f1/AKP check-ignore samples/)",
+      "Bash(git -C d:/f1/AKP ls-files)",
+      "PowerShell(py scripts/text/pdf_to_text.py \"samples/\\(����\\)[2026_1_1_a_����1_���ְ�].pdf\" --filter-handwriting)",
+      "PowerShell(py -m pip install anthropic 2>&1)",
+      "PowerShell(py scripts/text/pdf_to_text.py \"samples/\\(����\\)[2026_1_1_a_����1_���ְ�].pdf\" --filter-handwriting 2>&1)",
+      "Bash(py -c ' *)",
+      "PowerShell(py d:\\\\f1\\\\AKP\\\\_verify.py)",
+      "PowerShell(py d:\\\\f1\\\\AKP\\\\_retry_filter.py)",
+      "PowerShell(py d:\\\\f1\\\\AKP\\\\_retry_filter.py 2>&1)",
+      "PowerShell(py d:\\\\f1\\\\AKP\\\\_rebuild_hwpx.py)",
+      "PowerShell(py d:\\\\f1\\\\AKP\\\\_rebuild_v3.py)",
+      "PowerShell(py d:\\\\f1\\\\AKP\\\\_verify_v3.py)",
+      "PowerShell(py d:\\\\f1\\\\AKP\\\\_grep_hwpx.py)",
+      "PowerShell(py d:\\\\f1\\\\AKP\\\\_diag_marker.py)",
+      "PowerShell(py d:\\\\f1\\\\AKP\\\\_diff_hwpx.py)",
+      "PowerShell(py d:\\\\f1\\\\AKP\\\\_diff_para.py)"
+    ]
+  }
+}

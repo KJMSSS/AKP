@@ -18,7 +18,7 @@ sys.stdout.reconfigure(encoding='utf-8')
 from src.common.ocr.mathpix_client import MathpixClient
 from src.text_only.text_builder import build_from_markdown
 from src.text_only.handwriting_filter import filter_handwriting
-from src.text_only.ocr_fallback import apply_fallback
+from src.text_only.ocr_fallback import apply_fallback, reinforce_placeholders
 
 # ── 설정 ──────────────────────────────────────────────────────────────
 ROOT        = Path(__file__).resolve().parent.parent.parent
@@ -67,6 +67,7 @@ def convert(pdf_path: Path, filter_hw: bool = False) -> Path:
     out_md.write_text(md, encoding='utf-8')
     print(f"  마크다운 저장: {out_md.name}")
 
+    raw_md_for_reinforce = md  # 보강 시 손상 카운트의 기준
     md = apply_fallback(md, pdf_path)
 
     if filter_hw:
@@ -79,6 +80,13 @@ def convert(pdf_path: Path, filter_hw: bool = False) -> Path:
         filter_time = time.time() - t_filter
         removed = len(md) - len(md_filtered)
         print(f"  원본: {len(md):,}자  →  필터 후: {len(md_filtered):,}자  (제거: {removed:+,}자, {filter_time:.1f}s)")
+
+        # 필터가 ★ 플레이스홀더를 일부 제거했을 수 있어 문항 단위로 강제 재삽입
+        md_reinforced, added = reinforce_placeholders(md_filtered, raw_md_for_reinforce)
+        if added:
+            print(f"  [reinforce] 필터가 누락한 ★ 마커 {added}건 재삽입")
+        md_filtered = md_reinforced
+
         out_md_filtered = ROOT / "output_text_temp_filtered.md"
         out_md_filtered.write_text(md_filtered, encoding='utf-8')
         print(f"  필터 마크다운 저장: {out_md_filtered.name}")
