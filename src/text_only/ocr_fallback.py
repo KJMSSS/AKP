@@ -90,6 +90,11 @@ _ESSAY_BOUNDARY = re.compile(
     re.MULTILINE,
 )
 
+# ── 브루털 본문 교체 패턴 ──────────────────────────────────────────────
+_CIRCLED_ANY   = re.compile(r"[①②③④⑤]")
+_SCORE_PATTERN = re.compile(r"\[\d+\.?\d*점\]")
+_STAR_MARKER   = re.compile(r"【★[^】]*】")
+
 
 # ── 손상 감지 ─────────────────────────────────────────────────────────
 
@@ -406,6 +411,64 @@ def _count_placeholders_per_item(md: str) -> dict[str, int]:
     return counts
 
 
+def brutal_replace_bodies(md: str) -> tuple[str, int]:
+    """
+    ★ 마커가 있는 문항의 본문을 단일 블록 마커로 교체 (Option A 브루털).
+
+    보존: 문항 번호, [N점], ①②③④⑤ 선택지
+    교체: 본문 전체 → 단일 블록 마커
+
+    반환: (수정된 마크다운, 교체된 문항 수)
+    """
+    items = _split_by_items(md)
+    page_index = _build_page_index(md)
+    item_index = _build_item_index(md)
+
+    replacements: list[tuple[int, int, str]] = []
+
+    for key, start, end in items:
+        segment = md[start:end]
+        if _PLACEHOLDER_KEY not in segment:
+            continue
+        if key == "헤더":
+            continue
+
+        is_essay = key.startswith("서술형:")
+        item_num = key.split(":")[1]
+
+        score_m = _SCORE_PATTERN.search(segment)
+        score_str = (" " + score_m.group(0)) if score_m else ""
+
+        new_marker = _block_placeholder(start, page_index, item_index)
+
+        if is_essay:
+            first_nl = segment.find("\n")
+            first_line = segment[:first_nl] if first_nl != -1 else segment
+            first_line_clean = _SCORE_PATTERN.sub("", first_line).rstrip()
+            new_seg = f"{first_line_clean}\n{new_marker}{score_str}\n"
+        else:
+            choices_m = _CIRCLED_ANY.search(segment)
+            if choices_m:
+                line_start = segment.rfind("\n", 0, choices_m.start())
+                choices_raw = segment[line_start + 1 if line_start >= 0 else choices_m.start():]
+                choices_clean = _STAR_MARKER.sub("", choices_raw).strip()
+                new_seg = f"{item_num}. {new_marker}{score_str}\n{choices_clean}\n"
+            else:
+                new_seg = f"{item_num}. {new_marker}{score_str}\n"
+
+        replacements.append((start, end, new_seg))
+
+    if not replacements:
+        return md, 0
+
+    replacements.sort(key=lambda x: x[0], reverse=True)
+    result = md
+    for s, e, new_text in replacements:
+        result = result[:s] + new_text + result[e:]
+
+    return result, len(replacements)
+
+
 def reinforce_placeholders(filtered_md: str, raw_md: str) -> tuple[str, int]:
     """
     필터 결과에서 ★ 마커가 raw 대비 누락된 문항을 찾아 부족분을 강제 재삽입.
@@ -480,6 +543,10 @@ def reinforce_placeholders(filtered_md: str, raw_md: str) -> tuple[str, int]:
         last_end = m.end()
     parts.append(result[last_end:])
     result = "".join(parts)
+
+    result, brutal_count = brutal_replace_bodies(result)
+    if brutal_count:
+        print(f"  [brutal] 손상 문항 본문 교체: {brutal_count}건")
 
     return result, total_inserted
 
