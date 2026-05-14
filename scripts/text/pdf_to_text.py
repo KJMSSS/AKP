@@ -3,6 +3,7 @@ PDF → 빈 HWPX 직접 타이핑 변환 (템플릿 불필요)
 
 사용법:
     py scripts/text/pdf_to_text.py [PDF경로]
+    py scripts/text/pdf_to_text.py [PDF경로] --filter-handwriting
 
 출력:
     samples/output_text_{파일명}.hwpx
@@ -16,6 +17,7 @@ sys.stdout.reconfigure(encoding='utf-8')
 
 from src.common.ocr.mathpix_client import MathpixClient
 from src.text_only.text_builder import build_from_markdown
+from src.text_only.handwriting_filter import filter_handwriting
 
 # ── 설정 ──────────────────────────────────────────────────────────────
 ROOT        = Path(__file__).resolve().parent.parent.parent
@@ -38,7 +40,7 @@ def _pick_template() -> Path:
     raise FileNotFoundError("samples/ 폴더에 .hwpx 파일이 없습니다.")
 
 
-def convert(pdf_path: Path) -> Path:
+def convert(pdf_path: Path, filter_hw: bool = False) -> Path:
     stem    = pdf_path.stem
     out_md  = ROOT / "output_text_temp.md"          # 임시 마크다운 저장
     out_hwpx = SAMPLES_DIR / f"output_text_{stem}.hwpx"
@@ -63,6 +65,21 @@ def convert(pdf_path: Path) -> Path:
     # 마크다운 저장 (디버그용)
     out_md.write_text(md, encoding='utf-8')
     print(f"  마크다운 저장: {out_md.name}")
+
+    if filter_hw:
+        print()
+        print("─" * 62)
+        print("[ 1.5단계 ] 손글씨 풀이 제거 (Claude AI)")
+        print("─" * 62)
+        t_filter = time.time()
+        md_filtered = filter_handwriting(md)
+        filter_time = time.time() - t_filter
+        removed = len(md) - len(md_filtered)
+        print(f"  원본: {len(md):,}자  →  필터 후: {len(md_filtered):,}자  (제거: {removed:+,}자, {filter_time:.1f}s)")
+        out_md_filtered = ROOT / "output_text_temp_filtered.md"
+        out_md_filtered.write_text(md_filtered, encoding='utf-8')
+        print(f"  필터 마크다운 저장: {out_md_filtered.name}")
+        md = md_filtered
 
     print()
     print("─" * 62)
@@ -90,11 +107,15 @@ def convert(pdf_path: Path) -> Path:
 
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("사용법: py scripts/text/pdf_to_text.py [PDF경로]")
+    args = sys.argv[1:]
+    filter_hw = "--filter-handwriting" in args
+    positional = [a for a in args if not a.startswith("--")]
+
+    if not positional:
+        print("사용법: py scripts/text/pdf_to_text.py [PDF경로] [--filter-handwriting]")
         sys.exit(1)
 
-    pdf = Path(sys.argv[1])
+    pdf = Path(positional[0])
     if not pdf.exists():
         # samples/ 폴더 자동 탐색
         cand = SAMPLES_DIR / pdf.name
@@ -104,4 +125,4 @@ if __name__ == "__main__":
             print(f"파일 없음: {pdf}")
             sys.exit(1)
 
-    convert(pdf)
+    convert(pdf, filter_hw=filter_hw)

@@ -100,9 +100,14 @@ def find_template(info: dict[str, str], samples_dir: Path) -> Path:
 
 # ── XML 파싱 헬퍼 ─────────────────────────────────────────────────────────
 
-_P_RE = re.compile(r'(<hp:p [^>]+>)(.*?)(</hp:p>)', re.DOTALL)
-_T_RE = re.compile(r'(<hp:t[^>]*>)(.*?)(</hp:t>)', re.DOTALL)
+_P_RE          = re.compile(r'(<hp:p [^>]+>)(.*?)(</hp:p>)', re.DOTALL)
+_T_RE          = re.compile(r'(<hp:t[^>]*>)(.*?)(</hp:t>)', re.DOTALL)
 _SCORE_TEXT_RE = re.compile(r'^\d+\.?\d*점$')
+# hp:tbl/hp:p 열기·닫기 태그 스캐너 (tbl_depth 추적용)
+_TAG_SCAN_RE   = re.compile(r'<(/?)(hp:tbl|hp:p)[\s>]')
+# 정확한 hp:t 텍스트 런 매처 — hp:tc / hp:tbl / hp:tr 오매칭 방지
+# <hp:t> 또는 <hp:t attr> 형태만 매칭 (self-closing <hp:t/> 제외)
+_T_EXACT_RE    = re.compile(r'<hp:t(?:\s[^>]*)?>([^<]*)</hp:t>')
 
 
 def _para_text(inner_xml: str) -> str:
@@ -132,10 +137,34 @@ def _clear_all_t(inner_xml: str) -> str:
 # ── 헤더 추출 + 패치 ─────────────────────────────────────────────────────
 
 def _extract_header_xml(section_xml: str) -> str:
-    """첫 배점 단락 이전까지의 XML (XML 선언 + hs:sec 태그 포함)."""
-    for m in _P_RE.finditer(section_xml):
-        if _SCORE_TEXT_RE.match(_para_text(m.group(2)).strip()):
-            return section_xml[:m.start()]
+    """첫 배점 텍스트를 포함한 외부 단락 이전까지의 XML.
+
+    배점 텍스트는 항상 <hp:tbl> 셀 안에 있으므로 _P_RE 단순 매칭으로는
+    중간에 태그가 열린 채 잘린다. tbl_depth를 추적해 최상위 외부 <hp:p>
+    기준으로 경계를 찾는다.
+    """
+    tbl_depth     = 0
+    outer_p_start: int | None = None
+
+    for m in _TAG_SCAN_RE.finditer(section_xml):
+        is_close = m.group(1) == '/'
+        tag      = m.group(2)
+
+        if tag == 'hp:tbl':
+            tbl_depth += -1 if is_close else 1
+
+        elif tag == 'hp:p':
+            if not is_close and tbl_depth == 0:
+                outer_p_start = m.start()
+            elif is_close and tbl_depth == 0 and outer_p_start is not None:
+                outer_p_body = section_xml[outer_p_start : m.end()]
+                if any(
+                    _SCORE_TEXT_RE.match(tm.group(1).strip())
+                    for tm in _T_EXACT_RE.finditer(outer_p_body)
+                ):
+                    return section_xml[:outer_p_start]
+                outer_p_start = None
+
     return section_xml
 
 
@@ -180,7 +209,36 @@ def _patch_header(header_xml: str, info: dict[str, str]) -> str:
 
         return m.group()
 
-    return _P_RE.sub(process_para, header_xml)
+    # tbl_depth 추적으로 외부 단락을 정확히 찾아 처리
+    # (중첩 hp:tbl 안의 hp:p에 _P_RE가 오매칭되는 현상 방지)
+    tbl_depth     = 0
+    outer_p_start: int | None = None
+    parts: list[str] = []
+    prev_end      = 0
+
+    for m in _TAG_SCAN_RE.finditer(header_xml):
+        is_close = m.group(1) == '/'
+        tag      = m.group(2)
+
+        if tag == 'hp:tbl':
+            tbl_depth += -1 if is_close else 1
+
+        elif tag == 'hp:p':
+            if not is_close and tbl_depth == 0:
+                outer_p_start = m.start()
+            elif is_close and tbl_depth == 0 and outer_p_start is not None:
+                outer_p_xml = header_xml[outer_p_start : m.end()]
+                parts.append(header_xml[prev_end : outer_p_start])
+                # 내부에 테이블 포함 단락은 그대로 유지 (태그 구조 보존)
+                if '<hp:tbl' in outer_p_xml:
+                    parts.append(outer_p_xml)
+                else:
+                    parts.append(_P_RE.sub(process_para, outer_p_xml))
+                prev_end      = m.end()
+                outer_p_start = None
+
+    parts.append(header_xml[prev_end:])
+    return ''.join(parts)
 
 
 # ── OCR 마크다운에서 배점 추출 ────────────────────────────────────────────
@@ -287,7 +345,8 @@ def build_form(
     template = find_template(info, samples_dir)
 
     with zipfile.ZipFile(template, 'r') as zf:
-        files = {name: zf.read(name) for name in zf.namelist()}
+        files        = {name: zf.read(name) for name in zf.namelist()}
+        compress_map = {i.filename: i.compress_type for i in zf.infolist()}
 
     section_xml = files['Contents/section0.xml'].decode('utf-8')
 
@@ -304,11 +363,18 @@ def build_form(
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(output_path, 'w', zipfile.ZIP_DEFLATED) as zout:
+        # mimetype은 반드시 STORED + 첫 번째 엔트리 (HWPX/ODF 스펙)
+        if 'mimetype' in files:
+            zout.writestr('mimetype', files['mimetype'],
+                          compress_type=zipfile.ZIP_STORED)
         for name, data in files.items():
+            if name == 'mimetype':
+                continue
+            ct = compress_map.get(name, zipfile.ZIP_DEFLATED)
             if name == 'Contents/section0.xml':
-                zout.writestr(name, new_section.encode('utf-8'))
+                zout.writestr(name, new_section.encode('utf-8'), compress_type=ct)
             else:
-                zout.writestr(name, data)
+                zout.writestr(name, data, compress_type=ct)
 
     return {
         'template':    template,
