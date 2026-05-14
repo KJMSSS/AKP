@@ -20,8 +20,8 @@ import re
 # \frac{\sqrt{a^{2}+b^{2}}}{c} 같은 수식을 한 패스에서 처리하기 위해 3단계 필요
 _BG = r'\{((?:[^{}]|\{(?:[^{}]|\{[^{}]*\})*\})*)\}'
 
-# ── 분수 ──────────────────────────────────────────────────────────
-_FRAC_RE = re.compile(r'\\frac\s*' + _BG + r'\s*' + _BG)
+# ── 분수 (\frac / \dfrac / \tfrac / \cfrac) ──────────────────────
+_FRAC_RE = re.compile(r'\\(?:d|t|c)?frac\s*' + _BG + r'\s*' + _BG)
 
 def _sub_frac(m: re.Match) -> str:
     return f'{{{m.group(1)}}} over {{{m.group(2)}}}'
@@ -29,12 +29,17 @@ def _sub_frac(m: re.Match) -> str:
 # ── 제곱근 ────────────────────────────────────────────────────────
 _SQRT_N_RE = re.compile(r'\\sqrt\[([^\]]+)\]\s*' + _BG)
 _SQRT_RE   = re.compile(r'\\sqrt\s*' + _BG)
+# \nroot{n}{x} — Mathpix가 간혹 이 표기를 사용함
+_NROOT_RE  = re.compile(r'\\nroot\s*' + _BG + r'\s*' + _BG)
 
 def _sub_sqrt_n(m: re.Match) -> str:
     return f'nroot {{{m.group(1)}}} {{{m.group(2)}}}'
 
 def _sub_sqrt(m: re.Match) -> str:
     return f'sqrt {{{m.group(1)}}}'
+
+def _sub_nroot(m: re.Match) -> str:
+    return f'nroot {{{m.group(1)}}} {{{m.group(2)}}}'
 
 # ── 적분·합·곱 (from/to 방식) ─────────────────────────────────────
 _FROM_TO_RE = re.compile(
@@ -256,6 +261,7 @@ def convert(latex: str) -> str:
         prev = s
         s = _FRAC_RE.sub(_sub_frac, s)
         s = _SQRT_N_RE.sub(_sub_sqrt_n, s)
+        s = _NROOT_RE.sub(_sub_nroot, s)
         s = _SQRT_RE.sub(_sub_sqrt, s)
         s = _LIM_RE.sub(_sub_lim, s)
         s = _FROM_TO_RE.sub(_sub_from_to, s)

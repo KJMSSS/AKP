@@ -18,6 +18,7 @@ sys.stdout.reconfigure(encoding='utf-8')
 from src.common.ocr.mathpix_client import MathpixClient
 from src.text_only.text_builder import build_from_markdown
 from src.text_only.handwriting_filter import filter_handwriting
+from src.text_only.ocr_fallback import apply_fallback
 
 # ── 설정 ──────────────────────────────────────────────────────────────
 ROOT        = Path(__file__).resolve().parent.parent.parent
@@ -65,6 +66,8 @@ def convert(pdf_path: Path, filter_hw: bool = False) -> Path:
     # 마크다운 저장 (디버그용)
     out_md.write_text(md, encoding='utf-8')
     print(f"  마크다운 저장: {out_md.name}")
+
+    md = apply_fallback(md, pdf_path)
 
     if filter_hw:
         print()
