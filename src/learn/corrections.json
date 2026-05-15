@@ -1,0 +1,4447 @@
+{
+  "version": "1.0",
+  "updated": "2026-05-15",
+  "entries": [
+    {
+      "old": "포양의",
+      "new": "모양의",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "경신여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "각각 인 직육면체 포양의 블록 2 가"
+      ]
+    },
+    {
+      "old": "공간이",
+      "new": "공같이",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "경신여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "모양의 상자를 빈 공간이 없도록 채우려고 한다"
+      ]
+    },
+    {
+      "old": "흰쪽부터",
+      "new": "왼쪽부터",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "경신여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "없도록 채우려고 한다 흰쪽부터 빈틈없이 차례로 채워"
+      ]
+    },
+    {
+      "old": "셍각하지",
+      "new": "생각하지",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "경신여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "밖으로 나가는 경우는 셍각하지 않는다 3 점"
+      ]
+    },
+    {
+      "old": "A 서사낭정식",
+      "new": "삼차방정식",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "경신여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "7 에 대한 A 서사낭정식 의 서로 다른"
+      ]
+    },
+    {
+      "old": "상릉의",
+      "new": "실근의",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "경신여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "의 서로 다른 상릉의 개수가 2 가"
+      ]
+    },
+    {
+      "old": "회뇨목",
+      "new": "되도록",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "경신여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "개수가 2 가 회뇨목 하는 모든 실수"
+      ]
+    },
+    {
+      "old": "직각삼가형 ABC",
+      "new": "직각삼각형",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "경신여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "참조 9 인 직각삼가형 ABC 가 있다 그림과"
+      ]
+    },
+    {
+      "old": "줄레의",
+      "new": "둘레의",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "경신여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "삼각형 ABC 의 줄레의 길이가 60 일"
+      ]
+    },
+    {
+      "old": "이차하 수의",
+      "new": "이차함수의",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "경신여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "꼭짓점을 A 이 이차하 수의 그래프가 축과 만나는"
+      ]
+    },
+    {
+      "old": "는을",
+      "new": "세 근을",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "경신여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "의 서로 다른 는을 라 하자 일"
+      ]
+    },
+    {
+      "old": "이차 정사좌행렬",
+      "new": "이차정사각행렬",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "경신여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "참조 13 두 이차 정사좌행렬 에 대하여 옳은"
+      ]
+    },
+    {
+      "old": "단위헹렬이고",
+      "new": "단위행렬이고",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "경신여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "것은 단 는 단위헹렬이고 는 영행렬이다 315"
+      ]
+    },
+    {
+      "old": "보집에서",
+      "new": "모집에서",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "경신여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "2025 학년도 신입생 보집에서 어느 대학 A"
+      ]
+    },
+    {
+      "old": "B 하과의",
+      "new": "학과의",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "경신여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "대학 A 학과와 B 하과의 선발 인원수와 경쟁률을"
+      ]
+    },
+    {
+      "old": "정시모짐",
+      "new": "정시모집",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "경신여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "합을 학과의 수시모집과 정시모짐 지원자의 수의 합을"
+      ]
+    },
+    {
+      "old": "성눈의",
+      "new": "성분의",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "경신여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "성분과 행렬 의 성눈의 합 15 각"
+      ]
+    },
+    {
+      "old": "난뜬 6",
+      "new": "만든",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "경신여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "를 모두 사용하여 난뜬 6 자리 깐자열 중에서"
+      ]
+    },
+    {
+      "old": "깐자열",
+      "new": "문자열",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "경신여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "난뜬 6 자리 깐자열 중에서 다음 조건을"
+      ]
+    },
+    {
+      "old": "대음",
+      "new": "다음",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "경신여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "A 의 바로 대음 자리에 B 가"
+      ]
+    },
+    {
+      "old": "옹다",
+      "new": "온다",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "경신여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "자리에 B 가 옹다 나 B 의"
+      ]
+    },
+    {
+      "old": "꼬두",
+      "new": "모두",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "경신여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "건지름의 길이와 색이 꼬두 다른 나무 원판"
+      ]
+    },
+    {
+      "old": "5 게의",
+      "new": "개의",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "경신여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "5 개가 있다 5 게의 원판의 중식이 엘치하노록"
+      ]
+    },
+    {
+      "old": "중식이 엘치하노록",
+      "new": "중심이 일치하도록",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "경신여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "5 게의 원판의 중식이 엘치하노록 원판을 쌓으려고 한다"
+      ]
+    },
+    {
+      "old": "네려다봤을",
+      "new": "내려다봤을",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "경신여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "한다 그림은 위에서 네려다봤을 때 원판 3"
+      ]
+    },
+    {
+      "old": "에를",
+      "new": "예를",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "경신여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "개를 쌓은 한가지 에를 측면에서 바라본 것이나"
+      ]
+    },
+    {
+      "old": "것이나",
+      "new": "것이다",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "경신여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "에를 측면에서 바라본 것이나 위에서 네려다 봤을"
+      ]
+    },
+    {
+      "old": "네려다",
+      "new": "내려다",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "경신여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "바라본 것이나 위에서 네려다 봤을 때 원딴"
+      ]
+    },
+    {
+      "old": "원딴 3 채가",
+      "new": "원판 개가",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "경신여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "네려다 봤을 때 원딴 3 채가 보이도록 원판 5"
+      ]
+    },
+    {
+      "old": "쌍는 낭법의",
+      "new": "쌓는 방법의",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "경신여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "원판 5 개를 쌍는 낭법의 수는 4 2"
+      ]
+    },
+    {
+      "old": "저힌 21",
+      "new": "적힌",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "경신여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "21 번까지 번호가 저힌 21 개의 칸이 얐"
+      ]
+    },
+    {
+      "old": "얐 슨",
+      "new": "있는",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "경신여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "21 개의 칸이 얐 슨 사물함이 있다 본문"
+      ]
+    },
+    {
+      "old": "보양의 6 게의",
+      "new": "모양의 개의",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "경신여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "번 참조 같은 보양의 6 게의 공을 1 개"
+      ]
+    },
+    {
+      "old": "사불함의",
+      "new": "사물함의",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "경신여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "3 개로 나누어 사불함의 서로 다쁜 3"
+      ]
+    },
+    {
+      "old": "다쁜 3",
+      "new": "다른",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "경신여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "나누어 사불함의 서로 다쁜 3 개의 칸에 넣으려"
+      ]
+    },
+    {
+      "old": "훌수",
+      "new": "홀수",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "경신여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "넣으려 한다 이때 훌수 번호가 젛 칸에는"
+      ]
+    },
+    {
+      "old": "젛",
+      "new": "적힌",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "경신여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "이때 훌수 번호가 젛 칸에는 홀수 개"
+      ]
+    },
+    {
+      "old": "싹수 게를",
+      "new": "짝수 개를",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "경신여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "번호가 적힌 칸에는 싹수 게를 넣고 공이 들어갈"
+      ]
+    },
+    {
+      "old": "넣늘",
+      "new": "넣는",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "경신여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "개수가 많아지도록 공을 넣늘 경우의 수는 4"
+      ]
+    },
+    {
+      "old": "구하기",
+      "new": "구하고",
+      "type": "text",
+      "frequency": 2,
+      "schools": [
+        "경신여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "난족시키는 의 값을 구하기 그 과정을 서술하시오",
+        "의 값의 합을 구하기 그 과정을 서술하시오"
+      ]
+    },
+    {
+      "old": "출임을",
+      "new": "출입을",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "경신여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "3 어느 건물에서 출임을 통제하기 위하여 각"
+      ]
+    },
+    {
+      "old": "보안카뜨를",
+      "new": "보안카드를",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "경신여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "10 자리 문자열의 보안카뜨를 이용하고 있다 나음"
+      ]
+    },
+    {
+      "old": "나음 뚜",
+      "new": "다음 두",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "경신여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "보안카뜨를 이용하고 있다 나음 뚜 가지 조건 중"
+      ]
+    },
+    {
+      "old": "만족하년",
+      "new": "만족하면",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "경신여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "한 가지 조건을 만족하년 출입문을 통과할 수"
+      ]
+    },
+    {
+      "old": "늘어",
+      "new": "들어",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "경신여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "자리가 10101 예를 늘어 보안카드의 꾼자열이 1011010100"
+      ]
+    },
+    {
+      "old": "꾼자열이 1011010100",
+      "new": "분자열이",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "경신여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "예를 늘어 보안카드의 꾼자열이 1011010100 이거나 1010100111 이면"
+      ]
+    },
+    {
+      "old": "촐입문을",
+      "new": "출입문을",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "경신여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "있다 이 건물의 촐입문을 통과할 수 있는"
+      ]
+    },
+    {
+      "old": "개수롤",
+      "new": "개수를",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "경신여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "다른 보안카드의 총 개수롤 구하고 그 과정을"
+      ]
+    },
+    {
+      "old": "식 C",
+      "new": "점",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "경신여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "선분 AB 위의 식 C 에 대하여 선분"
+      ]
+    },
+    {
+      "old": "중접을",
+      "new": "중점을",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "경신여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "선분 AC 의 중접을 선분 CB 의"
+      ]
+    },
+    {
+      "old": "숭점응",
+      "new": "중점을",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "경신여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "선분 CB 의 숭점응 라 하지 라"
+      ]
+    },
+    {
+      "old": "하지",
+      "new": "하고",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "경신여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "의 숭점응 라 하지 라 하자 점"
+      ]
+    },
+    {
+      "old": "중시으로 하기 난지름의",
+      "new": "중심으로 하고 반지름의",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "경신여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "하자 점 을 중시으로 하기 난지름의 길이가 인 난원"
+      ]
+    },
+    {
+      "old": "난원",
+      "new": "반원",
+      "type": "text",
+      "frequency": 2,
+      "schools": [
+        "경신여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": true,
+      "context_examples": [
+        "난지름의 길이가 인 난원 점 를 숭신으로",
+        "난원을 그린다 두 난원 과 의 겨접이"
+      ]
+    },
+    {
+      "old": "숭신으로",
+      "new": "중심으로",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "경신여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "난원 점 를 숭신으로 하고 반지름의 길이가"
+      ]
+    },
+    {
+      "old": "L 린",
+      "new": "그린",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "경신여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "반원 를 각각 L 린 후 선분 를"
+      ]
+    },
+    {
+      "old": "지름으론 하웅 난원을",
+      "new": "지름으로 하는 반원을",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "경신여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "후 선분 를 지름으론 하웅 난원을 그린다 두 난원"
+      ]
+    },
+    {
+      "old": "겨접이",
+      "new": "교점이",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "경신여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "난원 과 의 겨접이 호 위에 있을"
+      ]
+    },
+    {
+      "old": "노든 정슈",
+      "new": "모든 정수",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "경신여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "실근을 갖도록 하는 노든 정슈 의 값의 합을"
+      ]
+    },
+    {
+      "old": "학년도",
+      "new": "년 1 학년",
+      "type": "text",
+      "frequency": 6,
+      "schools": [
+        "고려고",
+        "광주여고",
+        "광주제일고",
+        "대성여고",
+        "동신여고",
+        "문성고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "2025 학년도 1 학기 1",
+        "2025 학년도 1 학기 2",
+        "2025 학년도 1 학년 1",
+        "PDF 참조 2025 학년도 1 학기 2"
+      ],
+      "blacklisted": true
+    },
+    {
+      "old": "4 이차 정사각행렬",
+      "new": "이차정사각행렬",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "고려고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "값은 3 점 4 이차 정사각행렬 의 성분 이고"
+      ]
+    },
+    {
+      "old": "을",
+      "new": "를",
+      "type": "text",
+      "frequency": 5,
+      "schools": [
+        "고려고",
+        "광주여고",
+        "금호고",
+        "대성여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": true,
+      "context_examples": [
+        "에 대한 연립부등식 을 만족시키는 모든 정수",
+        "서로 다른 삼차식 을 모두 구하시오 8",
+        "이다 보기 등식 을 만족시키는 n 의",
+        "8 점 연립부등식 을 만족시키는 정수 의",
+        "두 이차정사가행릴 가 을 만족시킬 때 다음"
+      ]
+    },
+    {
+      "old": "만족시키눈",
+      "new": "만족시키는",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "고려고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "대하여 부등식 를 만족시키눈 정수 의 개수를"
+      ]
+    },
+    {
+      "old": "아족시키는",
+      "new": "만족시키는",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "고려고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "할 때 를 아족시키는 자연수 의 값은"
+      ]
+    },
+    {
+      "old": "사열하는",
+      "new": "나열하는",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "고려고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "자연수를 선택하여 일렬로 사열하는 경우의 수는 이다"
+      ]
+    },
+    {
+      "old": "자연수에 서",
+      "new": "자연수에서",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "고려고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "나머지 8 개의 자연수에 서 개를 뽑아 일렬로"
+      ]
+    },
+    {
+      "old": "나열하 는",
+      "new": "나열하는",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "고려고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "선택된 개를 일렬로 나열하 는 경우의 수는 나"
+      ]
+    },
+    {
+      "old": "최 댓값을",
+      "new": "최댓값을",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "고려고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "에 대하여 의 최 댓값을 최솟값을 어랴할 때"
+      ]
+    },
+    {
+      "old": "어랴할",
+      "new": "이라 할",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "고려고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "최 댓값을 최솟값을 어랴할 때 의 값은"
+      ]
+    },
+    {
+      "old": "해간",
+      "new": "해가",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "고려고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "가 부등식 의 해간 이다 나 모든"
+      ]
+    },
+    {
+      "old": "연립부둥식",
+      "new": "연립부등식",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "고려고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "갖는다 일 때 연립부둥식 을 만족시키는 정수해의"
+      ]
+    },
+    {
+      "old": "때하여",
+      "new": "대하여",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "고려고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "두 행렬 에 때하여 일 때 의"
+      ]
+    },
+    {
+      "old": "만족시키다",
+      "new": "만족시킨다",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "고려고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "가 다음 조건을 만족시키다 가 삼차식 는"
+      ]
+    },
+    {
+      "old": "전개 하였을",
+      "new": "전개하였을",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "광덕고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "5 다항식 를 전개 하였을 때 항의 개수는"
+      ]
+    },
+    {
+      "old": "다저트가",
+      "new": "디저트가",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "광덕고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "메뉴 메인 요리 다저트가 각각 한 개씩"
+      ]
+    },
+    {
+      "old": "성 립하도록",
+      "new": "성립하도록",
+      "type": "text",
+      "frequency": 2,
+      "schools": [
+        "광덕고",
+        "동명고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": true,
+      "context_examples": [
+        "8 둥식 이 성 립하도록 하는 예 대하여",
+        "실수 에 대하여 성 립하도록 하는 실수 의"
+      ]
+    },
+    {
+      "old": "줏자의",
+      "new": "숫자의",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "광덕고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "가 각 자리의 줏자의 합은 짝수이다 나"
+      ]
+    },
+    {
+      "old": "자라의",
+      "new": "자리의",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "광덕고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "짝수이다 나 각 자라의 숫자는 서로 다르다"
+      ]
+    },
+    {
+      "old": "섹을",
+      "new": "색을",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "광덕고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "칠하려고 한다 같은 섹을 중복하여 사용해도 좋으나"
+      ]
+    },
+    {
+      "old": "녜",
+      "new": "네",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "광덕고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "19 셔로 다른 녜 종류의 인형이 각각"
+      ]
+    },
+    {
+      "old": "꾸별하지",
+      "new": "구별하지",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "광덕고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "종류의 인형끼리는 서로 꾸별하지 않는다 2 6"
+      ]
+    },
+    {
+      "old": "동아려에서",
+      "new": "동아리에서",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "광덕고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "동아리가 있다 이 동아려에서 회원들 모두가 한"
+      ]
+    },
+    {
+      "old": "마트로시카",
+      "new": "마트료시카",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "광덕고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "똑같은 모양을 가진 마트로시카 인형이 작은 인형"
+      ]
+    },
+    {
+      "old": "졉치지",
+      "new": "겹치지",
+      "type": "text",
+      "frequency": 2,
+      "schools": [
+        "광덕고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": true,
+      "context_examples": [
+        "인형 4 개를 졉치지 않게 각각 다른"
+      ]
+    },
+    {
+      "old": "제트를 만둘었을",
+      "new": "세트를 만들었을",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "광덕고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "4 개의 인형 제트를 만둘었을 때 각 인형"
+      ]
+    },
+    {
+      "old": "정수률",
+      "new": "정수를",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "광덕고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "의 여덟 개의 정수률 각 성분에 하나씩"
+      ]
+    },
+    {
+      "old": "대입햐여",
+      "new": "대입하여",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "광덕고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "각 성분에 하나씩 대입햐여 만든 행렬 가"
+      ]
+    },
+    {
+      "old": "만족시키능",
+      "new": "만족시키는",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "광덕고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "할 때 를 만족시키능 순서쌍 의 개수를"
+      ]
+    },
+    {
+      "old": "가 장",
+      "new": "가장",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "광주고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "네 실근 중 가 장 큰 근율 가장"
+      ]
+    },
+    {
+      "old": "근율",
+      "new": "근을",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "광주고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "가 장 큰 근율 가장 작은 근을"
+      ]
+    },
+    {
+      "old": "50",
+      "new": "점",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "광주고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "번 참조 7 50 이하의 자연수 에"
+      ]
+    },
+    {
+      "old": "부등 식",
+      "new": "부등식",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "광주고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "의 해가 이다 부등 식 을 만족시키는 모든"
+      ]
+    },
+    {
+      "old": "다힝식",
+      "new": "다항식",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "광주고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "자연수 에 대하여 다힝식 가 로 나누어"
+      ]
+    },
+    {
+      "old": "나누어 떨어지도록",
+      "new": "나누어떨어지도록",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "광주고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "다힝식 가 로 나누어 떨어지도록 하는 모든 장연수"
+      ]
+    },
+    {
+      "old": "장연수",
+      "new": "자연수",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "광주고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "떨어지도록 하는 모든 장연수 의 값의 합은"
+      ]
+    },
+    {
+      "old": "모누 거처",
+      "new": "모두 거쳐",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "광주고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "출발하여 두 지역을 모누 거처 지역에 도착하는 경우의"
+      ]
+    },
+    {
+      "old": "지나반",
+      "new": "지나간",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "광주고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "단 한 번 지나반 지역은 다시 지나지"
+      ]
+    },
+    {
+      "old": "울",
+      "new": "을",
+      "type": "text",
+      "frequency": 2,
+      "schools": [
+        "광주고",
+        "동명고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": true,
+      "context_examples": [
+        "참조 12 등식 울 만족시키는 모든 자연수",
+        "와 에 대하여 울 만족시키는 순서 쌍"
+      ]
+    },
+    {
+      "old": "설경한다",
+      "new": "설정한다 광주고",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "광주고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "이웃한 자리에 오도록 설경한다 15 그림과 같이"
+      ]
+    },
+    {
+      "old": "1 누터 16",
+      "new": "부터",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "광주고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "정사각형의 각 칸에 1 누터 16 까지의 자연수가 적혀"
+      ]
+    },
+    {
+      "old": "선텍한 3",
+      "new": "선택한",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "광주고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "가로줄에 있다 나 선텍한 3 개의 숫자는 서로"
+      ]
+    },
+    {
+      "old": "예률",
+      "new": "예를",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "광주고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "다른 세로줄에 있다 예률 들어 숫자 을"
+      ]
+    },
+    {
+      "old": "조건울",
+      "new": "조건을",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "광주고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "를 선택하는 것은 조건울 만족시키지 않는다 조건을"
+      ]
+    },
+    {
+      "old": "이둘이 적인 누",
+      "new": "이름이 적힌 두",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "광주고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "16 그림과 같이 이둘이 적인 누 개의 성삼각형과 세"
+      ]
+    },
+    {
+      "old": "성삼각형과",
+      "new": "정삼각형과",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "광주고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "적인 누 개의 성삼각형과 세 개의 정사각형으로"
+      ]
+    },
+    {
+      "old": "이루어진 도영이",
+      "new": "배열하였더니 도형이",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "광주고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "세 개의 정사각형으로 이루어진 도영이 있다 본문 손상"
+      ]
+    },
+    {
+      "old": "혀락하여",
+      "new": "허락하여",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "광주고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "숫자 중에서 중복을 혀락하여 다섯 개를 택해"
+      ]
+    },
+    {
+      "old": "하니씩",
+      "new": "하나씩",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "광주고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "개의 정다각형 내부에 하니씩 적을 때 다음"
+      ]
+    },
+    {
+      "old": "경우이",
+      "new": "경우의",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "광주고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "다음 조건을 만족시키는 경우이 수는 5 0"
+      ]
+    },
+    {
+      "old": "나",
+      "new": "다",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "광주고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "있는 수보다 크다 나 변을 공유하는 두"
+      ]
+    },
+    {
+      "old": "gt 단위 학년",
+      "new": "b 공수",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "광주고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "명 lt 1 gt 단위 학년 1 학년 2"
+      ]
+    },
+    {
+      "old": "행럴",
+      "new": "행렬",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "광주고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "gt 를 각각 행럴 로 나타낼 때"
+      ]
+    },
+    {
+      "old": "2",
+      "new": "명 학년 학생",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "광주고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "3 학년 학생 2 명이 다음 조건을"
+      ]
+    },
+    {
+      "old": "핫 은",
+      "new": "학생은",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "광주고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "가 1 학년 핫 은 짝수 번호가 적힌"
+      ]
+    },
+    {
+      "old": "학싱은 저로",
+      "new": "학생은 서로",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "광주고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "나 같은 학년 학싱은 저로 이웃하여 앉지 않는다"
+      ]
+    },
+    {
+      "old": "학년 궁뿡수학",
+      "new": "번 2025",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "광주여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "지필평가 문제지 1 학년 궁뿡수학 1 과목 2025"
+      ]
+    },
+    {
+      "old": "3 연 부등식",
+      "new": "연립부등식",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "광주여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "3 4 점 3 연 부등식 의 해가 일"
+      ]
+    },
+    {
+      "old": "4 열립방정식",
+      "new": "연립방정식",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "광주여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "3 6 점 4 열립방정식 의 해를 라"
+      ]
+    },
+    {
+      "old": "라",
+      "new": "라고",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "광주여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "열립방정식 의 해를 라 할 때 의"
+      ]
+    },
+    {
+      "old": "앖이",
+      "new": "값이",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "광주여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "다음 중 의 앖이 될 수 없는"
+      ]
+    },
+    {
+      "old": "최솟값 이 2",
+      "new": "최솟값이",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "광주여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "때 이차함수 의 최솟값 이 2 가 되도록 하는"
+      ]
+    },
+    {
+      "old": "10 여화생과",
+      "new": "여학생과",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "광주여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "3 9 점 10 여화생과 남학생을 합하여 모두"
+      ]
+    },
+    {
+      "old": "수학동아리에서",
+      "new": "수학등아리에서",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "광주여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "모두 7 명인 수학동아리에서 대표 3 명을"
+      ]
+    },
+    {
+      "old": "작어도 1",
+      "new": "적어도",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "광주여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "뽑을 때 여학생이 작어도 1 명 포함되도록 뽑는"
+      ]
+    },
+    {
+      "old": "수학동아리 7",
+      "new": "수학등아리",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "광주여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "수는 25 이다 수학동아리 7 명의 학생이 일렬로"
+      ]
+    },
+    {
+      "old": "양끝",
+      "new": "양 끝",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "광주여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "여학생끼리는 이웃하지 않고 양끝 의자에는 모두 남학생이"
+      ]
+    },
+    {
+      "old": "다 른",
+      "new": "다른",
+      "type": "text",
+      "frequency": 2,
+      "schools": [
+        "광주여고",
+        "대광여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": true,
+      "context_examples": [
+        "사차방정식 의 서로 다 른 실근의 개수는 4",
+        "를 포함한 서로 다 른 세 정수를 근으로"
+      ]
+    },
+    {
+      "old": "부었더 니",
+      "new": "부었더니",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "광주여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "그릇에 의 물을 부었더 니 그릇의 위에서부터 3"
+      ]
+    },
+    {
+      "old": "은",
+      "new": "는",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "광주여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "고른 것은 과 은 자연수이고 이다 보기"
+      ]
+    },
+    {
+      "old": "보기",
+      "new": "보 기",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "광주여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "은 자연수이고 이다 보기 등식 을 만족시키는"
+      ]
+    },
+    {
+      "old": "행사른",
+      "new": "행사를",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "광주여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "매년 교복 바자회 행사른 열어 얻은 수익금을"
+      ]
+    },
+    {
+      "old": "7",
+      "new": "그",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "광주여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "자치회 총무 팀이 7 동안의 데이터를 바탕으로"
+      ]
+    },
+    {
+      "old": "판메량을",
+      "new": "판매량을",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "광주여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "행사의 가격에 따른 판메량을 예측한 결과 교복"
+      ]
+    },
+    {
+      "old": "를",
+      "new": "을",
+      "type": "text",
+      "frequency": 2,
+      "schools": [
+        "광주여고",
+        "동신여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": true,
+      "context_examples": [
+        "에 대한 연립부등식 를 만족시키는 정수 가",
+        "에 대한 연립부등식 를 만족시키는 자연수 의"
+      ]
+    },
+    {
+      "old": "이라",
+      "new": "라",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "광주여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "두 점을 각각 이라 하자 점 를"
+      ]
+    },
+    {
+      "old": "- 2",
+      "new": "-2",
+      "type": "equation",
+      "frequency": 1,
+      "schools": [
+        "광주여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": []
+    },
+    {
+      "old": "0 &lt;= x &lt;= k",
+      "new": "0 le x le k`",
+      "type": "equation",
+      "frequency": 1,
+      "schools": [
+        "광주여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": []
+    },
+    {
+      "old": "y=x^{2}-12 x+38",
+      "new": "y=x^{2}-12x+38`",
+      "type": "equation",
+      "frequency": 1,
+      "schools": [
+        "광주여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": []
+    },
+    {
+      "old": "k",
+      "new": "k`",
+      "type": "equation",
+      "frequency": 2,
+      "schools": [
+        "광주여고",
+        "동성고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": true,
+      "context_examples": []
+    },
+    {
+      "old": "크기 순으로",
+      "new": "크기순으로",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "광주제일고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "크기가 작은 수부터 크기 순으로 모두 나열할 때"
+      ]
+    },
+    {
+      "old": "값 의",
+      "new": "값의",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "광주제일고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "모든 실수 의 값 의 합을 구하시오 5"
+      ]
+    },
+    {
+      "old": "대하 여",
+      "new": "대하여",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "광주제일고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "네 정수 에 대하 여 네 자리 자연수"
+      ]
+    },
+    {
+      "old": "b&gt;c&gt;d",
+      "new": "b &gt; c &gt; d`",
+      "type": "equation",
+      "frequency": 1,
+      "schools": [
+        "광주제일고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": []
+    },
+    {
+      "old": "모는",
+      "new": "모든",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "국제고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "대하여 행렬 의 모는 성분의 합은 3"
+      ]
+    },
+    {
+      "old": "실근 을",
+      "new": "실근을",
+      "type": "text",
+      "frequency": 2,
+      "schools": [
+        "국제고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": true,
+      "context_examples": [
+        "서로 다른 네 실근 을 갖도록 하는 정수",
+        "이차방정식 이 에서 실근 을 갖도록 하는 실수"
+      ]
+    },
+    {
+      "old": "리고 합",
+      "new": "라고 할",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "국제고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "이차함수 의 최솟값을 리고 합 때 애서 함수"
+      ]
+    },
+    {
+      "old": "애서",
+      "new": "에서",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "국제고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "리고 합 때 애서 함수 의 최댓값은"
+      ]
+    },
+    {
+      "old": "다슨 4",
+      "new": "다른",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "국제고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "5 에서 서로 다슨 4 개의 숫자를 택하여"
+      ]
+    },
+    {
+      "old": "네자리",
+      "new": "네 자리",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "국제고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "개의 숫자를 택하여 네자리 자연수를 만들 때"
+      ]
+    },
+    {
+      "old": "남하상 3",
+      "new": "남학생",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "국제고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "어학생 4 명과 남하상 3 명을 일렬로 세울"
+      ]
+    },
+    {
+      "old": "남학싱 능이이",
+      "new": "남학생 명이",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "국제고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "일렬로 세울 때 남학싱 능이이 이웃하는 경우의 수는"
+      ]
+    },
+    {
+      "old": "초클릿을",
+      "new": "초콜릿을",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "국제고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "text 15 학생들에게 초클릿을 나누어 주는데 학생"
+      ]
+    },
+    {
+      "old": "초골 릿이 23",
+      "new": "초콜릿이",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "국제고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "4 개씩 주면 초골 릿이 23 개 남고 6"
+      ]
+    },
+    {
+      "old": "히망 옹도와 신내",
+      "new": "희망 온도와 실내",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "국제고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "온도 조절기에 설정한 히망 옹도와 신내 온도의 차이가 1C"
+      ]
+    },
+    {
+      "old": "여름절",
+      "new": "여름철",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "국제고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "유지시켜 준다고 한다 여름절 적정 실내 온도를"
+      ]
+    },
+    {
+      "old": "탁지에서 8 7",
+      "new": "탁자에서",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "국제고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "있다 학생이 먼저 탁지에서 8 7 의 순서대로 카드롤"
+      ]
+    },
+    {
+      "old": "카드롤",
+      "new": "카드를",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "국제고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "7 의 순서대로 카드롤 선택했을 때 학생이"
+      ]
+    },
+    {
+      "old": "한번에",
+      "new": "한 번에",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "국제고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "구하 시오 단 한번에 한 장의 카드만"
+      ]
+    },
+    {
+      "old": "선태하며",
+      "new": "선택하며",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "국제고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "한 장의 카드만 선태하며 중복하여 선택할 수"
+      ]
+    },
+    {
+      "old": "종 8",
+      "new": "총",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "국제고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "선택할 수 없고 종 8 번 시행한다 각"
+      ]
+    },
+    {
+      "old": "선댁한 다",
+      "new": "선택한다",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "국제고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "2 의 배수를 선댁한 다 나 학생이 뽑은"
+      ]
+    },
+    {
+      "old": "카드 보다",
+      "new": "카드보다",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "국제고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "아니면 학생은 학생의 카드 보다 큰 카드를 선택한다"
+      ]
+    },
+    {
+      "old": "x^{3}-x^{2}-4 x+4=0",
+      "new": "x^{3}-x^{2}-4x+4=0`",
+      "type": "equation",
+      "frequency": 1,
+      "schools": [
+        "국제고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": []
+    },
+    {
+      "old": "x",
+      "new": "x`",
+      "type": "equation",
+      "frequency": 1,
+      "schools": [
+        "국제고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": []
+    },
+    {
+      "old": "y-x^{2}-4 a x+3 a^{2}-3 a",
+      "new": "y=x^{2}-4ax+3a^{2}-3a`",
+      "type": "equation",
+      "frequency": 1,
+      "schools": [
+        "국제고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": []
+    },
+    {
+      "old": "f(a)",
+      "new": "f left(a right)`",
+      "type": "equation",
+      "frequency": 2,
+      "schools": [
+        "국제고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": true,
+      "context_examples": []
+    },
+    {
+      "old": "-1 &lt;= a &lt;= 3",
+      "new": "-1 le a le 3`",
+      "type": "equation",
+      "frequency": 1,
+      "schools": [
+        "국제고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": []
+    },
+    {
+      "old": "만 족시키",
+      "new": "만족시키는",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "금호고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "에 대하여 를 만 족시키 상수 의 값은"
+      ]
+    },
+    {
+      "old": "아보",
+      "new": "아닌",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "금호고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "중 의 해가 아보 것은 5 3"
+      ]
+    },
+    {
+      "old": "이차 정사각행렬",
+      "new": "이차정사각행렬",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "금호고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "s 6 점 이차 정사각행렬 일 때 행렬"
+      ]
+    },
+    {
+      "old": "뚜",
+      "new": "두",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "금호고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "3 9 점 뚜 이차함수 의 그래프가"
+      ]
+    },
+    {
+      "old": "그림 과",
+      "new": "그림과",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "금호고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "의 그래프가 다음 그림 과 같을 때 를"
+      ]
+    },
+    {
+      "old": "있 다",
+      "new": "있다",
+      "type": "text",
+      "frequency": 2,
+      "schools": [
+        "금호고",
+        "동아여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": true,
+      "context_examples": [
+        "세 상자 가 있 다 한 개의 동전을",
+        "를 연결하는 도로망이 있 다 주어진 도로를 이용하여"
+      ]
+    },
+    {
+      "old": "개수 가",
+      "new": "개수가",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "금호고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "들어 있는 공의 개수 가 홀수일 때 상자"
+      ]
+    },
+    {
+      "old": "물어",
+      "new": "들어",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "금호고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "때 상자 에 물어 있는 공의 개수가"
+      ]
+    },
+    {
+      "old": "이 하인",
+      "new": "이하인",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "금호고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "개수가 4 개 이 하인 경우의 수는 안"
+      ]
+    },
+    {
+      "old": "만족 시키는",
+      "new": "만족시키는",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "금호고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "정의한다 이때 를 만족 시키는 실수 에 대하여"
+      ]
+    },
+    {
+      "old": "다 음",
+      "new": "해설",
+      "type": "text",
+      "frequency": 2,
+      "schools": [
+        "금호고",
+        "대동고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "의 개수는 lt 다 음 gt 가 의",
+        "수직선 위에 나타내면 다 음 그림과 같을 때"
+      ]
+    },
+    {
+      "old": "이등분선 과",
+      "new": "이등분선과",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "금호고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "ABC 에서 의 이등분선 과 변 BC 의"
+      ]
+    },
+    {
+      "old": "앞 에",
+      "new": "앞에",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "금호고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "있고 마부는 가장 앞 에 있는 3 인용"
+      ]
+    },
+    {
+      "old": "좌 석에",
+      "new": "좌석에",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "금호고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "있는 10 개의 좌 석에 앉는 경우의 수는"
+      ]
+    },
+    {
+      "old": "이웃하 는",
+      "new": "이웃하는",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "금호고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "앞뒤로 앉는 경우는 이웃하 는 경우로 보지 않는다"
+      ]
+    },
+    {
+      "old": "모뚠",
+      "new": "모든",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "금호고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "5 1 점 모뚠 실수 에 대하여"
+      ]
+    },
+    {
+      "old": "게수가 1",
+      "new": "계수가",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "금호고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "1 점 최고차항의 게수가 1 인 이차힘수 와"
+      ]
+    },
+    {
+      "old": "이차힘수",
+      "new": "이차함수",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "금호고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "게수가 1 인 이차힘수 와 최고차항의 게수가"
+      ]
+    },
+    {
+      "old": "게수가 2",
+      "new": "계수가",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "금호고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "이차힘수 와 최고차항의 게수가 2 인 이차함수 가"
+      ]
+    },
+    {
+      "old": "모 든",
+      "new": "모든",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "금호고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "두 정수 의 모 든 순서쌍 의 구는"
+      ]
+    },
+    {
+      "old": "8 까지 의",
+      "new": "까지의",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "금호고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "정사각형에 1 에서 8 까지 의 자연수가 하나씩 적혀있다"
+      ]
+    },
+    {
+      "old": "경우 의",
+      "new": "경우의",
+      "type": "text",
+      "frequency": 3,
+      "schools": [
+        "금호고",
+        "대성여고",
+        "동아여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": true,
+      "context_examples": [
+        "정사각형에 색을 칠하는 경우 의 수를 구하시오 단",
+        "개충에서 모두 내리는 경우 의 수는 X 단",
+        "D 지점으로 가는 경우 의 수를 구하시오 단"
+      ]
+    },
+    {
+      "old": "같 은",
+      "new": "같은",
+      "type": "text",
+      "frequency": 2,
+      "schools": [
+        "금호고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": true,
+      "context_examples": [
+        "이 적힌 정사각형에는 같 은 색을 칠한다 나",
+        "이 적힌 정사각형에는 같 은 색을 칠한다 다"
+      ]
+    },
+    {
+      "old": "A=LEFT (matrix{ a &amp; 3 # 6 &amp; b }RIGHT ), B=LEFT (matrix{ 2 &amp; 3 # 6 &amp; 3 }RIGHT )",
+      "new": "A`= left( rpile{ a &amp;&amp; 3 # 6 &amp;&amp; b } right)",
+      "type": "equation",
+      "frequency": 1,
+      "schools": [
+        "금호고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": []
+    },
+    {
+      "old": "A=B",
+      "new": "B`= left( rpile{ 2 &amp;&amp; 3 # 6 &amp;&amp; 3 } right)`",
+      "type": "equation",
+      "frequency": 1,
+      "schools": [
+        "금호고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": []
+    },
+    {
+      "old": "a+b",
+      "new": "A`=B``",
+      "type": "equation",
+      "frequency": 1,
+      "schools": [
+        "금호고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": []
+    },
+    {
+      "old": "G=2 ~ b=3",
+      "new": "a+b`",
+      "type": "equation",
+      "frequency": 1,
+      "schools": [
+        "금호고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": []
+    },
+    {
+      "old": "x^{4}=1",
+      "new": "x^{4}=1`",
+      "type": "equation",
+      "frequency": 1,
+      "schools": [
+        "금호고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": []
+    },
+    {
+      "old": "성 분을",
+      "new": "성분을",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "금호중앙여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "에 대하여 의 성 분을 이라 할 때"
+      ]
+    },
+    {
+      "old": "아래",
+      "new": "다음",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "금호중앙여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "수직선 위에 나타내면 아래 그림과 같다 이때"
+      ]
+    },
+    {
+      "old": "를 만족 시키는",
+      "new": "을 만족시키는",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "금호중앙여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "같다 이때 연립부등식 를 만족 시키는 정수 의 개수는"
+      ]
+    },
+    {
+      "old": "꼭짓점 으로",
+      "new": "꼭짓점으로",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "금호중앙여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "개수를 개의 점을 꼭짓점 으로 하는 사각형의 개수를"
+      ]
+    },
+    {
+      "old": "공통 근이",
+      "new": "공통근이",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "금호중앙여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "이차방정식의 근 중에서 공통 근이 아닌 두 근의"
+      ]
+    },
+    {
+      "old": "공 이 2",
+      "new": "공이",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "금호중앙여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "같은 숫자가 적힌 공 이 2 개뿐인 경우의 수는"
+      ]
+    },
+    {
+      "old": "이차청사각행렬",
+      "new": "이차정사각행렬",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "금호중앙여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "참조 17 두 이차청사각행렬 에 대하여 보기"
+      ]
+    },
+    {
+      "old": "것만 을",
+      "new": "것만을",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "금호중앙여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "보기 에서 옳은 것만 을 있는 대로 고른"
+      ]
+    },
+    {
+      "old": "존재하 지만",
+      "new": "존재하지만",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "금호중앙여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "연립이차부등식 의 해는 존재하 지만 정수인 해는 존재하지"
+      ]
+    },
+    {
+      "old": "싹수가",
+      "new": "짝수가",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "금호중앙여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "때 의 값이 싹수가 되는 경우의 수"
+      ]
+    },
+    {
+      "old": "갖도 록",
+      "new": "갖도록",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "금호중앙여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "한 쌍의 해를 갖도 록 하는 실수 의"
+      ]
+    },
+    {
+      "old": "한 다",
+      "new": "한다",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "대광여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "1 가지가 있다고 한 다 대전에서 여수를 거쳐"
+      ]
+    },
+    {
+      "old": "적혀있다",
+      "new": "적혀 있다",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "대광여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "의 숫자가 각각 적혀있다 이를 모 두"
+      ]
+    },
+    {
+      "old": "모 두",
+      "new": "모두",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "대광여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "각각 적혀있다 이를 모 두 이용하여 세 자리"
+      ]
+    },
+    {
+      "old": "존재하도 록",
+      "new": "존재하도록",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "대광여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "한 쌍 만 존재하도 록 하는 실수 의"
+      ]
+    },
+    {
+      "old": "싹수",
+      "new": "짝수",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "대광여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "부터 35 까지의 싹수 중에서 서로 다른"
+      ]
+    },
+    {
+      "old": "상자 에서",
+      "new": "상자에서",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "대광여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "카드가 들어 있는 상자 에서 카드를 한 장씩"
+      ]
+    },
+    {
+      "old": "적혀있는",
+      "new": "적혀 있는",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "대광여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "번째 꺼낸 카드에 적혀있는 수를 라 할"
+      ]
+    },
+    {
+      "old": "되도 록",
+      "new": "되도록",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "대광여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "개수가 2 가 되도 록 하는 실수 의"
+      ]
+    },
+    {
+      "old": "부호기 따른",
+      "new": "부호가 다른",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "대광여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "계수의 절댓값이 같고 부호기 따른 두 이차함수 가"
+      ]
+    },
+    {
+      "old": "정수 를",
+      "new": "정수를",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "대광여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "서로 다른 세 정수 를 근으로 갖는다 값은"
+      ]
+    },
+    {
+      "old": "음수 가",
+      "new": "음수가",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "대광여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "곱 의 성분이 음수 가 아닐 때 실수"
+      ]
+    },
+    {
+      "old": "배점",
+      "new": "lt 해설 gt",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "대광여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "지필평가 교과목별 정답 배점 2025 학년도 1"
+      ]
+    },
+    {
+      "old": "학년도 제",
+      "new": "년 1 학년",
+      "type": "text",
+      "frequency": 2,
+      "schools": [
+        "대동고",
+        "동성고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "2025 학년도 제 1 학기 2",
+        "원 안 2025 학년도 제 1 학년 1"
+      ],
+      "blacklisted": true
+    },
+    {
+      "old": "14 번",
+      "new": "2025",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "대동고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "선택형 1 번 14 번 1 삼차방정식 의"
+      ]
+    },
+    {
+      "old": "만족하시키는",
+      "new": "만족시키는",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "대동고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "점 6 을 만족하시키는 자연수 에 대하여"
+      ]
+    },
+    {
+      "old": "방법 의",
+      "new": "방법의",
+      "type": "text",
+      "frequency": 2,
+      "schools": [
+        "대동고",
+        "동신여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": true,
+      "context_examples": [
+        "지불할 수 있는 방법 의 수를 지불하는 금액의",
+        "부회장을 뽑는 모든 방법 의 수 1 점"
+      ]
+    },
+    {
+      "old": "만족 시킬",
+      "new": "만족시킬",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "대동고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "두 조건을 모두 만족 시킬 때 삼차방정식 의"
+      ]
+    },
+    {
+      "old": "조건 을",
+      "new": "조건을",
+      "type": "text",
+      "frequency": 2,
+      "schools": [
+        "대동고",
+        "대성여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": true,
+      "context_examples": [
+        "나열할 때 다음 조건 을 만족시키도록 나열하는 경우의",
+        "이차다항식 가 다음 조건 을 모두 만족시킬 때"
+      ]
+    },
+    {
+      "old": "사용해 도",
+      "new": "사용해도",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "대동고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "같은 색을 중복하여 사용해 도 좋으나 인접한 영역은"
+      ]
+    },
+    {
+      "old": "수 를",
+      "new": "수를",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "대동고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "색을 칠하는 경우의 수 를 이라 할 때"
+      ]
+    },
+    {
+      "old": "정 수",
+      "new": "정수",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "대동고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "해가 존재하도록 하는 정 수 를 모두 겆하시어"
+      ]
+    },
+    {
+      "old": "으로",
+      "new": "로",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "대동고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "대하여 다항식 를 으로 나눈 나머지를 구하시오"
+      ]
+    },
+    {
+      "old": "섯",
+      "new": "첫",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "대성여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "번 던질 때 섯 번째는 소수의 눈"
+      ]
+    },
+    {
+      "old": "눈 이",
+      "new": "눈이",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "대성여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "섯 번째는 소수의 눈 이 나오고 두 번째는"
+      ]
+    },
+    {
+      "old": "나마지를",
+      "new": "나머지를",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "대성여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "로 나누었을 때의 나마지를 구하면 3 3"
+      ]
+    },
+    {
+      "old": "헤는",
+      "new": "해는",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "대성여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "가 부등식 의 헤는 이다 나 방정식"
+      ]
+    },
+    {
+      "old": "붕지에는",
+      "new": "봉지에는",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "대성여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "먹으려고 한다 각 붕지에는 한 덩어리의 밤"
+      ]
+    },
+    {
+      "old": "9 조각으 로",
+      "new": "조각으로",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "대성여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "밤 식빵을 똑같이 9 조각으 로 각각 자른 후"
+      ]
+    },
+    {
+      "old": "먹 으면",
+      "new": "먹으면",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "대성여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "명이 4 조각씩 먹 으면 밤 식빵이 한"
+      ]
+    },
+    {
+      "old": "초대",
+      "new": "최대",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "대성여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "이때 이 동아리의 초대 학생 수를 구하면"
+      ]
+    },
+    {
+      "old": "5 충까지 울라",
+      "new": "층까지 올라",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "대성여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "함께 탄 후 5 충까지 울라 오는 동안 3"
+      ]
+    },
+    {
+      "old": "3 개충에서",
+      "new": "개 중에서",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "대성여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "울라 오는 동안 3 개충에서 모두 내리는 경우"
+      ]
+    },
+    {
+      "old": "숭강기를",
+      "new": "승강기를",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "대성여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "수는 X 단 숭강기를 새로 탄 사람은"
+      ]
+    },
+    {
+      "old": "각충에서는",
+      "new": "각 층에서는",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "대성여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "없으며 3 개의 각충에서는 적어도 1 명이"
+      ]
+    },
+    {
+      "old": "한을",
+      "new": "합을",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "대성여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "의 모든 성분의 한을 구하면 4 2"
+      ]
+    },
+    {
+      "old": "부둥식",
+      "new": "부등식",
+      "type": "text",
+      "frequency": 2,
+      "schools": [
+        "대성여고",
+        "동신여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": true,
+      "context_examples": [
+        "의 두 근이 부둥식 의 해의 범위를",
+        "실수 에 대하여 부둥식 이 성립하도복 하는"
+      ]
+    },
+    {
+      "old": "하 는",
+      "new": "하는",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "대성여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "해의 범위를 만족하도록 하 는 모든 정수 의"
+      ]
+    },
+    {
+      "old": "합수",
+      "new": "함수",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "대성여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "조건을 만족시킨다 가 합수 의 그래프는 축과"
+      ]
+    },
+    {
+      "old": "울은",
+      "new": "옳은",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "대성여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "때 보기 에서 울은 것만을 있는 대로"
+      ]
+    },
+    {
+      "old": "판매한 다",
+      "new": "판매한다",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "대성여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "어느 한 마트에서만 판매한 다 마트에서는 중 어느"
+      ]
+    },
+    {
+      "old": "판매 한다",
+      "new": "판매한다",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "대성여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "어느 한 물건만 판매 한다 마트에서는 모두 판매한다"
+      ]
+    },
+    {
+      "old": "범위 는",
+      "new": "범위는",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "대성여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "실수 의 값의 범위 는 일 때 의"
+      ]
+    },
+    {
+      "old": "6 적 17",
+      "new": "8 점",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "대성여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "값을 구하면 4 6 적 17 모든 실수 에"
+      ]
+    },
+    {
+      "old": "만들때 3",
+      "new": "만들 때",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "대성여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "네 자리 자연수를 만들때 3 의 배수의 개수는"
+      ]
+    },
+    {
+      "old": "조진 을",
+      "new": "조건을",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "대성여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "삼차방정식 은 다음 조진 을 만족시키는 를 허근으로"
+      ]
+    },
+    {
+      "old": "이 때",
+      "new": "이때",
+      "type": "text",
+      "frequency": 3,
+      "schools": [
+        "대성여고",
+        "동신여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": true,
+      "context_examples": [
+        "gt 가 나 이 때 의 값을 구하고",
+        "에 대하여 이다 이 때 의 값을 구하면",
+        "할 때 이다 이 때 의 값은 4"
+      ]
+    },
+    {
+      "old": "이차정사가행릴",
+      "new": "이차정사각행렬",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "대성여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "서답형 3 두 이차정사가행릴 가 을 만족시킬"
+      ]
+    },
+    {
+      "old": "싱립함을",
+      "new": "성립함을",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "대성여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "는 영행렬 가 싱립함을 보이시오 4 점"
+      ]
+    },
+    {
+      "old": "4 점",
+      "new": "2",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "대성여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "가 싱립함을 보이시오 4 점 의 값을 구하고"
+      ]
+    },
+    {
+      "old": "순서 쌍",
+      "new": "순서쌍",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "동명고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "대하여 울 만족시키는 순서 쌍 의 개수를 구하면"
+      ]
+    },
+    {
+      "old": "바나다를",
+      "new": "바나나를",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "동명고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "11 사과 배 바나다를 포함한 과일 9"
+      ]
+    },
+    {
+      "old": "반 나는",
+      "new": "바나나는",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "동명고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "종큐를 태할 때 반 나는 포함하지 않고 사과와"
+      ]
+    },
+    {
+      "old": "비는",
+      "new": "배는",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "동명고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "포함하지 않고 사과와 비는 모두 포함하는 경우의"
+      ]
+    },
+    {
+      "old": "팀울",
+      "new": "팀을",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "동명고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "D 극 한 팀울 이루어 출전할 때"
+      ]
+    },
+    {
+      "old": "찾율",
+      "new": "찾을",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "동명고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "13 아래 그림에서 찾율 수 있는 크고"
+      ]
+    },
+    {
+      "old": "존재 햐도록",
+      "new": "존재하도록",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "동성고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "오직 한 개 존재 햐도록 하는 모드 실수"
+      ]
+    },
+    {
+      "old": "모드",
+      "new": "모든",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "동성고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "존재 햐도록 하는 모드 실수 의 값의"
+      ]
+    },
+    {
+      "old": "갑을",
+      "new": "같을",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "동성고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "이차부등식 의 해와 갑을 때 상수 에"
+      ]
+    },
+    {
+      "old": "만족시키 는",
+      "new": "만족시키는",
+      "type": "text",
+      "frequency": 2,
+      "schools": [
+        "동성고",
+        "동아여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": true,
+      "context_examples": [
+        "대한 연립부등식 을 만족시키 는 정수 의 개수가"
+      ]
+    },
+    {
+      "old": "최댓값 의",
+      "new": "최댓값의",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "동성고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "실수 의 최솟값과 최댓값 의 합은 4 점"
+      ]
+    },
+    {
+      "old": "어릿이끼리",
+      "new": "어린이끼리",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "동성고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "하려고 한다 이때 어릿이끼리 서로 이웃하지 않도록"
+      ]
+    },
+    {
+      "old": "대표 뿔 빱으러고",
+      "new": "대표를 뽑으려고",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "동성고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "동아리에서 2 명의 대표 뿔 빱으러고 한다 여학생이 적어도"
+      ]
+    },
+    {
+      "old": "만족시 키는",
+      "new": "만족시키는",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "동성고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "이때 부등식 을 만족시 키는 자연수 의 최솟값은"
+      ]
+    },
+    {
+      "old": "자역수의",
+      "new": "자연수의",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "동성고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "만족시키고 60000 이하인 자역수의 개수는 5 점"
+      ]
+    },
+    {
+      "old": "찹석한",
+      "new": "참석한",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "동성고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "11 쌍의 부부가 찹석한 모임에서 남자는 자신의"
+      ]
+    },
+    {
+      "old": "휫수률",
+      "new": "횟수를",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "동성고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "명의 나눈 악수의 휫수률 구하는 과정을 서술하시오"
+      ]
+    },
+    {
+      "old": "주사 위를",
+      "new": "주사위를",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "동성고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "다른 세 개의 주사 위를 동시에 던질 때"
+      ]
+    },
+    {
+      "old": "모는 성뿐의",
+      "new": "모든 성분의",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "동성고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "에 대하여 의 모는 성뿐의 합이 15 이라고"
+      ]
+    },
+    {
+      "old": "과정옵",
+      "new": "과정을",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "동성고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "의 값을 구하는 과정옵 서술하시오 6 점"
+      ]
+    },
+    {
+      "old": "넓이보 다는",
+      "new": "넓이보다는",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "동성고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "넓이는 삼각형 의 넓이보 다는 작고 삼각형 의"
+      ]
+    },
+    {
+      "old": "x^{2}+2(k+1) x+7 &lt;= 0",
+      "new": "x^{2}+2 left(k+1 right)x+7 le 0`",
+      "type": "equation",
+      "frequency": 1,
+      "schools": [
+        "동성고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": []
+    },
+    {
+      "old": "lt br gt",
+      "new": "해가 없다 동신여고",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "동신여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "점 또는 또는 lt br gt 3 모음 를"
+      ]
+    },
+    {
+      "old": "아웃하노록",
+      "new": "이웃하도록",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "동신여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "나열하려 한다 모음끼리 아웃하노록 나열하는 경우의 수를"
+      ]
+    },
+    {
+      "old": "연릭이차방정식",
+      "new": "연립이차방정식",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "동신여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "4 에 대한 연릭이차방정식 의 정수 해를"
+      ]
+    },
+    {
+      "old": "정수 해를",
+      "new": "정수해를",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "동신여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "대한 연릭이차방정식 의 정수 해를 라 할 때"
+      ]
+    },
+    {
+      "old": "응식이",
+      "new": "등식이",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "동신여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "아레의 보기에 제시된 응식이 참이 되도록 하는"
+      ]
+    },
+    {
+      "old": "만족시킨 다",
+      "new": "만족시킨다",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "동신여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "성분 가 를 만족시킨 다 가 성립할 때"
+      ]
+    },
+    {
+      "old": "성립하도복",
+      "new": "성립하도록",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "동신여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "대하여 부둥식 이 성립하도복 하는 정수 의"
+      ]
+    },
+    {
+      "old": "2 청수 위",
+      "new": "정수 의",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "동신여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "연립부등식 을 만족시키는 2 청수 위 개수가 2 가"
+      ]
+    },
+    {
+      "old": "정 수 s",
+      "new": "정수",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "동신여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "가 되도록 하는 정 수 s 의 개수는 4"
+      ]
+    },
+    {
+      "old": "계 수가 1",
+      "new": "계수가",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "동신여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "실수인 는 최고차항의 계 수가 1 인 삼차식이다 의"
+      ]
+    },
+    {
+      "old": "대 하여 를",
+      "new": "대하여 을",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "동신여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "세 근 에 대 하여 를 만족하는 모든 의"
+      ]
+    },
+    {
+      "old": "이차함주",
+      "new": "이차함수",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "동신여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "참조 19 두 이차함주 가 다음 조건을"
+      ]
+    },
+    {
+      "old": "학생 을",
+      "new": "학생을",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "동신여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "명은 2 학년 학생 을 뽑는 것우의 수"
+      ]
+    },
+    {
+      "old": "것우의",
+      "new": "경우의",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "동신여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "학생 을 뽑는 것우의 수 2 점"
+      ]
+    },
+    {
+      "old": "질문이",
+      "new": "질문에",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "동신여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "에 대하여 다음 질문이 답하시오 6 점"
+      ]
+    },
+    {
+      "old": "해 가",
+      "new": "해가",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "동아여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "대한 연립부등식 의 해 가 이다 의 값은"
+      ]
+    },
+    {
+      "old": "매한",
+      "new": "대한",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "동아여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "점 8 에 매한 연립부등식 을 만족시키는"
+      ]
+    },
+    {
+      "old": "영화관람 을",
+      "new": "영화관람을",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "동아여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "5 명의 학생이 영화관람 을 하려고 한아 A"
+      ]
+    },
+    {
+      "old": "한아 A",
+      "new": "한다",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "동아여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "영화관람 을 하려고 한아 A 는 같은 열에서"
+      ]
+    },
+    {
+      "old": "수술이",
+      "new": "lt 보기 gt",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "동아여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "이차정사각행렬 에 대하여 수술이 에서 옳을 것만을"
+      ]
+    },
+    {
+      "old": "옳을",
+      "new": "옳은",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "동아여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "대하여 수술이 에서 옳을 것만을 있는 대로"
+      ]
+    },
+    {
+      "old": "계승 을",
+      "new": "계승을",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "동아여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "등식 이 성립함을 계승 을 이용하여 증명하시오 7"
+      ]
+    },
+    {
+      "old": "서술형 5 소든",
+      "new": "모든",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "동아여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "증명하시오 7 점 서술형 5 소든 실수 에 대하여"
+      ]
+    },
+    {
+      "old": "값 을",
+      "new": "값을",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "동아여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "성립할 때 의 값 을 구하시오 단 은"
+      ]
+    },
+    {
+      "old": "b_{-2}^{-5}",
+      "new": "-5",
+      "type": "equation",
+      "frequency": 1,
+      "schools": [
+        "동아여고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": []
+    },
+    {
+      "old": "학년 공통수학",
+      "new": "번 2025",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "문성고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "gt 제 1 학년 공통수학 1 과 공통과정"
+      ]
+    },
+    {
+      "old": "테면",
+      "new": "빼면",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "문성고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "가서 잡는다 이를 테면 체스판에 2 개"
+      ]
+    },
+    {
+      "old": "P2 뫈",
+      "new": "다음의",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "문성고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "잡을 수 없다 P2 뫈 그림 2 와"
+      ]
+    },
+    {
+      "old": "예정이 라고",
+      "new": "예정이라고",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "문성고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "로 바꾸어 구독할 예정이 라고 하였다 한편 회사"
+      ]
+    },
+    {
+      "old": "예정이라고 하였다",
+      "new": "예정이다",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "문성고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "로 바꾸어 구독할 예정이라고 하였다 두 회사 의"
+      ]
+    },
+    {
+      "old": "재구독",
+      "new": "재 구독",
+      "type": "text",
+      "frequency": 2,
+      "schools": [
+        "문성고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "의 OTT 서비스 재구독 비율을 아래의 표를",
+        "행렬로 표현한 후 재구독 비율이 매월 동일하게"
+      ]
+    },
+    {
+      "old": "아래의",
+      "new": "다음의",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "문성고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "서비스 재구독 비율을 아래의 표를 활용하여 행렬로"
+      ]
+    },
+    {
+      "old": "점유 율을",
+      "new": "점유율을",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "문성고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "나타내고 현재의 시장 점유 율을 행렬로 표현한 후"
+      ]
+    },
+    {
+      "old": "과정 을",
+      "new": "과정을",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "문성고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "점유율을 구하고 그 과정 을 설명하시오 4 0"
+      ]
+    },
+    {
+      "old": "해구독",
+      "new": "현재 재구독",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "문성고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "회사의 재구독 비율표 해구독 회사 A 회사"
+      ]
+    },
+    {
+      "old": "아래 로",
+      "new": "아래로",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "문성고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "일 에서 시작하여 아래 로 내려가면서 바로 이웃한"
+      ]
+    },
+    {
+      "old": "우일신이라는",
+      "new": "우일신 이라는",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "문성고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "글자씩 택하여 일신일신 우일신이라는 단어를 만들 수"
+      ]
+    },
+    {
+      "old": "색칠하 는",
+      "new": "색칠하는",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "문성고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "연속하여 색칠하려고 한다 색칠하 는 모양의 수를 타일에"
+      ]
+    },
+    {
+      "old": "방 법의",
+      "new": "방법의",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "문성고"
+      ],
+      "first_seen": "2026-05-15",
+      "approved": false,
+      "context_examples": [
+        "모양을 이용하여 색칠하는 방 법의 수를 이라 할"
+      ]
+    }
+  ]
+}

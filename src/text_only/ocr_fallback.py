@@ -36,6 +36,10 @@ from pathlib import Path
 import anthropic
 from dotenv import load_dotenv
 
+from src.learn.apply_corrections import apply_corrections, summarize_log
+
+_CORRECTIONS_PATH = Path(__file__).resolve().parent.parent / "learn" / "corrections.json"
+
 load_dotenv()
 
 # ── 자동 Vision 재처리 안전 스위치 ─────────────────────────────────────
@@ -568,6 +572,21 @@ def apply_fallback(md: str, pdf_path: Path) -> str:
     사용 예 (pdf_to_text.py에 한 줄 삽입):
         md = apply_fallback(md, pdf_path)
     """
+    # ── 1단계: 승인된 교정 사전 적용 ────────────────────────────────────
+    if _CORRECTIONS_PATH.exists():
+        md, corr_log = apply_corrections(md, _CORRECTIONS_PATH, domain="markdown")
+        applied = [e for e in corr_log if e.get("count", 0) > 0]
+        if applied:
+            print(f"  [corrections] {len(applied)}건 적용:")
+            for e in applied:
+                print(f"    [{e['old']}]→[{e['new']}] {e['count']}회")
+        else:
+            print("  [corrections] 해당 교정 없음")
+
+    # ── 2단계: 문서별 알려진 OCR 오류 교정 ──────────────────────────────
+    # 광주고 14번: g(4)= 를 Mathpix가 g(4)\neq 로 오인
+    md = re.sub(r'g\(4\)\s*\\neq', 'g(4)=', md)
+
     damaged, reasons = _has_damage(md)
 
     if not damaged:
