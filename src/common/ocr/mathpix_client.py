@@ -1,4 +1,5 @@
 import base64
+import hashlib
 import json
 import os
 import re
@@ -13,6 +14,39 @@ from dotenv import load_dotenv
 load_dotenv()
 
 _API_BASE = "https://api.mathpix.com/v3"
+
+# pdf_id 영구 캐시 — 같은 PDF 재실행 시 재과금 방지
+_PDF_ID_CACHE_DIR = Path(__file__).resolve().parent.parent.parent.parent / ".mathpix_cache"
+_PDF_ID_CACHE_PATH = _PDF_ID_CACHE_DIR / "pdf_ids.json"
+
+
+def _pdf_sha256(pdf_path: Path) -> str:
+    h = hashlib.sha256()
+    h.update(pdf_path.read_bytes())
+    return h.hexdigest()
+
+
+def load_pdf_id_cache() -> dict[str, str]:
+    if not _PDF_ID_CACHE_PATH.exists():
+        return {}
+    try:
+        return json.loads(_PDF_ID_CACHE_PATH.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return {}
+
+
+def save_pdf_id_to_cache(pdf_path: Path, pdf_id: str) -> None:
+    cache = load_pdf_id_cache()
+    key = _pdf_sha256(pdf_path)
+    cache[key] = pdf_id
+    _PDF_ID_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    _PDF_ID_CACHE_PATH.write_text(
+        json.dumps(cache, indent=2), encoding="utf-8"
+    )
+
+
+def lookup_pdf_id(pdf_path: Path) -> str | None:
+    return load_pdf_id_cache().get(_pdf_sha256(pdf_path))
 _FORMATS = ["text", "latex_styled", "data", "mmd"]
 _DATA_OPTIONS = {"include_latex": True, "include_table_html": True}
 

@@ -1,20 +1,21 @@
 """
-야간 배치 — samples/11b/ 전체 쌍 정합 + JSONL 저장
+야간 배치 — PDF+HWPX 쌍 정합 + JSONL 저장
 
 사용법:
-  py scripts/batch_align.py                 # 전체 실행
-  py scripts/batch_align.py --dry-run       # OCR 호출 없이 캐시만 처리
-  py scripts/batch_align.py --limit N       # N쌍만 처리
+  py scripts/batch_align.py                       # samples/11b/ 전체 실행
+  py scripts/batch_align.py --source-dir samples/2024
+  py scripts/batch_align.py --dry-run             # OCR 호출 없이 캐시만 처리
+  py scripts/batch_align.py --limit N             # N쌍만 처리
 
 출력:
-  samples/11b/_aligned_dataset.jsonl
-  samples/11b/_batch_log.txt
+  <source-dir>/_aligned_dataset.jsonl
+  <source-dir>/_batch_log.txt
 
 한도:
   Mathpix: $20 cap (페이지당 ~$0.007, 6페이지 기준 쌍당 ~$0.04)
-  최대 약 500쌍 처리 가능 (11b는 ~30쌍)
 """
 import json
+import re
 import sys
 import time
 import traceback
@@ -27,9 +28,6 @@ sys.stdout.reconfigure(encoding="utf-8")
 from src.learn.pair_align import align
 
 ROOT      = Path(__file__).resolve().parent.parent
-DIR_11B   = ROOT / "samples" / "11b"
-OUT_JSONL = DIR_11B / "_aligned_dataset.jsonl"
-OUT_LOG   = DIR_11B / "_batch_log.txt"
 
 # Mathpix 비용 한도 (USD) — 초과 시 중단
 MATHPIX_COST_CAP = 20.0
@@ -48,51 +46,69 @@ def _log(msg: str, f=None) -> None:
         f.flush()
 
 
-def _find_pairs() -> list[tuple[Path, Path]]:
+def _find_pairs(source_dir: Path) -> list[tuple[Path, Path]]:
     """PDF + HWPX 쌍 탐색 (파일명 stem 일치 기준)."""
     pairs = []
-    for pdf in sorted(DIR_11B.glob("*.pdf")):
+    for pdf in sorted(source_dir.glob("*.pdf")):
         hwpx = pdf.with_suffix(".hwpx")
         if hwpx.exists():
             pairs.append((pdf, hwpx))
     return pairs
 
 
-def _cache_path(pdf: Path) -> Path:
+def _cache_path(pdf: Path, source_dir: Path) -> Path:
     """PDF → 캐시 마크다운 경로."""
-    stem = pdf.stem.strip("[]")   # "[2025_1_1_b_...]" → "2025_1_1_b_..."
-    return DIR_11B / f"_{stem}_raw.md"
+    stem = pdf.stem.strip("[]")
+    # 대괄호/괄호/공백 안전화 (samples/2024 파일명 보호)
+    safe_stem = re.sub(r"[^\w\-]+", "_", stem).strip("_")
+    return source_dir / f"_{safe_stem}_raw.md"
 
 
 def _source_name(pdf: Path) -> str:
-    """파일명에서 소스 태그 추출 (예: 2025_1_1_b_공수1_광주고)."""
-    return pdf.stem.strip("[]")
+    """파일명에서 소스 태그 추출. 파일시스템·JSONL 키로 안전한 형태."""
+    stem = pdf.stem.strip("[]")
+    return re.sub(r"[^\w\-]+", "_", stem).strip("_")
 
 
-def _fetch_md(pdf: Path, cache: Path, dry_run: bool, log_f) -> str | None:
-    """마크다운 취득: 캐시 → Mathpix 호출. dry_run이면 캐시만 사용."""
+def _fetch_md(pdf: Path, cache: Path, dry_run: bool, log_f) -> tuple[str | None, bool]:
+    """마크다운 취득: 캐시 → pdf_id 캐시 → Mathpix 신규 제출.
+
+    반환: (markdown_or_None, did_new_submit)
+      did_new_submit=True 이면 신규 OCR 비용 발생.
+    """
     if cache.exists():
         _log(f"  캐시 사용: {cache.name}", log_f)
-        return cache.read_text(encoding="utf-8")
+        return cache.read_text(encoding="utf-8"), False
     if dry_run:
         _log(f"  캐시 없음 + dry-run → skip: {pdf.name}", log_f)
-        return None
-    from src.common.ocr.mathpix_client import MathpixClient
+        return None, False
+    from src.common.ocr.mathpix_client import (
+        MathpixClient, lookup_pdf_id, save_pdf_id_to_cache,
+    )
     client = MathpixClient()
-    _log(f"  Mathpix 제출: {pdf.name}", log_f)
     t0 = time.time()
     try:
-        pdf_id = client.submit_pdf(pdf)
-        _log(f"  pdf_id={pdf_id}", log_f)
-        client.poll_pdf(pdf_id, progress=True)
-        md = client.fetch_pdf_markdown(pdf_id)
+        # pdf_id 영구 캐시 확인 — 같은 PDF는 재제출 없이 결과만 fetch
+        cached_id = lookup_pdf_id(pdf)
+        if cached_id:
+            _log(f"  pdf_id 캐시 hit: {cached_id} → 재제출 없이 fetch", log_f)
+            md = client.fetch_pdf_markdown(cached_id)
+            did_new_submit = False
+        else:
+            _log(f"  Mathpix 신규 제출: {pdf.name}", log_f)
+            pdf_id = client.submit_pdf(pdf)
+            save_pdf_id_to_cache(pdf, pdf_id)
+            _log(f"  pdf_id={pdf_id} (영구 캐시 저장)", log_f)
+            client.poll_pdf(pdf_id, progress=True)
+            md = client.fetch_pdf_markdown(pdf_id)
+            did_new_submit = True
         elapsed = time.time() - t0
         _log(f"  완료: {len(md):,}자 ({elapsed:.1f}s)", log_f)
         cache.write_text(md, encoding="utf-8")
-        return md
+        return md, did_new_submit
     except Exception as e:
         _log(f"  OCR 실패: {e}", log_f)
-        return None
+        return None, False
 
 
 def main() -> None:
@@ -103,10 +119,23 @@ def main() -> None:
         idx = args.index("--limit")
         limit = int(args[idx + 1])
 
+    # --source-dir 인자 (기본: samples/11b)
+    source_dir = ROOT / "samples" / "11b"
+    if "--source-dir" in args:
+        idx = args.index("--source-dir")
+        source_dir = (ROOT / args[idx + 1]).resolve() if not Path(args[idx + 1]).is_absolute() else Path(args[idx + 1])
+
+    if not source_dir.is_dir():
+        print(f"오류: source-dir 없음: {source_dir}")
+        sys.exit(1)
+
+    out_jsonl = source_dir / "_aligned_dataset.jsonl"
+    out_log   = source_dir / "_batch_log.txt"
+
     if dry_run:
         print("  [dry-run 모드: OCR 호출 없음]")
 
-    pairs = _find_pairs()
+    pairs = _find_pairs(source_dir)
     if limit:
         pairs = pairs[:limit]
 
@@ -118,10 +147,10 @@ def main() -> None:
     estimated_cost = 0.0
 
     # 출력 파일 열기 (append 모드 — 재실행 시 이어쓰기)
-    OUT_JSONL.parent.mkdir(parents=True, exist_ok=True)
+    out_jsonl.parent.mkdir(parents=True, exist_ok=True)
     seen_sources: set[str] = set()
-    if OUT_JSONL.exists():
-        with open(OUT_JSONL, encoding="utf-8") as f:
+    if out_jsonl.exists():
+        with open(out_jsonl, encoding="utf-8") as f:
             for line in f:
                 try:
                     rec = json.loads(line)
@@ -131,13 +160,14 @@ def main() -> None:
 
     print("─" * 62)
     print(f"  배치 시작: {total_pairs}쌍  (이미 완료: {len(seen_sources)}개 소스)")
+    print(f"  source-dir: {source_dir.relative_to(ROOT)}")
     print("─" * 62)
 
     with (
-        open(OUT_LOG, "a", encoding="utf-8") as log_f,
-        open(OUT_JSONL, "a", encoding="utf-8") as jsonl_f,
+        open(out_log, "a", encoding="utf-8") as log_f,
+        open(out_jsonl, "a", encoding="utf-8") as jsonl_f,
     ):
-        _log(f"=== 배치 시작 {datetime.now():%Y-%m-%d %H:%M:%S} ===", log_f)
+        _log(f"=== 배치 시작 {datetime.now():%Y-%m-%d %H:%M:%S}  dir={source_dir.name} ===", log_f)
 
         for i, (pdf, hwpx) in enumerate(pairs, 1):
             source = _source_name(pdf)
@@ -154,16 +184,15 @@ def main() -> None:
                 _log(f"  Mathpix 비용 한도 도달 (${estimated_cost:.2f}) → 중단", log_f)
                 break
 
-            cache = _cache_path(pdf)
-            is_new_ocr = not cache.exists()
+            cache = _cache_path(pdf, source_dir)
 
             try:
-                md = _fetch_md(pdf, cache, dry_run, log_f)
+                md, did_new_submit = _fetch_md(pdf, cache, dry_run, log_f)
                 if md is None:
                     done_skip += 1
                     continue
 
-                if is_new_ocr:
+                if did_new_submit:
                     estimated_cost += DEFAULT_PAGES * COST_PER_PAGE
                     _log(f"  예상 누적 비용: ${estimated_cost:.2f}", log_f)
 
@@ -200,7 +229,7 @@ def main() -> None:
     print(f"  성공: {done_ok}  skip: {done_skip}  오류: {done_err}")
     print(f"  총 레코드: {total_records}개")
     print(f"  예상 Mathpix 비용: ${estimated_cost:.2f}")
-    print(f"  출력: {OUT_JSONL}")
+    print(f"  출력: {out_jsonl}")
     print("─" * 62)
 
 

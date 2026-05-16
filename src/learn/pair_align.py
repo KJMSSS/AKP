@@ -171,6 +171,7 @@ def align(
 
     # ── 선택형 정합 ─────────────────────────────────────────────
     raw_choice  = {p.num: p for p in raw_probs if not p.is_essay}
+    # gold_choice: choices가 있는 문제만 (fallback은 dummy ChoiceItem으로 통과)
     gold_choice = {p.num: p for p in gold_probs if len(p.choices) > 0}
 
     common = sorted(set(raw_choice) & set(gold_choice))
