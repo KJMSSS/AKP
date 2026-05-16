@@ -65,6 +65,26 @@ def _to_circled(text: str) -> str:
 # ── 줄 구조 분석 패턴 ────────────────────────────────────────────────
 _PROB_LINE_RE    = re.compile(r'^\d{1,2}[.．]\s')          # "1. " "2. " …
 _SCORE_LINE_RE   = re.compile(r'^\[\d+(?:\.\d+)?점\]')     # "[4.5점]" "[5점]"
+
+# ── 보기/점수 정규화 (v7) ─────────────────────────────────────────────
+_KOREAN_RE       = re.compile('[가-힣]')
+# 줄 시작 원문자/ASCII/전각 선택지 불릿 (공백 포함)
+_CHOICE_BULLET_RE = re.compile(r'^(?:[①②③④⑤]|\((?:10|[1-9])\)|（[1-5]）)\s*')
+# [N점] 패턴 — plain text 강제
+_SCORE_PAT_RE    = re.compile(r'\[\d+(?:\.\d+)?점\]')
+
+
+def _strip_eq_to_korean_space(segs: list[tuple[str, str]]) -> list[tuple[str, str]]:
+    """수식 세그먼트 직후 텍스트가 ' [가-힣]' 로 시작하면 공백 1개 제거 (수식→한글 단방향)."""
+    out: list[tuple[str, str]] = []
+    for k, v in segs:
+        if (k == 'text' and out and out[-1][0] in ('inline', 'display')
+                and len(v) >= 2 and v[0] == ' ' and '가' <= v[1] <= '힣'):
+            v = v[1:]
+        out.append((k, v))
+    return out
+
+
 # 공백 뒤에 (N) 또는 （N） 이 나타나는 위치 — 두 번째 선택지부터 분리
 _CHOICE_BOUND_RE = re.compile(
     r'(?<=\s)(?=(?:\((?:10|[1-9])\)|（[1-5]）)(?:\s|$))'
@@ -180,9 +200,11 @@ class _HwpxWriter:
     """섹션 XML을 순차적으로 구성하는 내부 빌더."""
 
     def __init__(self):
-        self._eq_id  = 3000
-        self._eq_z   = 1
+        self._eq_id   = 3000
+        self._eq_z    = 1
         self._para_id = 10
+        self._choice_eq    = 0   # 보기 수식화 건수
+        self._choice_plain = 0   # 보기 한글 plain 유지 건수
 
     # ── ID 발급 ──────────────────────────────────────────────────────
 
@@ -228,6 +250,7 @@ class _HwpxWriter:
     # ── hp:p (일반 문단) ─────────────────────────────────────────────
 
     def _para(self, segs: list[tuple[str, str]], cpr: int = 0) -> str:
+        segs = _strip_eq_to_korean_space(segs)  # B: 수식→한글 공백 제거 (모든 경로 일괄)
         parts: list[str] = []
         for kind, content in segs:
             if kind == 'text':
@@ -307,6 +330,26 @@ class _HwpxWriter:
             if not line.strip():
                 paras.append(self._para([]))
                 continue
+
+            # ── 선택지 줄 처리 (v7) ──────────────────────────────────
+            cm = _CHOICE_BULLET_RE.match(line)
+            if cm:
+                bullet  = cm.group(0)
+                content = line[cm.end():]
+                if content.strip() and not _SCORE_PAT_RE.search(content):
+                    content_segs = _parse_segments(content)
+                    if all(k == 'text' for k, _ in content_segs):
+                        # $...$ 없는 텍스트(한글 포함) → inline 수식으로 변환 (C: 한글 예외 제거)
+                        segs = [('text', bullet), ('inline', content.strip())]
+                        self._choice_eq += 1
+                    else:
+                        # 이미 $...$ 포함 → 불릿만 text로 분리
+                        segs = [('text', bullet)] + content_segs
+                else:
+                    segs = _parse_segments(line)
+                paras.append(self._para(segs, cpr=0))
+                continue
+            # ────────────────────────────────────────────────────────
 
             segs = _parse_segments(line)
             paras.append(self._para(segs, cpr=0))
@@ -449,8 +492,19 @@ def build_from_markdown(md: str, output_path: Path, base_template: Path) -> dict
     section_bytes = section_xml.encode('utf-8')
 
     # 통계
-    eq_count = section_xml.count('<hp:equation')
+    eq_count   = section_xml.count('<hp:equation')
     para_count = section_xml.count('<hp:p ')
+
+    # [N점] plain 카운트: 마크다운 전체 출현 중 $...$ 내부가 아닌 것
+    score_total   = len(re.findall(r'\[\d+(?:\.\d+)?점\]', md))
+    score_in_math = len(re.findall(r'\$[^$\n]*\[\d+(?:\.\d+)?점\][^$\n]*\$', md))
+    score_plain   = score_total - score_in_math
+
+    print(
+        f"  [v7] 보기 수식화 {writer._choice_eq}건 / "
+        f"한글 plain {writer._choice_plain}건 / "
+        f"[N점] plain {score_plain}/{score_total}건"
+    )
 
     # ZIP 조합 (mimetype 은 반드시 첫 항목, ZIP_STORED)
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -472,7 +526,11 @@ def build_from_markdown(md: str, output_path: Path, base_template: Path) -> dict
         zout.writestr('Preview/PrvText.txt',        'PDF 변환 문서'.encode('utf-8'))
 
     return {
-        'paragraphs': para_count,
-        'equations':  eq_count,
-        'output':     output_path,
+        'paragraphs':   para_count,
+        'equations':    eq_count,
+        'output':       output_path,
+        'choice_eq':    writer._choice_eq,
+        'choice_plain': writer._choice_plain,
+        'score_plain':  score_plain,
+        'score_total':  score_total,
     }

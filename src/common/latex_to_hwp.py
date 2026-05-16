@@ -32,6 +32,10 @@ _SQRT_RE   = re.compile(r'\\sqrt\s*' + _BG)
 # \nroot{n}{x} — Mathpix가 간혹 이 표기를 사용함
 _NROOT_RE  = re.compile(r'\\nroot\s*' + _BG + r'\s*' + _BG)
 
+# ── 이항계수 / 열벡터 (\binom{n}{k}) ──────────────────────────────
+# 수학 시험지에서 열벡터 표기로도 사용됨: \binom{1}{-2} = 2×1 열벡터
+_BINOM_RE  = re.compile(r'\\binom\s*' + _BG + r'\s*' + _BG)
+
 def _sub_sqrt_n(m: re.Match) -> str:
     return f'nroot {{{m.group(1)}}} {{{m.group(2)}}}'
 
@@ -40,6 +44,10 @@ def _sub_sqrt(m: re.Match) -> str:
 
 def _sub_nroot(m: re.Match) -> str:
     return f'nroot {{{m.group(1)}}} {{{m.group(2)}}}'
+
+def _sub_binom(m: re.Match) -> str:
+    prefix = ' ' if m.start() > 0 and m.string[m.start() - 1].isalnum() else ''
+    return f'{prefix}LEFT ( {{{m.group(1)}}} atop {{{m.group(2)}}} RIGHT )'
 
 # ── 적분·합·곱 (from/to 방식) ─────────────────────────────────────
 _FROM_TO_RE = re.compile(
@@ -133,11 +141,18 @@ _SYMBOLS: list[tuple[str, str]] = [
     # 부등호
     (r'\\leq\b|\\le\b',     '<='),
     (r'\\geq\b|\\ge\b',     '>='),
-    (r'\\neq\b|\\ne\b',     '<>'),
+    (r'\\neq\b|\\ne\b',     ' ne '),
+    (r'\\ll\b',             'll'),
+    (r'\\gg\b',             'gg'),
+    # 관계 연산자 (유사/등가)
+    (r'\\approx\b',         'approx'),
+    (r'\\sim\b',            'sim'),
+    (r'\\propto\b',         'propto'),
+    (r'\\equiv\b',          'equiv'),
     # 연산자
     (r'\\bullet\b',         'bullet'),
     (r'\\cdot\b',           'cdot'),
-    (r'\\times\b',          'times'),
+    (r'\\times(?![a-zA-Z])', ' times '),
     (r'\\div\b',            'div'),
     (r'\\pm\b',             '+-'),
     (r'\\mp\b',             '-+'),
@@ -159,6 +174,9 @@ _SYMBOLS: list[tuple[str, str]] = [
     (r'\\emptyset\b|\\varnothing\b', 'emptyset'),
     (r'\\forall\b',         'for all'),
     (r'\\exists\b',         'exists'),
+    # 미적분/해석학
+    (r'\\partial\b',        'partial'),
+    (r'\\nabla\b',          'nabla'),
     # 기하
     (r'\\parallel\b',       '//'),
     (r'\\perp\b',           'perp'),
@@ -170,13 +188,13 @@ _SYMBOLS: list[tuple[str, str]] = [
     # 공백 명령
     (r'\\,|\\;|\\!|\\quad\b|\\qquad\b', '~'),
     (r'\\ ',                '~'),
-    # \left / \right delimiter → 실제 기호 (\{ 는 앞 단계에서 이미 { 로 변환됨)
-    (r'\\left\s*\(',     '('),    (r'\\right\s*\)',    ')'),
-    (r'\\left\s*\[',     '['),    (r'\\right\s*\]',    ']'),
-    (r'\\left\s*\{',     '{'),    (r'\\right\s*\}',    '}'),
-    (r'\\left\s*\|',     '|'),    (r'\\right\s*\|',    '|'),
-    (r'\\left\s*\.',     ''),     (r'\\right\s*\.',     ''),
-    (r'\\left\s*<',      '<'),    (r'\\right\s*>',      '>'),
+    # \left / \right delimiter → 자동 사이즈 괄호 (행렬 등 큰 표현식에 대응)
+    (r'\\left\s*\(',     'LEFT ('),    (r'\\right\s*\)',    'RIGHT )'),
+    (r'\\left\s*\[',     'LEFT ['),    (r'\\right\s*\]',    'RIGHT ]'),
+    (r'\\left\s*\{',     'LEFT {'),    (r'\\right\s*\}',    'RIGHT }'),
+    (r'\\left\s*\|',     'LEFT |'),    (r'\\right\s*\|',    'RIGHT |'),
+    (r'\\left\s*\.',     ''),          (r'\\right\s*\.',     ''),
+    (r'\\left\s*<',      'LEFT <'),    (r'\\right\s*>',      'RIGHT >'),
     # \text{...} 언래핑
     (r'\\text\{([^}]*)\}',  r'\1'),
     (r'\\mathrm\{([^}]*)\}', r'\1'),
@@ -224,7 +242,7 @@ def _sub_env(m: re.Match) -> str:
             row = re.sub(r'\s*&+\s*', ' ', row).strip()
             if row:
                 cleaned.append(row)
-        return 'lbrace cases{ ' + ' ## '.join(cleaned) + ' }'
+        return 'lbrace cases{ ' + ' # '.join(cleaned) + ' }'
 
     else:  # array, matrix, pmatrix, bmatrix, vmatrix
         has_cols = any('&' in row for row in rows)
@@ -233,19 +251,19 @@ def _sub_env(m: re.Match) -> str:
             # 단일 열 → atop 적층
             return ' atop '.join(rows)
 
-        # 다중 열 → matrix{} 표현
+        # 다중 열 → matrix{} 표현 (col: & / row: #)
         matrix_rows = []
         for row in rows:
             cells = [c.strip() for c in row.split('&')]
-            matrix_rows.append(' # '.join(cells))
-        inner = ' ## '.join(matrix_rows)
+            matrix_rows.append(' & '.join(cells))
+        inner = ' # '.join(matrix_rows)
 
         if env == 'pmatrix':
-            return f'lparen matrix{{ {inner} }} rparen'
+            return f'LEFT ( matrix{{ {inner} }} RIGHT )'
         elif env == 'bmatrix':
-            return f'lbracket matrix{{ {inner} }} rbracket'
+            return f'LEFT [ matrix{{ {inner} }} RIGHT ]'
         elif env == 'vmatrix':
-            return f'lline matrix{{ {inner} }} rline'
+            return f'LEFT | matrix{{ {inner} }} RIGHT |'
         else:
             return f'matrix{{ {inner} }}'
 
@@ -260,6 +278,7 @@ def convert(latex: str) -> str:
     for _ in range(3):          # 중첩 표현을 위한 다중 패스
         prev = s
         s = _FRAC_RE.sub(_sub_frac, s)
+        s = _BINOM_RE.sub(_sub_binom, s)
         s = _SQRT_N_RE.sub(_sub_sqrt_n, s)
         s = _NROOT_RE.sub(_sub_nroot, s)
         s = _SQRT_RE.sub(_sub_sqrt, s)
