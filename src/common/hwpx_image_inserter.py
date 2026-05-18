@@ -114,6 +114,7 @@ def replace_placeholder_with_image(
         bin_num, bin_stem = _next_bin_id(src_zf)
         bin_name = f"{bin_stem}{image_path.suffix.lower()}"
         xml = src_zf.read("Contents/section0.xml").decode("utf-8")
+        hpf_xml = src_zf.read("Contents/content.hpf").decode("utf-8")
 
         # 새 ID들
         existing_ids = [int(m) for m in re.findall(r'<hp:p id="(\d+)"', xml)]
@@ -141,11 +142,21 @@ def replace_placeholder_with_image(
         else:
             print(f"  [pic] {item_no}번 → {bin_name} ({w_hpc}×{h_hpc} HWP)")
 
+        # content.hpf에 BinData 항목 등록
+        ext = image_path.suffix.lower().lstrip(".")
+        mime = {"png": "image/png", "jpg": "image/jpg", "jpeg": "image/jpg", "bmp": "image/bmp"}.get(ext, "image/png")
+        new_item = f'<opf:item id="{bin_stem}" href="BinData/{bin_name}" media-type="{mime}" isEmbeded="1"/>'
+        hpf_new = hpf_xml.replace("</opf:manifest>", f"{new_item}</opf:manifest>")
+
+        # section0.xml / content.hpf는 직접 교체 — 원본 복사 건너뜀으로 중복 방지
+        _OVERWRITE = {"Contents/section0.xml", "Contents/content.hpf"}
         with zipfile.ZipFile(tmp_path, "w", zipfile.ZIP_DEFLATED) as dst_zf:
             for item in src_zf.infolist():
-                dst_zf.writestr(item, src_zf.read(item.filename))
+                if item.filename not in _OVERWRITE:
+                    dst_zf.writestr(item, src_zf.read(item.filename))
             dst_zf.writestr(f"BinData/{bin_name}", image_path.read_bytes())
             dst_zf.writestr("Contents/section0.xml", xml_new.encode("utf-8"))
+            dst_zf.writestr("Contents/content.hpf", hpf_new.encode("utf-8"))
 
     shutil.move(str(tmp_path), str(out_path))
     return out_path

@@ -48,7 +48,7 @@ PROD_DIR = ROOT / "samples" / "11b_production"
 LOG_DIR  = ROOT / "log" / "cycle_16"
 
 SOURCE  = "2025_1_1_b_공수1_광주여고"
-VER     = "v12"
+VER     = "v13"
 
 safe    = re.sub(r"[^\w\-]+", "_", SOURCE.strip("[]")).strip("_")
 cache   = SRC_DIR / f"_{safe}_raw.md"
@@ -75,7 +75,7 @@ def _get_hp_t_texts(hwpx: Path) -> list[str]:
 guard = CostGuard(cap_usd=5.0)
 
 print(f"\n{'='*60}")
-print(f"[광주여고] → {VER}  (Cycle 16: v12 12번+20번 그림 삽입)")
+print(f"[광주여고] → {VER}  (Cycle 16: v13 그림삽입 content.hpf 수정 + ZIP 중복 수정)")
 
 if out_hwpx.exists():
     print(f"  {VER} 이미 존재 ({_xml_sha(out_hwpx)}) — 재빌드하려면 수동 삭제")
