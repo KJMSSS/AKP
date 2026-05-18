@@ -274,13 +274,15 @@ class _HwpxWriter:
 
     # ── linesegarray ─────────────────────────────────────────────────
 
-    def _lineseg(self, empty: bool = False) -> str:
+    def _lineseg(self, max_eq_h: int = 0, empty: bool = False) -> str:
         if empty:
             return '<hp:linesegarray/>'
+        vs = max(1200, max_eq_h)
+        bl = round(vs * 0.85)
         return (
             '<hp:linesegarray>'
-            f'<hp:lineseg textpos="0" vertpos="0" vertsize="1600" textheight="1600" '
-            f'baseline="1360" spacing="960" horzpos="0" horzsize="{_TW}" flags="393216"/>'
+            f'<hp:lineseg textpos="0" vertpos="0" vertsize="{vs}" textheight="{vs}" '
+            f'baseline="{bl}" spacing="720" horzpos="0" horzsize="{_TW}" flags="393216"/>'
             '</hp:linesegarray>'
         )
 
@@ -296,6 +298,12 @@ class _HwpxWriter:
             else:
                 parts.append(self._equation(content))
 
+        max_eq_h = 0
+        for part in parts:
+            m = re.search(r'height="(\d+)" heightRelTo="ABSOLUTE"', part)
+            if m:
+                max_eq_h = max(max_eq_h, int(m.group(1)))
+
         run = (
             f'<hp:run charPrIDRef="{cpr}">{"".join(parts)}</hp:run>'
             if parts else
@@ -305,7 +313,7 @@ class _HwpxWriter:
             f'<hp:p id="{self._pid()}" paraPrIDRef="8" styleIDRef="0" '
             f'pageBreak="0" columnBreak="0" merged="0">'
             f'{run}'
-            f'{self._lineseg(empty=not parts)}'
+            f'{self._lineseg(max_eq_h, empty=not parts)}'
             f'</hp:p>'
         )
 
