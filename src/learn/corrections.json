@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "updated": "2026-05-16",
+  "updated": "2026-05-18",
   "entries": [
     {
       "old": "포양의",
@@ -677,7 +677,7 @@
         "typer"
       ],
       "first_seen": "2026-05-16",
-      "approved": false,
+      "approved": true,
       "context_examples": [
         "난족시키는 의 값을 구하기 그 과정을 서술하시오",
         "의 값의 합을 구하기 그 과정을 서술하시오"
@@ -2185,7 +2185,7 @@
         "typer"
       ],
       "first_seen": "2026-05-16",
-      "approved": false,
+      "approved": true,
       "context_examples": [
         "그릇에 의 물을 부었더 니 그릇의 위에서부터 3"
       ]
@@ -2213,8 +2213,8 @@
       ]
     },
     {
-      "old": "보기",
-      "new": "보 기",
+      "old": "보 기",
+      "new": "보기",
       "type": "text",
       "frequency": 6,
       "schools": [
@@ -2231,12 +2231,7 @@
       "first_seen": "2026-05-16",
       "approved": true,
       "context_examples": [
-        "은 자연수이고 이다 보기 등식 을 만족시키는",
-        "2 점 lt 보기 gt 이면 이다",
-        "2 점 lt 보기 정의역은 인실수 이다",
-        "번 참조 lt 보기 gt 함수 의",
-        "3 0 lt 보기 gt 27 의",
-        "점수 있음 lt 보기 gt 모든 실수"
+        "OCR 공백 오인식 교정: 보 기 → 보기 (반전 수정 2026-05-18)"
       ]
     },
     {
@@ -2272,13 +2267,13 @@
         "msbiseo"
       ],
       "first_seen": "2026-05-16",
-      "approved": false,
       "context_examples": [
         "자치회 총무 팀이 7 동안의 데이터를 바탕으로",
         "값을 구하면 4 7 점 78 83",
         "계산한다 7 점 7 부등식 을 만족시키는",
         "6 1 2 7 금호중앙여고 7 번"
-      ]
+      ],
+      "blacklisted": true
     },
     {
       "old": "판메량을",
@@ -4199,7 +4194,7 @@
         "msbiseo"
       ],
       "first_seen": "2026-05-16",
-      "approved": false,
+      "approved": true,
       "context_examples": [
         "해의 범위를 만족하도록 하 는 모든 정수 의",
         "값이 실수가 되도록 하 는 정수 의 개수는",
@@ -4222,7 +4217,7 @@
         "msbiseo"
       ],
       "first_seen": "2026-05-16",
-      "approved": false,
+      "approved": true,
       "context_examples": [
         "조건을 만족시킨다 가 합수 의 그래프는 축과",
         "지나는 직선 과 합수 의 그래 프가",
@@ -4661,7 +4656,7 @@
         "msbiseo"
       ],
       "first_seen": "2026-05-16",
-      "approved": false,
+      "approved": true,
       "context_examples": [
         "이때 부등식 을 만족시 키는 자연수 의 최솟값은",
         "에 대하여 을 만족시 키는 정수 의 개수는",
@@ -9347,7 +9342,7 @@
         "msbiseo"
       ],
       "first_seen": "2026-05-16",
-      "approved": false,
+      "approved": true,
       "context_examples": [
         "개수는 에서 로의 함 수 중 치역과 공역이",
         "라 하자 세 함 수 가 보기 의",
@@ -10720,13 +10715,13 @@
         "msbiseo"
       ],
       "first_seen": "2026-05-16",
-      "approved": false,
       "context_examples": [
         "1 3 1 3 1 3 3",
         "3 3 점 3 정의역이 인 함수",
         "점 1 2 3 의 값을 구하시오",
         "최댓값은 5 4 3 1 2 3"
-      ]
+      ],
+      "blacklisted": true
     },
     {
       "old": "넓이를",
@@ -18974,6 +18969,329 @@
       "approved": false,
       "context_examples": [
         "실시 일자 2024 년 7 월 2 일 1"
+      ]
+    },
+    {
+      "old": "문제분",
+      "new": "문제를",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "광주고"
+      ],
+      "forms": [
+        "typer"
+      ],
+      "first_seen": "2026-05-17",
+      "approved": false,
+      "context_examples": [
+        "각 문제분 잘 읽고 답을 쓰시오"
+      ]
+    },
+    {
+      "old": "쪼기",
+      "new": "표기",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "광주고"
+      ],
+      "forms": [
+        "typer"
+      ],
+      "first_seen": "2026-05-18",
+      "approved": true,
+      "context_examples": [
+        "수험번호 쪼기 방법에 따라"
+      ]
+    },
+    {
+      "old": "베점",
+      "new": "배점",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "광주고"
+      ],
+      "forms": [
+        "typer"
+      ],
+      "first_seen": "2026-05-17",
+      "approved": false,
+      "context_examples": [
+        "각 문항의 베점은 문항 옆에"
+      ]
+    },
+    {
+      "old": "사인편",
+      "new": "사인펜",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "광주고"
+      ],
+      "forms": [
+        "typer"
+      ],
+      "first_seen": "2026-05-17",
+      "approved": false,
+      "context_examples": [
+        "컴퓨터용 사인편으로 표기하시오"
+      ]
+    },
+    {
+      "old": "누등식",
+      "new": "부등식",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "광주고"
+      ],
+      "forms": [
+        "typer"
+      ],
+      "first_seen": "2026-05-17",
+      "approved": false,
+      "context_examples": [
+        "연립누등식을 만족시키는"
+      ]
+    },
+    {
+      "old": "서명형무망",
+      "new": "서술형문항",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "광주고"
+      ],
+      "forms": [
+        "typer"
+      ],
+      "first_seen": "2026-05-18",
+      "approved": false,
+      "context_examples": [
+        "## 서명형무망 1"
+      ]
+    },
+    {
+      "old": "서명면항",
+      "new": "서술형문항",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "광주고"
+      ],
+      "forms": [
+        "typer"
+      ],
+      "first_seen": "2026-05-18",
+      "approved": false,
+      "context_examples": [
+        "## 서명면항 2"
+      ]
+    },
+    {
+      "old": "학익 사항",
+      "new": "확인 사항",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "광주고"
+      ],
+      "forms": [
+        "typer"
+      ],
+      "first_seen": "2026-05-18",
+      "approved": true,
+      "context_examples": [
+        "## - 학익 사항"
+      ]
+    },
+    {
+      "old": "설경한다",
+      "new": "설정한다",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "광주고"
+      ],
+      "forms": [
+        "typer"
+      ],
+      "first_seen": "2026-05-18",
+      "approved": false,
+      "context_examples": [
+        "이웃한 자리에 오도록 설경한다"
+      ]
+    },
+    {
+      "old": "유의 사항",
+      "new": "확인 사항",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "광주고"
+      ],
+      "forms": [
+        "typer"
+      ],
+      "first_seen": "2026-05-18",
+      "approved": true,
+      "context_examples": [
+        "## 유의 사항  (학원장 PDF: 확인 사항이 정답)"
+      ]
+    },
+    {
+      "old": "B . C",
+      "new": "B, C",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "광주고"
+      ],
+      "forms": [
+        "typer"
+      ],
+      "first_seen": "2026-05-18",
+      "approved": true,
+      "context_examples": [
+        "$ 지역에서 출발하여  . C$ 두 지역을"
+      ]
+    },
+    {
+      "old": "다르며",
+      "new": "다르니",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "광주고"
+      ],
+      "forms": [
+        "typer"
+      ],
+      "first_seen": "2026-05-18",
+      "approved": true,
+      "context_examples": [
+        "학원장 PDF 확인 #6: 다르니가 정답"
+      ]
+    },
+    {
+      "old": "궁뿡수학1",
+      "new": "공통수학1",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "광주여고"
+      ],
+      "forms": [
+        "typer"
+      ],
+      "first_seen": "2026-05-18",
+      "approved": true,
+      "context_examples": [
+        "## 2025학년도...( 궁뿡수학1) 과목"
+      ]
+    },
+    {
+      "old": "서술 하는",
+      "new": "서술하는",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "광주여고"
+      ],
+      "forms": [
+        "typer"
+      ],
+      "first_seen": "2026-05-18",
+      "approved": true,
+      "context_examples": [
+        "서술 하는 문제입니다"
+      ]
+    },
+    {
+      "old": "정 확하게",
+      "new": "정확하게",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "광주여고"
+      ],
+      "forms": [
+        "typer"
+      ],
+      "first_seen": "2026-05-18",
+      "approved": true,
+      "context_examples": [
+        "답안을 정 확하게 작성하시기"
+      ]
+    },
+    {
+      "old": "7 동안의",
+      "new": "그 동안의",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "광주여고"
+      ],
+      "forms": [
+        "typer"
+      ],
+      "first_seen": "2026-05-18",
+      "approved": true,
+      "context_examples": [
+        "총무 팀이 7 동안의 데이터"
+      ]
+    },
+    {
+      "old": "연齿부등식",
+      "new": "연립부등식",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "광주여고"
+      ],
+      "forms": [
+        "typer"
+      ],
+      "first_seen": "2026-05-18",
+      "approved": true,
+      "context_examples": [
+        "3. 연齿부등식"
+      ]
+    },
+    {
+      "old": "열립방정식",
+      "new": "연립방정식",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "광주여고"
+      ],
+      "forms": [
+        "typer"
+      ],
+      "first_seen": "2026-05-18",
+      "approved": true,
+      "context_examples": [
+        "4. 열립방정식"
+      ]
+    },
+    {
+      "old": "부농식",
+      "new": "부등식",
+      "type": "text",
+      "frequency": 1,
+      "schools": [
+        "광주여고"
+      ],
+      "forms": [
+        "typer"
+      ],
+      "first_seen": "2026-05-18",
+      "approved": true,
+      "context_examples": [
+        "13. 부농식"
       ]
     }
   ]

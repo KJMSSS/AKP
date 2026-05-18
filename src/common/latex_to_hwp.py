@@ -139,8 +139,8 @@ _SYMBOLS: list[tuple[str, str]] = [
     (r'\\leftarrow\b',      '<-'),
     (r'\\longrightarrow\b', '->'),
     # 부등호
-    (r'\\leq\b|\\le\b',     '<='),
-    (r'\\geq\b|\\ge\b',     '>='),
+    (r'\\leq\b|\\le\b',     ' LEQ '),
+    (r'\\geq\b|\\ge\b',     ' GEQ '),
     (r'\\neq\b|\\ne\b',     ' ne '),
     (r'\\ll\b',             'll'),
     (r'\\gg\b',             'gg'),
@@ -189,12 +189,12 @@ _SYMBOLS: list[tuple[str, str]] = [
     (r'\\,|\\;|\\!|\\quad\b|\\qquad\b', '~'),
     (r'\\ ',                '~'),
     # \left / \right delimiter → 자동 사이즈 괄호 (행렬 등 큰 표현식에 대응)
-    (r'\\left\s*\(',     'LEFT ('),    (r'\\right\s*\)',    'RIGHT )'),
-    (r'\\left\s*\[',     'LEFT ['),    (r'\\right\s*\]',    'RIGHT ]'),
-    (r'\\left\s*\{',     'LEFT {'),    (r'\\right\s*\}',    'RIGHT }'),
-    (r'\\left\s*\|',     'LEFT |'),    (r'\\right\s*\|',    'RIGHT |'),
-    (r'\\left\s*\.',     ''),          (r'\\right\s*\.',     ''),
-    (r'\\left\s*<',      'LEFT <'),    (r'\\right\s*>',      'RIGHT >'),
+    (r'\\left\s*\(',     'LEFT ('),    (r'\\right\s*\)',    ' RIGHT )'),
+    (r'\\left\s*\[',     'LEFT ['),    (r'\\right\s*\]',    ' RIGHT ]'),
+    (r'\\left\s*\{',     'LEFT {'),    (r'\\right\s*\}',    ' RIGHT }'),
+    (r'\\left\s*\|',     'LEFT |'),    (r'\\right\s*\|',    ' RIGHT |'),
+    (r'\\left\s*\.',     ''),          (r'\\right\s*\.',    ' RIGHT .'),
+    (r'\\left\s*<',      'LEFT <'),    (r'\\right\s*>',     ' RIGHT >'),
     # \text{...} 언래핑
     (r'\\text\{([^}]*)\}',  r'\1'),
     (r'\\mathrm\{([^}]*)\}', r'\1'),
@@ -206,6 +206,21 @@ _SYMBOL_PATS = [(re.compile(p), r) for p, r in _SYMBOLS]
 # ── LaTeX 환경 (\begin{...}...\end{...}) ────────────────────────────
 # 시험 OCR에서 나타나는 환경: array, gathered, aligned, cases, *matrix 계열
 # 반드시 다른 변환보다 먼저 처리해야 내부 수식이 이후 패스에서 올바르게 변환된다.
+
+# Mathpix가 연립방정식/연립부등식을 \left\{...\begin{array}\right. 형태로 OCR하는 패턴
+# → \begin{cases}...\end{cases}로 통일 후 _sub_env에서 처리
+_LBRACE_ARRAY_RE = re.compile(
+    r'\\left\s*\\\{\s*'
+    r'\\begin\{(?:array|cases)\}(?:\{[^}]*\})?\s*'
+    r'([\s\S]*?)'
+    r'\\end\{(?:array|cases)\}\s*'
+    r'\\right\s*\.'
+)
+
+
+def _normalize_lbrace_array(m: re.Match) -> str:
+    return r'\begin{cases}' + m.group(1) + r'\end{cases}'
+
 
 _ENV_RE = re.compile(
     r'\\begin\{(array|gathered|aligned|cases|(?:p|b|v)?matrix)\}'
@@ -242,7 +257,7 @@ def _sub_env(m: re.Match) -> str:
             row = re.sub(r'\s*&+\s*', ' ', row).strip()
             if row:
                 cleaned.append(row)
-        return 'lbrace cases{ ' + ' # '.join(cleaned) + ' }'
+        return 'cases{ ' + ' # '.join(cleaned) + ' }'
 
     else:  # array, matrix, pmatrix, bmatrix, vmatrix
         has_cols = any('&' in row for row in rows)
@@ -273,6 +288,8 @@ def _sub_env(m: re.Match) -> str:
 def convert(latex: str) -> str:
     """LaTeX 수식 문자열을 HWP hp:script 표기로 변환한다."""
     s = latex.strip()
+    # \left\{...\begin{array}...\right. → \begin{cases}...\end{cases} 정규화
+    s = _LBRACE_ARRAY_RE.sub(_normalize_lbrace_array, s)
     # 환경 블록을 먼저 처리 (내부 수식은 이후 패스가 담당)
     s = _ENV_RE.sub(_sub_env, s)
     for _ in range(3):          # 중첩 표현을 위한 다중 패스
@@ -293,5 +310,8 @@ def convert(latex: str) -> str:
         s = _GREEK_RE.sub(_sub_greek, s)
         if s == prev:
             break
+    # raw 부등호 → HWP 키워드 (<=> 는 lookbehind/lookahead로 보호)
+    s = re.sub(r'(?<![=<>])<=(?![>=])', ' LEQ ', s)
+    s = re.sub(r'(?<![=<>])>=(?!>)',    ' GEQ ', s)
     # 중복 공백 정리 (삼각함수 변환 시 생길 수 있는 연속 공백)
     return re.sub(r' {2,}', ' ', s).strip()

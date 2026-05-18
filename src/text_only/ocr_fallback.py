@@ -37,6 +37,8 @@ import anthropic
 from dotenv import load_dotenv
 
 from src.learn.apply_corrections import apply_corrections, summarize_log
+from src.text_only.layout_filter import apply_layout_filter
+from src.text_only.vision_stage_a import run_vision_stage_a
 
 _CORRECTIONS_PATH = Path(__file__).resolve().parent.parent / "learn" / "corrections.json"
 
@@ -60,8 +62,9 @@ _INLINE_MATH = re.compile(r"(?<!\$)\$(?!\$)((?:[^\$\n])+?)(?<!\$)\$(?!\$)")
 # 디스플레이 수식 블록: $$...$$
 _DISPLAY_MATH = re.compile(r"\$\$([\s\S]+?)\$\$")
 
-# 빈 함수 정의: $f(x)=$, $f(x)=  $ 같은 형태 (= 뒤가 공백뿐)
-_EMPTY_DEF = re.compile(r"\$[^$\n]*?=\s*\$")
+# 빈 함수 정의: $f(x)=$, $y=  $ 같은 형태 (= 뒤가 공백뿐, 최소 1자 이상 내용 필수)
+# $=$ (등호 단독) 는 제외 — [^$\n]+? 로 1자 이상 내용 요구
+_EMPTY_DEF = re.compile(r"\$[^$\n]+?=\s*\$")
 
 # 페이지 번호 추적용 — Mathpix는 페이지 경계에 "\page{N}" 또는 "---"를 넣기도 함
 _PAGE_MARKER = re.compile(r"\\page\{(\d+)\}")
@@ -583,7 +586,26 @@ def apply_fallback(md: str, pdf_path: Path) -> str:
         else:
             print("  [corrections] 해당 교정 없음")
 
-    # ── 2단계: 문서별 알려진 OCR 오류 교정 ──────────────────────────────
+    # ── 2단계: 레이아웃 필터 (결재선·페이지메타·알파벳 선택지) ─────────────
+    md, layout_log = apply_layout_filter(md)
+    lf_hits = [e for e in layout_log]
+    if lf_hits:
+        print(f"  [layout_filter] {len(lf_hits)}종 필터 적용:")
+        for e in lf_hits:
+            note = f" — {e['note']}" if "note" in e else ""
+            print(f"    {e['filter']}: {e['count']}건{note}")
+    else:
+        print("  [layout_filter] 해당 없음")
+
+    # ── 3단계: Vision Stage A (복잡 레이아웃 감지 시만) ─────────────────
+    md, va_log, va_cost = run_vision_stage_a(md, pdf_path)
+    va_actions = [e for e in va_log if e.get("action") not in ("skipped",)]
+    if va_actions:
+        print(f"  [vision_a] 처리 결과:")
+        for e in va_actions:
+            print(f"    {e}")
+
+    # ── 4단계: 문서별 알려진 OCR 오류 교정 ──────────────────────────────
     # 광주고 14번: g(4)= 를 Mathpix가 g(4)\neq 로 오인
     md = re.sub(r'g\(4\)\s*\\neq', 'g(4)=', md)
 

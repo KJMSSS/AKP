@@ -219,14 +219,51 @@ class _HwpxWriter:
 
     # ── hp:equation ──────────────────────────────────────────────────
 
+    # 그리스 문자 키워드 (HWP script 변환 후 이 이름으로 등장)
+    _GREEK_KW = {
+        'alpha','beta','gamma','delta','epsilon','zeta','eta','theta',
+        'iota','kappa','lambda','mu','nu','xi','pi','rho','sigma',
+        'tau','upsilon','phi','chi','psi','omega',
+        'GAMMA','DELTA','THETA','LAMBDA','XI','PI','SIGMA','UPSILON','PHI','PSI','OMEGA',
+    }
+
+    @staticmethod
+    def _eq_size(hwp: str) -> tuple[int, int]:
+        """수식 크기 추정 (gold HWPX 실측 기반).
+
+        그리스 문자 키워드는 ~500단위, 나머지 의미 문자는 ~650단위/char.
+        (gold 실측: x^3-1=0 → 4511, alpha,beta → ~1400)
+        """
+        if 'cases' in hwp:
+            h = 2415
+        elif ' atop ' in hwp:
+            h = 2000
+        elif ' over ' in hwp or 'sqrt' in hwp or 'nroot' in hwp:
+            h = 1700
+        else:
+            h = 1313
+        # 그리스 문자 먼저 제거 후 나머지 의미 문자 계산
+        remaining = hwp
+        greek_count = 0
+        for gk in sorted(_HwpxWriter._GREEK_KW, key=len, reverse=True):
+            cnt = remaining.count(gk)
+            if cnt:
+                greek_count += cnt
+                remaining = remaining.replace(gk, ' ')
+        meaningful = len(re.sub(r'[\s{}()\[\]]', '', remaining))
+        w = greek_count * 500 + meaningful * 650
+        w = max(1050, min(w, 18000))
+        return w, h
+
     def _equation(self, latex: str) -> str:
         hwp = latex_to_hwp(latex)
+        w, h = self._eq_size(hwp)
         return (
             f'<hp:equation id="{self._eid()}" zOrder="{self._ez()}" '
             f'numberingType="EQUATION" textWrap="TOP_AND_BOTTOM" textFlow="BOTH_SIDES" '
             f'lock="0" dropcapstyle="None" version="Equation Version 60" '
             f'baseLine="85" textColor="#000000" baseUnit="1100" lineMode="CHAR" font="HYhwpEQ">'
-            f'<hp:sz width="2000" widthRelTo="ABSOLUTE" height="1500" heightRelTo="ABSOLUTE" protect="0"/>'
+            f'<hp:sz width="{w}" widthRelTo="ABSOLUTE" height="{h}" heightRelTo="ABSOLUTE" protect="0"/>'
             f'<hp:pos treatAsChar="1" affectLSpacing="0" flowWithText="1" allowOverlap="0" '
             f'holdAnchorAndSO="0" vertRelTo="PARA" horzRelTo="COLUMN" vertAlign="TOP" '
             f'horzAlign="LEFT" vertOffset="0" horzOffset="0"/>'
