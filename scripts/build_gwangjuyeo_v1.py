@@ -40,6 +40,7 @@ from src.text_only.page_extractor import compare_scripts, get_hwpx_scripts
 from src.ocr.llm_postprocess import postprocess_markdown
 from src.ocr.cost_guard import CostGuard, CostCapError
 from src.common.image_extractor import extract_images
+from src.common.hwpx_image_inserter import crop_figure_from_pdf, replace_placeholder_with_image
 
 ROOT     = Path(__file__).resolve().parent.parent
 SRC_DIR  = ROOT / "samples" / "11b"
@@ -47,7 +48,7 @@ PROD_DIR = ROOT / "samples" / "11b_production"
 LOG_DIR  = ROOT / "log" / "cycle_16"
 
 SOURCE  = "2025_1_1_b_공수1_광주여고"
-VER     = "v10"
+VER     = "v12"
 
 safe    = re.sub(r"[^\w\-]+", "_", SOURCE.strip("[]")).strip("_")
 cache   = SRC_DIR / f"_{safe}_raw.md"
@@ -74,7 +75,7 @@ def _get_hp_t_texts(hwpx: Path) -> list[str]:
 guard = CostGuard(cap_usd=5.0)
 
 print(f"\n{'='*60}")
-print(f"[광주여고] → {VER}  (Cycle 16: v10 lineseg동적높이+숫자수식추가+19번보기)")
+print(f"[광주여고] → {VER}  (Cycle 16: v12 12번+20번 그림 삽입)")
 
 if out_hwpx.exists():
     print(f"  {VER} 이미 존재 ({_xml_sha(out_hwpx)}) — 재빌드하려면 수동 삭제")
@@ -196,6 +197,36 @@ try:
         f.write(f"- 거부: {llm_meta.get('rejected', 'N/A')}건\n")
         f.write(f"- 비용: ${llm_meta.get('cost_usd', 0):.4f}\n")
     print(f"\n  보고서: {report_path}")
+
+    # ── 그림 삽입 (12번, 20번) ────────────────────────────────────────
+    # Mathpix URL 좌표 (top_left_x, top_left_y, width, height, page)
+    FIGURES = [
+        dict(item="12", page=3,  mx=387, my=1836, mw=716,  mh=395),
+        dict(item="20", page=5,  mx=304, my=1694, mw=874,  mh=874),
+    ]
+    if pdf.exists():
+        print("\n  ── 그림 삽입 ──")
+        fig_dir = LOG_DIR / "figures" / f"광주여고_{VER}"
+        fig_dir.mkdir(parents=True, exist_ok=True)
+        for fig in FIGURES:
+            png = fig_dir / f"fig_{fig['item']}.png"
+            try:
+                crop_figure_from_pdf(
+                    pdf, fig["page"],
+                    fig["mx"], fig["my"], fig["mw"], fig["mh"],
+                    png, render_dpi=300, mathpix_dpi=180,
+                )
+                # HWP 크기: Mathpix 비율 유지, width ≈ 17640 HWP (176.4pt)
+                w_hpc = 17640
+                h_hpc = round(w_hpc * fig["mh"] / fig["mw"])
+                replace_placeholder_with_image(
+                    out_hwpx, fig["item"], png,
+                    w_hpc=w_hpc, h_hpc=h_hpc,
+                )
+            except Exception as e:
+                print(f"  [pic] {fig['item']}번 오류: {e}")
+    else:
+        print("\n  ── 그림 삽입: PDF 없음 — skip")
 
     # 광주고 v17 (2차) sha 회귀 검증
     gj_v17 = PROD_DIR / "2025_1_1_b_공수1_광주고_v17.hwpx"
