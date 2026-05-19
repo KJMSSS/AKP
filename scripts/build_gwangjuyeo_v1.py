@@ -48,7 +48,7 @@ PROD_DIR = ROOT / "samples" / "11b_production"
 LOG_DIR  = ROOT / "log" / "cycle_16"
 
 SOURCE  = "2025_1_1_b_공수1_광주여고"
-VER     = "v13"
+VER     = "v14"
 
 safe    = re.sub(r"[^\w\-]+", "_", SOURCE.strip("[]")).strip("_")
 cache   = SRC_DIR / f"_{safe}_raw.md"
@@ -75,7 +75,7 @@ def _get_hp_t_texts(hwpx: Path) -> list[str]:
 guard = CostGuard(cap_usd=5.0)
 
 print(f"\n{'='*60}")
-print(f"[광주여고] → {VER}  (Cycle 16: v13 그림삽입 content.hpf 수정 + ZIP 중복 수정)")
+print(f"[광주여고] → {VER}  (Cycle 16: v14 그림 PT좌표 직접 크롭 + 20번 180도 회전)")
 
 if out_hwpx.exists():
     print(f"  {VER} 이미 존재 ({_xml_sha(out_hwpx)}) — 재빌드하려면 수동 삭제")
@@ -199,10 +199,15 @@ try:
     print(f"\n  보고서: {report_path}")
 
     # ── 그림 삽입 (12번, 20번) ────────────────────────────────────────
-    # Mathpix URL 좌표 (top_left_x, top_left_y, width, height, page)
+    # pt_rect: PDF 표시 좌표계 (x0, y0, x1, y1) pt 단위
+    # rotate_deg: 뒤집힌 페이지 보정 (0 or 180)
     FIGURES = [
-        dict(item="12", page=3,  mx=387, my=1836, mw=716,  mh=395),
-        dict(item="20", page=5,  mx=304, my=1694, mw=874,  mh=874),
+        dict(item="12", page=3,
+             pt_rect=(5, 540, 365, 645), rotate_deg=0,
+             aspect=(365-5, 645-540)),   # w=360, h=105 pt
+        dict(item="20", page=6,
+             pt_rect=(355, 330, 730, 520), rotate_deg=180,
+             aspect=(730-355, 520-330)), # w=375, h=190 pt
     ]
     if pdf.exists():
         print("\n  ── 그림 삽입 ──")
@@ -212,13 +217,15 @@ try:
             png = fig_dir / f"fig_{fig['item']}.png"
             try:
                 crop_figure_from_pdf(
-                    pdf, fig["page"],
-                    fig["mx"], fig["my"], fig["mw"], fig["mh"],
-                    png, render_dpi=300, mathpix_dpi=180,
+                    pdf, fig["page"], png,
+                    pt_rect=fig["pt_rect"],
+                    render_dpi=300,
+                    rotate_deg=fig["rotate_deg"],
                 )
-                # HWP 크기: Mathpix 비율 유지, width ≈ 17640 HWP (176.4pt)
+                # HWP 크기: PT 비율 유지, width ≈ 17640 HWP (176.4pt)
+                aw, ah = fig["aspect"]
                 w_hpc = 17640
-                h_hpc = round(w_hpc * fig["mh"] / fig["mw"])
+                h_hpc = round(w_hpc * ah / aw)
                 replace_placeholder_with_image(
                     out_hwpx, fig["item"], png,
                     w_hpc=w_hpc, h_hpc=h_hpc,

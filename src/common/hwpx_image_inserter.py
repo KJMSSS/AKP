@@ -165,21 +165,16 @@ def replace_placeholder_with_image(
 def crop_figure_from_pdf(
     pdf_path: Path,
     page_1idx: int,
-    mx: int,
-    my: int,
-    mw: int,
-    mh: int,
     out_path: Path,
+    pt_rect: tuple[float, float, float, float] | None = None,
     render_dpi: int = 300,
-    mathpix_dpi: int = 180,
-    padding_pt: float = 4.0,
+    rotate_deg: int = 0,
 ) -> Path:
     """
-    PDF 특정 페이지에서 Mathpix 좌표 기반 영역을 PNG로 추출.
+    PDF 페이지에서 그림 영역을 PNG로 추출.
 
-    mx/my/mw/mh: Mathpix URL의 top_left_x, top_left_y, width, height (픽셀)
-    mathpix_dpi: Mathpix 처리 DPI (광주여고 PDF 기준 ~180)
-    padding_pt: 여백 추가 (포인트 단위)
+    pt_rect: (x0, y0, x1, y1) in PDF pt 단위 (PyMuPDF 표시 좌표계)
+    rotate_deg: 추출 후 회전 각도 (0, 90, 180, 270). 뒤집힌 페이지 보정용.
     """
     try:
         import fitz
@@ -190,15 +185,30 @@ def crop_figure_from_pdf(
     page = doc[page_1idx - 1]
     pr = page.rect
 
-    scale = 72.0 / mathpix_dpi
-    x0 = max(0.0,       mx * scale - padding_pt)
-    y0 = max(0.0,       my * scale - padding_pt)
-    x1 = min(pr.width,  (mx + mw) * scale + padding_pt)
-    y1 = min(pr.height, (my + mh) * scale + padding_pt)
+    if pt_rect is not None:
+        x0, y0, x1, y1 = pt_rect
+    else:
+        x0, y0, x1, y1 = pr.x0, pr.y0, pr.x1, pr.y1
+
+    x0 = max(0.0, x0)
+    y0 = max(0.0, y0)
+    x1 = min(pr.width,  x1)
+    y1 = min(pr.height, y1)
 
     clip = fitz.Rect(x0, y0, x1, y1)
     mat  = fitz.Matrix(render_dpi / 72, render_dpi / 72)
     pix  = page.get_pixmap(matrix=mat, clip=clip)
-    pix.save(str(out_path))
+
+    if rotate_deg != 0:
+        try:
+            import PIL.Image, io
+            img = PIL.Image.open(io.BytesIO(pix.tobytes("png")))
+            img.rotate(rotate_deg, expand=True).save(str(out_path))
+        except ImportError:
+            pix.save(str(out_path))
+            print("  [pic] Pillow 미설치 — 회전 건너뜀")
+    else:
+        pix.save(str(out_path))
+
     doc.close()
     return out_path
