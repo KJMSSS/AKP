@@ -141,12 +141,16 @@ def _extract_korean_lines(md: str) -> list[tuple[int, str]]:
     한글(가-힣) 2자 이상이거나 독립 자모(ㄱ-ㅣ) 포함 줄 추출.
 
     수식만 있는 줄 제외. 헤더(##...)도 포함.
+    구조 마커(【★...】) 줄은 제외 — LLM이 임의 수정하면 표 삽입 실패.
     반환: [(line_idx, original_line_text), ...]
     """
     result = []
     for i, line in enumerate(md.split("\n")):
         stripped = line.strip()
         if not stripped:
+            continue
+        # 구조 마커 줄 제외 (표 삽입용 플레이스홀더)
+        if stripped.startswith("【★"):
             continue
         # 수식 전용 줄은 제외
         if re.match(r"^\$\$[\s\S]*\$\$$", stripped):
