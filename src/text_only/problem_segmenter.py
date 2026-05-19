@@ -21,6 +21,7 @@ _COND_RE   = re.compile(r'^[（(][가-힣][）)]\s*')         # （가）, (나)
 _BOGI_RE   = re.compile(r'^[ㄱ-ㅎ]\s*[.．]\s*|^보기\s*$')  # ㄱ. ㄴ. ㄷ. 또는 "보기" 헤더
 _IMAGE_RE  = re.compile(r'!\[.*?\]\((https://cdn\.mathpix\.com/[^)]+)\)')
 _DISPLAY_MATH_RE = re.compile(r'^\$\$|^\\begin\{')
+_BIGVEE_RE   = re.compile(r'\s*\$\\bigvee_\{(\d+)\}\$\s*$')  # ① OCR 아티팩트
 
 
 @dataclass
@@ -106,8 +107,37 @@ def _split_block(
     if score_idx == -1:
         return "\n".join(block_lines), [], [], []
 
-    prob_lines  = list(block_lines[: score_idx + 1])
-    after_lines = block_lines[score_idx + 1 :]
+    # 선택지가 score bracket 이전에 등장하는 경우 (2컬럼 OCR 역전)
+    # 예: 17번 — 선택지 → 이미지 → [점수] → 그림 순서로 OCR됨
+    first_choice_before = next(
+        (j for j, l in enumerate(block_lines[:score_idx]) if _CHOICE_RE.match(l.strip())),
+        -1,
+    )
+    if first_choice_before > 0:
+        # 첫 번째 선택지 직전까지 문제 텍스트 (단, 첫 선택지 앞 1~2줄이 $(1)$ 같은 선택지
+        # 후보면 그것도 포함: 선택지 시작은 first_choice_before-1이 아닌 최대 1줄 앞까지 허용)
+        choice_region_start = first_choice_before
+        # $(1)$ 같은 패턴: 숫자만 있는 한 줄짜리 math가 직전에 있으면 함께 포함
+        if choice_region_start > 1:
+            prev = block_lines[choice_region_start - 1].strip()
+            if re.match(r'^\$\(([1-5])\)\$$', prev):
+                choice_region_start -= 1
+
+        pre_score = block_lines[:score_idx]
+        early_choices = [l for l in pre_score[choice_region_start:] if not l.strip().startswith("![")]
+        image_lines   = [l for l in pre_score[choice_region_start:] if l.strip().startswith("![")]
+        prob_lines    = list(block_lines[:choice_region_start]) + image_lines + [block_lines[score_idx]]
+        after_lines   = early_choices + list(block_lines[score_idx + 1:])
+    else:
+        prob_lines  = list(block_lines[: score_idx + 1])
+        after_lines = block_lines[score_idx + 1 :]
+
+    # Fix: score 줄 끝 $\bigvee_{N}$ → 선택지 ① N 으로 추출 (OCR 아티팩트)
+    if prob_lines:
+        bv_m = _BIGVEE_RE.search(prob_lines[-1])
+        if bv_m:
+            prob_lines[-1] = _BIGVEE_RE.sub('', prob_lines[-1]).rstrip()
+            after_lines = [f'（1） {bv_m.group(1)}'] + list(after_lines)
 
     if is_subj:
         return "\n".join(prob_lines), [], [], []
@@ -151,6 +181,12 @@ def _split_block(
             continue
         else:
             in_bogi = False
+
+        # 수식 스타일 선택지 번호: $(1)$ $(2)$ 등 (Mathpix OCR 아티팩트)
+        if re.match(r'^\$\(([1-5])\)\$$', s):
+            choices.append(s)
+            i += 1
+            continue
 
         # 선택지 레이블 있는 줄
         if _CHOICE_RE.match(s):

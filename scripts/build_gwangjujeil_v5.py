@@ -101,6 +101,122 @@ if not template.exists():
 
 md_raw = cache.read_text(encoding="utf-8")
 
+# ── 광주제일고 OCR 수정 패치 ────────────────────────────────────────────
+
+# 2번: (b) 1 → (1) 1
+md_raw = re.sub(r'^[（(]\s*[bB]\s*[）)]', '（1）', md_raw, flags=re.MULTILINE)
+
+# 서술형1: [^0] 각주 참조 제거
+md_raw = md_raw.replace('[^0]서술형 1.', '서술형 1.')
+# 서술형4: 배점 누락 추가 + 숫자 수식처리
+md_raw = md_raw.replace(
+    '서술형 4. 0 이상 9 이하의 서로 다른 네 정수',
+    '서술형 4. $0$ 이상 $9$ 이하의 서로 다른 네 정수',
+)
+md_raw = md_raw.replace(
+    '를 만들 때, $b>c>d$ 를 만족시키는 짝수의 개수를 구하시오.',
+    '를 만들 때, $b>c>d$ 를 만족시키는 짝수의 개수를 구하시오. [6.5점]',
+)
+# 저작권·확인사항 제거
+md_raw = re.sub(
+    r'※\s*이 시험 문제의 저작권.*?처벌될 수 있습니다\.?',
+    '',
+    md_raw, flags=re.DOTALL,
+)
+md_raw = re.sub(r'\[\^0\]:\s+＊확인 사항.*', '', md_raw, flags=re.DOTALL)
+
+# 3번: 선택지 ①② 합쳐짐 ($9 \quad 12$) → 분리
+md_raw = md_raw.replace(r'（1） $9 \quad 12$', '（1） 9\n（2） 12')
+
+# 8번: 선택지 ② 누락 추가 + 스크래치 제거
+md_raw = md_raw.replace(
+    '（1） 1\n（3） 3\n（4） 4\n（5） 5\n入边二刘 －',
+    '（1） 1\n（2） 2\n（3） 3\n（4） 4\n（5） 5',
+)
+
+# 6번: 선택지 LaTeX array → 개별 줄
+md_raw = md_raw.replace(
+    '（1） $6 \\quad 8$\n$\\begin{array}{lllll}\\text {（1）} 6 & 8 / 7 & \\text {（3）} 8 & \\text {（4）} 9 & \\text {（5）} 10 \\\\ & 71 & \\end{array}$',
+    '（1） 6\n（2） 7\n（3） 8\n（4） 9\n（5） 10',
+)
+
+# 12번: 연립부등식 OCR 수정
+md_raw = md_raw.replace(
+    r'\left\{\begin{array}{l}' + '\n'
+    r'4 x-3<5 \text { atn } \geq \geq 2 \text { an } \\' + '\n'
+    r'x-7 \geq-2 x^{3} a' + '\n'
+    r'\end{array}\right. \text { 32 atn }',
+    r'\left\{\begin{array}{l}' + '\n'
+    r'4x-3<5 \\' + '\n'
+    r'x-7 \geq -2x+a' + '\n'
+    r'\end{array}\right.',
+)
+# 12번: 본문 숫자 수식처리 (개수가 6)
+md_raw = md_raw.replace('개수가 6 이 되도록', '개수가 $6$ 이 되도록')
+# 12번: 선택지 ⑤ 스크래치 제거
+md_raw = md_raw.replace('(5) 60 $-4-3-2-101$', '(5) 60')
+
+# 13번: OCR 'aco' → '$a>0$인'
+md_raw = md_raw.replace('에 대하여 aco 이차부등식', '에 대하여 $a>0$인 이차부등식')
+# 13번: 선택지 ③④⑤ 이미지 앞으로 이동 (이미지가 파싱 중단시킴)
+md_raw = md_raw.replace(
+    '(2) 2\n![](https://cdn.mathpix.com/cropped/3253d2d6',
+    '(2) 2\n(3) 3\n(4) 4\n(5) 5\n![](https://cdn.mathpix.com/cropped/3253d2d6',
+)
+md_raw = md_raw.replace('(4) $4 \\quad 4 a+2 b+c=0$\n(5) 5', '')  # 이미지 뒤 중복 제거
+
+# 16번: 본문 숫자 수식처리
+md_raw = md_raw.replace('모두 6 명이', '모두 $6$ 명이')
+md_raw = md_raw.replace('수가 576 일 때', '수가 $576$ 일 때')
+
+# 17번: 학생 손글씨 스크래치 이미지 제거 (apply_fallback이 【★ 본문 손상】으로 치환하는 것 방지)
+md_raw = md_raw.replace(
+    '![](https://cdn.mathpix.com/cropped/3253d2d6-3984-4e9e-9856-4bfe6fb8168c-6.jpg?height=234&width=538&top_left_y=632&top_left_x=554)\n',
+    '',
+)
+# 17번: [4.1점] 뒤 스크래치 '-' 제거
+md_raw = md_raw.replace('[4.1점] -', '[4.1점]')
+
+# 18번: 본문 숫자 수식처리
+md_raw = md_raw.replace(
+    '18. 10 이하의 자연수 중에서 서로 다른 4 개의 수를 뽑을 때, 뽑은 4 개의 수의 합이 3 의 배수가 되는 경우의 수는? [4.2점]',
+    '18. $10$ 이하의 자연수 중에서 서로 다른 $4$ 개의 수를 뽑을 때, 뽑은 $4$ 개의 수의 합이 $3$ 의 배수가 되는 경우의 수는? [4.2점]',
+)
+
+# 19번: 본문 숫자 수식처리 + 선택지 OCR 순서 오류 수정
+md_raw = md_raw.replace('79 번째', '$79$ 번째')
+md_raw = md_raw.replace(
+    '(3) 41023\n(1) 40312\n(1) 40312\n(2) 40321\n(4) 41032\n(5) 41203',
+    '(1) 40312\n(2) 40321\n(3) 41023\n(4) 41032\n(5) 41203',
+)
+
+# 21번: 본문 숫자 수식처리 + 선택지 누락 추가
+md_raw = md_raw.replace(
+    '21． 1 학년 학생 3 명과 2 학년 학생 3 명이 모두 일렬로 배치된 7 개의 의자에 앉을 때，다음 조건을 만족시키는 경우의 수는？',
+    '21． $1$ 학년 학생 $3$ 명과 $2$ 학년 학생 $3$ 명이 모두 일렬로 배치된 $7$ 개의 의자에 앉을 때，다음 조건을 만족시키는 경우의 수는？',
+)
+md_raw = md_raw.replace(
+    '（나） 2 학년 학생끼리는 이웃하지 않는다．\n\n22．',
+    '（나） 2 학년 학생끼리는 이웃하지 않는다．\n（1） 636\n（2） 648\n（3） 660\n（4） 672\n（5） 684\n\n22．',
+)
+# 21번: 조건 표 안 숫자 수식처리 (선택지 삽입 후 실행)
+md_raw = md_raw.replace('（가）빈 의자 옆에는 2 학년 학생이 앉는다．', '（가）빈 의자 옆에는 $2$ 학년 학생이 앉는다．')
+md_raw = md_raw.replace('（나） 2 학년 학생끼리는 이웃하지 않는다．', '（나） $2$ 학년 학생끼리는 이웃하지 않는다．')
+
+# 22번: 방정식 t 수정 (학교 수정사항) + 질문 t² + 조건(나) 분수 제거
+md_raw = md_raw.replace(
+    r'$x^{3}-5 x^{2}+x-6=0$',
+    r'$x^{3}-5 x^{2}+tx-6=0$',
+)
+md_raw = md_raw.replace('里의 값은？', '$t^{2}$의 값은？')
+md_raw = md_raw.replace(
+    r'（나）$\frac{(\alpha-3 \beta+3 \gamma)^{2}}{\sqrt{3} / 2}=-3$',
+    r'（나）$(\alpha-3\beta+3\gamma)^{2}=-3$',
+)
+
+# 서술형2: 본문 숫자 수식처리
+md_raw = md_raw.replace('실근의 개수가 2 가 되도록', '실근의 개수가 $2$ 가 되도록')
+
 # ── [1] 문제 분리 + 정렬 + 스크래치 제거 ────────────────────────────────
 print("\n[1/7] 문제 파싱 (parse_problems)")
 header, segments = parse_problems(md_raw)
@@ -127,7 +243,7 @@ except CostCapError as e:
 # ── [3] rebuild_markdown ─────────────────────────────────────────────────
 print("\n[3/7] rebuild_markdown")
 data_table_set = {t.item for t in DATA_TABLES}
-md_rebuilt = rebuild_markdown(header, segments, data_table_items=data_table_set)
+md_rebuilt = rebuild_markdown("", segments, data_table_items=data_table_set)  # 헤더(표지/유의사항) 제외
 # 재조립 결과 일부 출력
 line_cnt = md_rebuilt.count("\n")
 marker_cnt = md_rebuilt.count("【★")
