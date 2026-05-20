@@ -105,6 +105,10 @@ def _split_block(
             break
 
     if score_idx == -1:
+        if is_subj:
+            conditions = [l.strip() for l in block_lines if _COND_RE.match(l.strip())]
+            clean = [l for l in block_lines if not _COND_RE.match(l.strip())]
+            return "\n".join(clean), [], conditions, []
         return "\n".join(block_lines), [], [], []
 
     # 선택지가 score bracket 이전에 등장하는 경우 (2컬럼 OCR 역전)
@@ -139,11 +143,16 @@ def _split_block(
             prob_lines[-1] = _BIGVEE_RE.sub('', prob_lines[-1]).rstrip()
             after_lines = [f'（1） {bv_m.group(1)}'] + list(after_lines)
 
+    # 조건문이 score 이전 prob_lines에 있는 경우 추출 (예: 19번, 서술형 3)
+    pre_conds = [l.strip() for l in prob_lines if _COND_RE.match(l.strip())]
+    prob_lines = [l for l in prob_lines if not _COND_RE.match(l.strip())]
+
     if is_subj:
-        return "\n".join(prob_lines), [], [], []
+        post_conds = [l.strip() for l in after_lines if _COND_RE.match(l.strip())]
+        return "\n".join(prob_lines), [], pre_conds + post_conds, []
 
     choices: list[str]     = []
-    conditions: list[str]  = []
+    conditions: list[str]  = list(pre_conds)  # score 이전 조건 선삽입
     boilerplate: list[str] = []
     in_bogi = False
 
@@ -224,6 +233,16 @@ def _looks_like_unlabeled_choice(s: str) -> bool:
     return True
 
 
+def _normalize_score_to_end(text: str) -> str:
+    """score bracket을 항상 problem_text 마지막 줄 끝으로 이동."""
+    m = _SCORE_RE.search(text)
+    if not m:
+        return text
+    bracket = m.group(0)
+    cleaned = _SCORE_RE.sub('', text, count=1).rstrip()
+    return cleaned + ' ' + bracket
+
+
 def rebuild_markdown(
     header: str,
     segments: list[ProblemSegment],
@@ -249,7 +268,7 @@ def rebuild_markdown(
     for seg in segments:
         num_str = str(seg.number if seg.number < 100 else seg.number - 100)
 
-        parts.append(seg.problem_text)
+        parts.append(_normalize_score_to_end(seg.problem_text))
 
         # 조건문 — text_builder가 수식 처리, table_inserter가 박스로 감쌈
         if seg.conditions:

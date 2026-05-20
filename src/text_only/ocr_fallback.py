@@ -117,7 +117,11 @@ def _has_damage(md: str) -> tuple[bool, list[str]]:
         reasons.append(f"Mathpix 이미지 대체 {len(img_matches)}건")
 
     for m in _INLINE_MATH.finditer(md):
-        if _KOREAN.search(m.group(1)):
+        inner = m.group(1)
+        # box{~(가)~} 등 HWP 공란 박스 수식은 의도적으로 한글 포함 → 무시
+        if re.match(r'^box\{~[^}]+~\}$', inner.strip()):
+            continue
+        if _KOREAN.search(inner):
             reasons.append(f"수식 내 한글: {m.group(0)[:50]}")
             break
 
@@ -261,7 +265,11 @@ def _replace_damage_with_placeholders(md: str) -> tuple[str, int]:
     md = _MATHPIX_IMG_LINE.sub(sub_img_line, md)
 
     def sub_inline(m: re.Match) -> str:
-        if _KOREAN.search(m.group(1)):
+        inner = m.group(1)
+        # box{~(가)~} 등 HWP 공란 박스 수식 — 한글이 의도적으로 포함됨, 제외
+        if re.match(r'^box\{~[^}]+~\}$', inner.strip()):
+            return m.group(0)
+        if _KOREAN.search(inner):
             return _PLACEHOLDER_INLINE
         return m.group(0)
 
