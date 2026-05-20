@@ -147,13 +147,17 @@ def _split_block(
     pre_conds = [l.strip() for l in prob_lines if _COND_RE.match(l.strip())]
     prob_lines = [l for l in prob_lines if not _COND_RE.match(l.strip())]
 
+    # 보기 항목(ㄱ/ㄴ/ㄷ)이 score 이전 prob_lines에 있는 경우 추출 (예: 11번 (i)(ii)(iii)→ㄱ/ㄴ/ㄷ)
+    pre_bogi = [l.strip() for l in prob_lines if _BOGI_RE.match(l.strip())]
+    prob_lines = [l for l in prob_lines if not _BOGI_RE.match(l.strip())]
+
     if is_subj:
         post_conds = [l.strip() for l in after_lines if _COND_RE.match(l.strip())]
         return "\n".join(prob_lines), [], pre_conds + post_conds, []
 
     choices: list[str]     = []
     conditions: list[str]  = list(pre_conds)  # score 이전 조건 선삽입
-    boilerplate: list[str] = []
+    boilerplate: list[str] = list(pre_bogi)   # score 이전 보기 항목 선삽입
     in_bogi = False
 
     i = 0

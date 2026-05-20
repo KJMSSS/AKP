@@ -60,6 +60,52 @@ pdf      = SRC_DIR / f"[{SOURCE}].pdf"
 DATA_TABLES: list[TableSpec] = []
 
 
+def _split_inline_math_commas(text: str) -> str:
+    """$a, b, c$ → $a$, $b$, $c$ (수식 내 최상위 콤마 분리, 단순 항목만)."""
+    def is_simple(s: str) -> bool:
+        s = s.strip()
+        if not s or len(s) > 20:
+            return False
+        if any(c in '<>=' for c in s):
+            return False
+        if '+' in s and not s.startswith('+'):
+            return False
+        return True
+
+    def split_match(m: re.Match) -> str:
+        inner = m.group(1)
+        if '\\begin' in inner or '\\end' in inner:
+            return m.group(0)
+        # 최상위 콤마 기준 분리 (중괄호 깊이 추적)
+        parts, depth, current = [], 0, []
+        for ch in inner:
+            if ch == '{':
+                depth += 1
+                current.append(ch)
+            elif ch == '}':
+                depth -= 1
+                current.append(ch)
+            elif ch == ',' and depth == 0:
+                parts.append(''.join(current).strip())
+                current = []
+            else:
+                current.append(ch)
+        if current:
+            parts.append(''.join(current).strip())
+        if len(parts) <= 1 or len(parts) > 4:
+            return m.group(0)
+        if all(is_simple(p) for p in parts):
+            return '$' + '$, $'.join(parts) + '$'
+        return m.group(0)
+
+    return re.sub(r'\$([^$\n]{1,80})\$', split_match, text)
+
+
+def _fix_punct_spacing(text: str) -> str:
+    """'일 때 , 이다' → '일 때, 이다' (한글·$ 뒤 구두점 앞 공백 제거)."""
+    return re.sub(r'(?<=[가-힣$])\s+([,.])', r'\1', text)
+
+
 def _xml_sha(hwpx_path: Path) -> str:
     with zipfile.ZipFile(hwpx_path) as zf:
         data = zf.read("Contents/section0.xml")
@@ -113,6 +159,12 @@ md_raw = re.sub(r'\\left\s*\|', '|', md_raw)
 md_raw = re.sub(r'\\right\s*\|', '|', md_raw)
 md_raw = re.sub(r'\\left\s*\\?\.', '', md_raw)
 md_raw = re.sub(r'\\right\s*\\?\.', '', md_raw)
+
+# B3. 8번 연립부등식 복원 (B2 패치가 \left\{ 구조를 파괴함)
+md_raw = md_raw.replace(
+    '\\{\\begin{array}{l}\nx+4>7 \\\\\n4 x<k+2\n\\end{array}',
+    '\\left\\{\\begin{array}{l}\nx+4>7 \\\\\n4 x<k+2\n\\end{array}\\right.',
+)
 
 # C. 14번: ## 4. → 14. + '름이 아' → '음이 아닌'
 md_raw = md_raw.replace('## 4. 름이 아 정수', '14. 음이 아닌 정수')
@@ -215,6 +267,13 @@ md_raw = md_raw.replace(
 )
 md_raw = md_raw.replace('선분 CD 와 선분 HE 의 교점을 I 라', '선분 $CD$ 와 선분 $HE$ 의 교점을 $I$ 라')
 md_raw = md_raw.replace('직사각형 EBCI 의 넓이가 정사각형 EFGH', '직사각형 $EBCI$ 의 넓이가 정사각형 $EFGH$')
+
+# N2. 9번: 선택지 사이 학생풀이 제거 + ⑤ 오인식 수정
+md_raw = md_raw.replace('\n$2 d=\\frac{1}{5} b^{2}$\n', '\n')  # (3)/(4) 사이 학생 계산
+md_raw = md_raw.replace(
+    '(5) $-5+\\sqrt{105} 10 a=6^{2}$',
+    '(5) $-5+\\sqrt{105}$',
+)
 
 # O. 11번: jamo 분리 수정 (수식 안에 포함됨 → $ 경계 포함 교체)
 md_raw = md_raw.replace('\\leq 10 ㅇ ㅣ ㄴ$ 자연수이다', '\\leq 10$ 인 자연수이다')
@@ -328,6 +387,21 @@ md_raw = md_raw.replace(
     '(iii) 1 과 2 를 모두 포함하고 나머지 8 개의',
     '(iii) $1$ 과 $2$ 를 모두 포함하고 나머지 $8$ 개의',
 )
+
+# O'. 11번 (i)(ii)(iii) → ㄱ/ㄴ/ㄷ 변환 (보기 표 추출용 — problem_segmenter의 _BOGI_RE 감지)
+md_raw = md_raw.replace(
+    '(i) $1$ 과 $2$ 를 모두 포함하지 않고',
+    'ㄱ. $1$ 과 $2$ 를 모두 포함하지 않고',
+)
+md_raw = md_raw.replace(
+    '(ii) $1$ 과 $2$ 중 한 개만 포함하고',
+    'ㄴ. $1$ 과 $2$ 중 한 개만 포함하고',
+)
+md_raw = md_raw.replace(
+    '(iii) $1$ 과 $2$ 를 모두 포함하고',
+    'ㄷ. $1$ 과 $2$ 를 모두 포함하고',
+)
+
 # 13번
 md_raw = md_raw.replace('개수가 10 이 되도록', '개수가 $10$ 이 되도록')
 # 15번
@@ -392,6 +466,8 @@ except CostCapError as e:
 print("\n[3/7] rebuild_markdown")
 data_table_set = {t.item for t in DATA_TABLES}
 md_rebuilt = rebuild_markdown("", segments, data_table_items=data_table_set)
+md_rebuilt = _split_inline_math_commas(md_rebuilt)
+md_rebuilt = _fix_punct_spacing(md_rebuilt)
 line_cnt   = md_rebuilt.count("\n")
 marker_cnt = md_rebuilt.count("【★")
 print(f"  줄 수: {line_cnt} / 마커: {marker_cnt}개")
