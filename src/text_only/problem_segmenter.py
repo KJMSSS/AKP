@@ -155,9 +155,11 @@ def _split_block(
     pre_conds = [l.strip() for l in prob_lines if _COND_RE.match(l.strip())]
     prob_lines = [l for l in prob_lines if not _COND_RE.match(l.strip())]
 
-    # 보기 항목(ㄱ/ㄴ/ㄷ 또는 로마자 (i)(ii)(iii))이 score 이전 prob_lines에 있는 경우 추출
-    pre_bogi = [l.strip() for l in prob_lines if _is_bogi_line(l.strip())]
-    prob_lines = [l for l in prob_lines if not _is_bogi_line(l.strip())]
+    # 보기 항목(ㄱ/ㄴ/ㄷ)이 score 이전 prob_lines에 있는 경우 추출
+    # 로마자 (i)(ii)(iii)는 위치가 prob_lines 중간이라 자동 추출 불가
+    # → 빌드 스크립트에서 【★ 보기시작/끝:N번】 마커를 올바른 위치에 직접 삽입
+    pre_bogi = [l.strip() for l in prob_lines if _BOGI_RE.match(l.strip())]
+    prob_lines = [l for l in prob_lines if not _BOGI_RE.match(l.strip())]
 
     if is_subj:
         post_conds = [l.strip() for l in after_lines if _COND_RE.match(l.strip())]
