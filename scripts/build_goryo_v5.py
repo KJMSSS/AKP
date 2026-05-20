@@ -60,45 +60,14 @@ pdf      = SRC_DIR / f"[{SOURCE}].pdf"
 DATA_TABLES: list[TableSpec] = []
 
 
-def _split_inline_math_commas(text: str) -> str:
-    """$a, b, c$ → $a$, $b$, $c$ (수식 내 최상위 콤마 분리, 단순 항목만)."""
-    def is_simple(s: str) -> bool:
-        s = s.strip()
-        if not s or len(s) > 20:
-            return False
-        if any(c in '<>=' for c in s):
-            return False
-        if '+' in s and not s.startswith('+'):
-            return False
-        return True
-
+def _split_matrix_name_commas(text: str) -> str:
+    """$A, B$ → $A$, $B$ (단일 대문자 행렬명만 분리, 그 외는 그대로 유지)."""
     def split_match(m: re.Match) -> str:
-        inner = m.group(1)
-        if '\\begin' in inner or '\\end' in inner:
-            return m.group(0)
-        # 최상위 콤마 기준 분리 (중괄호 깊이 추적)
-        parts, depth, current = [], 0, []
-        for ch in inner:
-            if ch == '{':
-                depth += 1
-                current.append(ch)
-            elif ch == '}':
-                depth -= 1
-                current.append(ch)
-            elif ch == ',' and depth == 0:
-                parts.append(''.join(current).strip())
-                current = []
-            else:
-                current.append(ch)
-        if current:
-            parts.append(''.join(current).strip())
-        if len(parts) <= 1 or len(parts) > 4:
-            return m.group(0)
-        if all(is_simple(p) for p in parts):
+        parts = [p.strip() for p in m.group(1).split(',')]
+        if all(re.fullmatch(r'[A-Z]', p) for p in parts):
             return '$' + '$, $'.join(parts) + '$'
         return m.group(0)
-
-    return re.sub(r'\$([^$\n]{1,80})\$', split_match, text)
+    return re.sub(r'\$([A-Z](?:\s*,\s*[A-Z])*)\$', split_match, text)
 
 
 def _fix_punct_spacing(text: str) -> str:
@@ -466,7 +435,7 @@ except CostCapError as e:
 print("\n[3/7] rebuild_markdown")
 data_table_set = {t.item for t in DATA_TABLES}
 md_rebuilt = rebuild_markdown("", segments, data_table_items=data_table_set)
-md_rebuilt = _split_inline_math_commas(md_rebuilt)
+md_rebuilt = _split_matrix_name_commas(md_rebuilt)
 md_rebuilt = _fix_punct_spacing(md_rebuilt)
 line_cnt   = md_rebuilt.count("\n")
 marker_cnt = md_rebuilt.count("【★")
