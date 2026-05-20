@@ -357,20 +357,6 @@ md_raw = md_raw.replace(
     '(iii) $1$ 과 $2$ 를 모두 포함하고 나머지 $8$ 개의',
 )
 
-# O'. 11번 (i)(ii)(iii) → ㄱ/ㄴ/ㄷ 변환 (보기 표 추출용 — problem_segmenter의 _BOGI_RE 감지)
-md_raw = md_raw.replace(
-    '(i) $1$ 과 $2$ 를 모두 포함하지 않고',
-    'ㄱ. $1$ 과 $2$ 를 모두 포함하지 않고',
-)
-md_raw = md_raw.replace(
-    '(ii) $1$ 과 $2$ 중 한 개만 포함하고',
-    'ㄴ. $1$ 과 $2$ 중 한 개만 포함하고',
-)
-md_raw = md_raw.replace(
-    '(iii) $1$ 과 $2$ 를 모두 포함하고',
-    'ㄷ. $1$ 과 $2$ 를 모두 포함하고',
-)
-
 # 13번
 md_raw = md_raw.replace('개수가 10 이 되도록', '개수가 $10$ 이 되도록')
 # 15번
