@@ -26,8 +26,8 @@ def preprocess_daesung(md):
     return md
 
 def preprocess_dongsung(md):
-    # (N점) 소괄호 → [N점]
-    md = re.sub(r'\(([\d.]+)점\)', r'[\1점]', md)
+    # (N점) 반각 + （N점） 전각 → [N점]
+    md = re.sub(r'[（(]([\d.]+)점[）)]', r'[\1점]', md)
     return md
 
 TARGETS = [
