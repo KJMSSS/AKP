@@ -746,7 +746,7 @@
       "label_num": null,
       "difficulty": "하",
       "score": 5.0,
-      "problem_text": "이차정사각행렬 [식:A``]의 [식:left(i,``j right)`]성분 [식:a_{ij}~ left(i=1,``2,``j=1,``2]가 [식:a_{ij}= cases {``i+j-1 & & lef]일 때, 행렬 [식:A`^{2}`]의 [식:left(2,``2 right)`]성분을 구하시오. 2025_1_1_b_공수1_명진고 ※ 이곳에 검수사항을 기재해주세요",
+      "problem_text": "이차정사각행렬 [식:A``]의 [식:left(i,``j right)`]성분 [식:a_{ij}~ left(i=1,``2,``j=1,``2]가 [식:a_{ij}= cases {``i+j-1 & & lef]일 때, 행렬 [식:A`^{2}`]의 [식:left(2,``2 right)`]성분을 구하시오.",
       "equations": [
         "A``",
         "left(i,``j right)`",

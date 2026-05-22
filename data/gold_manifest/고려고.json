@@ -801,7 +801,7 @@
       "label_num": null,
       "difficulty": "",
       "score": 8.0,
-      "problem_text": "정수 [식:a`]에 대하여 두 삼차식 [식:f left(x right)= left(x-a righ], [식:g left(x right)`]가 다음 조건을 만족시킨다. (가) 삼차식 [식:g left(x right)`]는 최고차항의 계수가 [식:1`]이다.(나) 방정식 [식:g left(x right)=0`]의 서로 다른 실근의 개수는 [식:2`]이다.(다) 방정식 [식:f left(x right)g left(x right)]이 서로 다른 세 실근을 갖고, 이 세 실근의 합은 [식:-5`]이다. 가능한 서로 다른 삼차식 [식:g left(x right)`]를 모두 구하시오. 2025_1_1_b_공수1_고려고 ※ 이곳에 검수사항을 기재해주세요",
+      "problem_text": "정수 [식:a`]에 대하여 두 삼차식 [식:f left(x right)= left(x-a righ], [식:g left(x right)`]가 다음 조건을 만족시킨다. (가) 삼차식 [식:g left(x right)`]는 최고차항의 계수가 [식:1`]이다.(나) 방정식 [식:g left(x right)=0`]의 서로 다른 실근의 개수는 [식:2`]이다.(다) 방정식 [식:f left(x right)g left(x right)]이 서로 다른 세 실근을 갖고, 이 세 실근의 합은 [식:-5`]이다. 가능한 서로 다른 삼차식 [식:g left(x right)`]를 모두 구하시오.",
       "equations": [
         "a`",
         "f left(x right)= left(x-a right) left(x-2a right) left(x-a+3 right)",

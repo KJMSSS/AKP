@@ -678,7 +678,7 @@
       "label_num": null,
       "difficulty": "하",
       "score": 8.0,
-      "problem_text": "사차항의 계수가 [식:1`]인 사차식 [식:P` left(x right)`]가 다음 조건을 만족시킨다. (가) [식:P` left(1 right)=1], [식:P` left(3 right)=27](나) 이차방정식 [식:x^{2}+x+1=0`]의 한 허근 [식:omega`]에 대하여 [식:P` left( omega right)=1], [식:P` left({ bar{ omega }} right)]이다. 다항식 [식:P` left(x right)`]를 [식:x-4`]로 나눈 나머지를 구하시오. 2025_1_1_b_공수1_대동고 ※ 이곳에 검수사항을 기재해주세요",
+      "problem_text": "사차항의 계수가 [식:1`]인 사차식 [식:P` left(x right)`]가 다음 조건을 만족시킨다. (가) [식:P` left(1 right)=1], [식:P` left(3 right)=27](나) 이차방정식 [식:x^{2}+x+1=0`]의 한 허근 [식:omega`]에 대하여 [식:P` left( omega right)=1], [식:P` left({ bar{ omega }} right)]이다. 다항식 [식:P` left(x right)`]를 [식:x-4`]로 나눈 나머지를 구하시오.",
       "equations": [
         "1`",
         "P` left(x right)`",

@@ -7,12 +7,13 @@
     "school": "국제고등학교",
     "term": "2025년 1학년 1학기 기말"
   },
-  "obj_count": 13,
+  "obj_count": 17,
   "subj_count": 4,
   "short_answer_count": 0,
   "essay_count": 4,
   "obj_numbers": [
     3,
+    4,
     5,
     6,
     7,
@@ -24,17 +25,20 @@
     13,
     14,
     15,
-    16
+    16,
+    17,
+    18,
+    19
   ],
   "subj_numbers": [
-    4,
+    20,
     21,
     22,
     23
   ],
   "short_answer_numbers": [],
   "essay_numbers": [
-    4,
+    20,
     21,
     22,
     23
@@ -42,6 +46,7 @@
   "score_list": {
     "16": 4.0,
     "3": 3.2,
+    "4": 3.3,
     "5": 3.4,
     "6": 3.5,
     "7": 3.5,
@@ -53,7 +58,10 @@
     "13": 3.9,
     "14": 3.9,
     "15": 4.0,
-    "서술형4": 6.0,
+    "17": 4.1,
+    "18": 4.2,
+    "19": 4.3,
+    "서술형20": 6.0,
     "서술형21": 7.0,
     "서술형22": 8.0,
     "서술형23": 9.0
@@ -65,7 +73,7 @@
   "total_endnotes": 23,
   "choice_marker_total": 95,
   "score_position_stats": {
-    "없음": 17
+    "없음": 21
   },
   "problems": {
     "16": {
@@ -120,6 +128,39 @@
         "③": "[식:7]",
         "④": "[식:8]",
         "⑤": "[식:9]"
+      },
+      "choice_count": 5,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "4": {
+      "number": 4,
+      "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
+      "difficulty": "",
+      "score": 3.3,
+      "problem_text": "두 이차함수 [식:y=f left(x right)], [식:y=g left(x right)`]의 그래프가 다음 그림과 같을 때, 부등식 [식:f left(x right)-g left(x right]의 해는?",
+      "equations": [
+        "y=f left(x right)",
+        "y=g left(x right)`",
+        "f left(x right)-g left(x right) le 0`",
+        "x leq`-2",
+        "x ge 2",
+        "x leq`-2",
+        "x ge 3",
+        "x leq`-2",
+        "x ge 4",
+        "-2 le x le 3",
+        "-2 le x le 4"
+      ],
+      "eq_count": 11,
+      "choices": {
+        "①": "[식:x leq`-2] 또는 [식:x ge 2]",
+        "②": "[식:x leq`-2] 또는 [식:x ge 3]",
+        "③": "[식:x leq`-2] 또는 [식:x ge 4]",
+        "④": "[식:-2 le x le 3]",
+        "⑤": "[식:-2 le x le 4]"
       },
       "choice_count": 5,
       "score_position": "없음",
@@ -477,14 +518,113 @@
       "score_position": "없음",
       "has_endnote": true
     },
-    "서술형4": {
-      "number": 4,
-      "is_subjective": true,
-      "problem_type": "essay",
+    "17": {
+      "number": 17,
+      "is_subjective": false,
+      "problem_type": "multiple_choice",
       "label_num": null,
       "difficulty": "하",
+      "score": 4.1,
+      "problem_text": "어느 냉난방기는 온도 조절기에 설정한 희망 온도와 실내 온도의 차이가 [식:1 ``centigrade `]보다 크면 실외기가 작동되어 실내 온도와 희망 온도의 차를 [식:1 ``centigrade] 이하로 유지시켜 준다고 한다. 여름철 적정 실내 온도를 [식:25 sim 28 ``centigrade `]라 하고 희망 온도를 [식:a ``centigrade `]라 할 때, 실내 온도가 여름철 실내 적정 온도 범위 내에서 유지되도록 하는 [식:a`]의 값의 범위는?",
+      "equations": [
+        "1 ``centigrade `",
+        "1 ``centigrade",
+        "25 sim 28 ``centigrade `",
+        "a ``centigrade `",
+        "a`",
+        "23 le a le 24",
+        "24 le a le 25",
+        "25 le a le 26",
+        "26 le a le 27",
+        "27 le a le 28"
+      ],
+      "eq_count": 10,
+      "choices": {
+        "①": "[식:23 le a le 24]",
+        "②": "[식:24 le a le 25]",
+        "③": "[식:25 le a le 26]",
+        "④": "[식:26 le a le 27]",
+        "⑤": "[식:27 le a le 28]"
+      },
+      "choice_count": 5,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "18": {
+      "number": 18,
+      "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
+      "difficulty": "하",
+      "score": 4.2,
+      "problem_text": "[식:x`]에 대한 연립부등식 [식:cases {``x^{2}-2x-3 ge 0 #`` x]을 만족시키는 정수 [식:x`]의 개수가 [식:3`]이 되도록 하는 모든 정수 [식:k`]의 값의 합은?",
+      "equations": [
+        "x`",
+        "cases {``x^{2}-2x-3 ge 0 #`` x^{2}- left(5+k right)x+5k le 0}`",
+        "x`",
+        "3`",
+        "k`",
+        "11",
+        "12",
+        "13",
+        "14",
+        "15"
+      ],
+      "eq_count": 10,
+      "choices": {
+        "①": "[식:11]",
+        "②": "[식:12]",
+        "③": "[식:13]",
+        "④": "[식:14]",
+        "⑤": "[식:15]"
+      },
+      "choice_count": 5,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "19": {
+      "number": 19,
+      "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
+      "difficulty": "하",
+      "score": 4.3,
+      "problem_text": "방정식 [식:x^{3}=1`]의 한 허근을 [식:omega`]라 하고 자연수 [식:n`]에 대하여 [식:f left(n right)={ omega^{2n}+1]이라 할 때, [식:f left(1 right)+f left(2 right]을 만족시키는 자연수 [식:k`]의 값은? (단, [식:{ bar{ omega }}`]는 [식:omega`]의 켤레복소수이다.)",
+      "equations": [
+        "x^{3}=1`",
+        "omega`",
+        "n`",
+        "f left(n right)={ omega^{2n}+1} over { left({ bar{ omega }} right)^{n}}`",
+        "f left(1 right)+f left(2 right)+f left(3 right)+`cdots` +f left(k right)=100`",
+        "k`",
+        "{ bar{ omega }}`",
+        "omega`",
+        "35",
+        "50",
+        "66",
+        "83",
+        "101"
+      ],
+      "eq_count": 13,
+      "choices": {
+        "①": "[식:35]",
+        "②": "[식:50]",
+        "③": "[식:66]",
+        "④": "[식:83]",
+        "⑤": "[식:101]"
+      },
+      "choice_count": 5,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "서술형20": {
+      "number": 20,
+      "is_subjective": true,
+      "problem_type": "essay",
+      "label_num": 1,
+      "difficulty": "하",
       "score": 6.0,
-      "problem_text": "연립방정식 [식:cases {``2x^{2}+xy-y^{2}=0 #``]을 푸시오.",
+      "problem_text": "[서술형1]연립방정식 [식:cases {``2x^{2}+xy-y^{2}=0 #``]을 푸시오.",
       "equations": [
         "cases {``2x^{2}+xy-y^{2}=0 #`` x^{2}-xy+y^{2}=3}`"
       ],
@@ -498,10 +638,10 @@
       "number": 21,
       "is_subjective": true,
       "problem_type": "essay",
-      "label_num": null,
+      "label_num": 2,
       "difficulty": "하",
       "score": 7.0,
-      "problem_text": "㉠ 탁자에 [식:1`]부터 [식:8`]까지 적힌 카드가 놓여 있고, ㉡ 탁자에 [식:4`]부터 [식:11`]까지 적힌 카드가 놓여 있다. [식:{rm{A}}it`]학생이 먼저 ㉠ 탁자에서 [식:8], [식:7], [식:6], [식:5], [식:4], [식:3], [식:2], [식:1`]의 순서대로 카드를 선택했을 때, [식:{rm{B}}it`]학생이 ㉡ 탁자에서 다음 조건에 따라 [식:8`]장의 카드를 선택할 수 있는 모든 경우의 수를 구하시오. (단, 한 번에 한 장의 카드만 선택하며 중복하여 선택할 수 없고, 총 [식:8`]번 시행한다.) (가) [식:{rm{A}}it`]학생이 뽑은 카드가 [식:2`]의 배수이면 [식:{rm{B}}it`]학생도 [식:2`]의 배수를 선택한다.(나) [식:{rm{A}}it`]학생이 뽑은 카드가 [식:2`]의 배수가 아니면, [식:{rm{B}}it`]학생은 [식:{rm{A}}it`]학생의 카드보다 큰 카드를 선택한다.",
+      "problem_text": "[서술형2]㉠ 탁자에 [식:1`]부터 [식:8`]까지 적힌 카드가 놓여 있고, ㉡ 탁자에 [식:4`]부터 [식:11`]까지 적힌 카드가 놓여 있다. [식:{rm{A}}it`]학생이 먼저 ㉠ 탁자에서 [식:8], [식:7], [식:6], [식:5], [식:4], [식:3], [식:2], [식:1`]의 순서대로 카드를 선택했을 때, [식:{rm{B}}it`]학생이 ㉡ 탁자에서 다음 조건에 따라 [식:8`]장의 카드를 선택할 수 있는 모든 경우의 수를 구하시오. (단, 한 번에 한 장의 카드만 선택하며 중복하여 선택할 수 없고, 총 [식:8`]번 시행한다.) (가) [식:{rm{A}}it`]학생이 뽑은 카드가 [식:2`]의 배수이면 [식:{rm{B}}it`]학생도 [식:2`]의 배수를 선택한다.(나) [식:{rm{A}}it`]학생이 뽑은 카드가 [식:2`]의 배수가 아니면, [식:{rm{B}}it`]학생은 [식:{rm{A}}it`]학생의 카드보다 큰 카드를 선택한다.",
       "equations": [
         "1`",
         "8`",
@@ -538,12 +678,17 @@
       "number": 22,
       "is_subjective": true,
       "problem_type": "essay",
-      "label_num": null,
+      "label_num": 3,
       "difficulty": "하",
       "score": 8.0,
-      "problem_text": "",
-      "equations": [],
-      "eq_count": 0,
+      "problem_text": "[서술형3] 에서 이차함수 의 최댓값과 최솟값의 합이 일 때, 실수 의 값을 모두 구하시오.",
+      "equations": [
+        "-2 le x le 4`",
+        "y=x^{2}-4ax+5`",
+        "18`",
+        "a`"
+      ],
+      "eq_count": 4,
       "choices": {},
       "choice_count": 0,
       "score_position": "없음",
@@ -553,10 +698,10 @@
       "number": 23,
       "is_subjective": true,
       "problem_type": "essay",
-      "label_num": null,
+      "label_num": 4,
       "difficulty": "하",
       "score": 9.0,
-      "problem_text": "이차방정식 [식:x^{2}-2 left(a+2 right)x-a=0`]이 [식:-2 le x le 3`]에서 실근을 갖도록 하는 실수 [식:a`]의 값의 범위를 구하시오. 2025_1_1_b_공수1_국제고 ※ 이곳에 검수사항을 기재해주세요",
+      "problem_text": "[서술형4]이차방정식 [식:x^{2}-2 left(a+2 right)x-a=0`]이 [식:-2 le x le 3`]에서 실근을 갖도록 하는 실수 [식:a`]의 값의 범위를 구하시오.",
       "equations": [
         "x^{2}-2 left(a+2 right)x-a=0`",
         "-2 le x le 3`",

@@ -790,7 +790,7 @@
       "label_num": null,
       "difficulty": "",
       "score": 5.0,
-      "problem_text": "실수 [식:k`]와 최고차항의 계수가 [식:1`]인 이차함수 [식:f left(x right)`]에 대하여 [식:x`]에 대한 방정식 [식:f left(x right)+x=k`]의 서로 다른 두 실근이 [식:alpha], [식:beta`]일 때, 함수 [식:f left(x right)`]는 다음 조건을 만족시킨다. (가) [식:f left( beta right)= beta](나) 모든 실수 [식:x`]에 대하여 [식:f left(x right) ge beta] [식:f left(0 right) le alpha + bet]일 때, [식:beta`]의 최댓값을 구하시오. 2025_1_1_b_공수1_동신여고 ※ 이곳에 검수사항을 기재해주세요",
+      "problem_text": "실수 [식:k`]와 최고차항의 계수가 [식:1`]인 이차함수 [식:f left(x right)`]에 대하여 [식:x`]에 대한 방정식 [식:f left(x right)+x=k`]의 서로 다른 두 실근이 [식:alpha], [식:beta`]일 때, 함수 [식:f left(x right)`]는 다음 조건을 만족시킨다. (가) [식:f left( beta right)= beta](나) 모든 실수 [식:x`]에 대하여 [식:f left(x right) ge beta] [식:f left(0 right) le alpha + bet]일 때, [식:beta`]의 최댓값을 구하시오.",
       "equations": [
         "k`",
         "1`",

@@ -34,6 +34,8 @@ _SCORE_RE     = re.compile(r"\[(\d+(?:\.\d+)?)점\]")
 _CHOICE_CHARS = "①②③④⑤"
 _DANDAP_RE    = re.compile(r"\[단답형(\d+)\]")
 _SEOSUL_RE    = re.compile(r"\[서술형(\d+)\]")
+_REVIEW_RE    = re.compile(r"검수사항을 기재")          # 검수 메모 칸 필터
+_SOURCE_RE    = re.compile(r"\s*\d{4}_\d+_\d+_\w+_\S+")  # 소스 파일명 제거
 
 
 # ── 표 범위 계산 (중첩 카운터) ────────────────────────────────────────────────
@@ -193,8 +195,31 @@ def _parse_chunk(chunk: str) -> dict:
     # 앞: </hp:run></hp:p> 같은 닫힘 단편 → 첫 완전한 <hp:p 부터
     # 뒤: 다음 메타 표를 담은 단락이 열리다 잘림 → 마지막 </hp:p> 까지
     first_p = chunk_body.find("<hp:p ")
+
+    # pre-para 구간: </hp:tbl> 직후 ~ 첫 <hp:p> 이전
+    # [서술형N] 레이블과 수식이 <hp:p> 없이 직접 붙는 경우 있음 (국제고/금호고 서술형 케이스)
+    pre_lines: list[str] = []
+    pre_eqs:   list[str] = []
+    pre_label_type = None
+    pre_label_num  = None
     if first_p > 0:
+        pre_para = chunk_body[:first_p]
+        for t_m in re.finditer(r"<hp:t>([^<]*)</hp:t>", pre_para):
+            text = _B64_RE.sub("", t_m.group(1)).strip()
+            if text:
+                pre_lines.append(text)
+                m = _DANDAP_RE.search(text)
+                if m:
+                    pre_label_type, pre_label_num = "short_answer", int(m.group(1))
+                m = _SEOSUL_RE.search(text)
+                if m:
+                    pre_label_type, pre_label_num = "essay", int(m.group(1))
+        for sc_m in re.finditer(r"<hp:script>([^<]*)</hp:script>", pre_para):
+            src = sc_m.group(1).strip()
+            if src:
+                pre_eqs.append(src)
         chunk_body = chunk_body[first_p:]
+
     last_p_close = chunk_body.rfind("</hp:p>")
     if last_p_close != -1:
         chunk_body = chunk_body[:last_p_close + len("</hp:p>")]
@@ -204,9 +229,10 @@ def _parse_chunk(chunk: str) -> dict:
         root = ET.fromstring(f"<root {_NS_WRAPPER}>{chunk_body}</root>")
     except Exception:
         return {
-            "problem_text": "", "equations": [], "eq_count": 0,
+            "problem_text": " ".join(pre_lines).strip(),
+            "equations": pre_eqs, "eq_count": len(pre_eqs),
             "choices": {}, "score_position": "없음", "has_endnote": has_endnote,
-            "label_type": None, "label_num": None,
+            "label_type": pre_label_type, "label_num": pre_label_num,
         }
 
     # equation 바깥의 단락만 순회
@@ -217,6 +243,17 @@ def _parse_chunk(chunk: str) -> dict:
         all_eqs.extend(eqs)
         if txt:
             lines.append(txt)
+
+    # pre-para 내용을 앞에 병합, 검수 메모 칸 + 소스 파일명 제거
+    merged = []
+    for l in pre_lines + lines:
+        if _REVIEW_RE.search(l):
+            continue
+        l = _SOURCE_RE.sub("", l).strip()
+        if l:
+            merged.append(l)
+    lines    = merged
+    all_eqs  = pre_eqs   + all_eqs
 
     # 정답/해설 경계 (해설 페이지 분리자)
     ans_i = next((i for i, l in enumerate(lines) if l.strip() == "[정답]"), None)
@@ -255,18 +292,19 @@ def _parse_chunk(chunk: str) -> dict:
                 if cm:
                     choices[marker] = re.sub(r"\s+", " ", cm.group(1)).strip()
 
-    # 단답형/서술형 레이블 감지 ([단답형N], [서술형N])
-    label_type = None
-    label_num  = None
-    for line in lines[:body_end + 1]:
-        m = _DANDAP_RE.search(line)
-        if m:
-            label_type, label_num = "short_answer", int(m.group(1))
-            break
-        m = _SEOSUL_RE.search(line)
-        if m:
-            label_type, label_num = "essay", int(m.group(1))
-            break
+    # 단답형/서술형 레이블 감지 — pre-para에서 이미 찾은 경우 우선 사용
+    label_type = pre_label_type
+    label_num  = pre_label_num
+    if label_type is None:
+        for line in lines[:body_end + 1]:
+            m = _DANDAP_RE.search(line)
+            if m:
+                label_type, label_num = "short_answer", int(m.group(1))
+                break
+            m = _SEOSUL_RE.search(line)
+            if m:
+                label_type, label_num = "essay", int(m.group(1))
+                break
 
     return {
         "problem_text":  body_text,

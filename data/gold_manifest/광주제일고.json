@@ -559,8 +559,11 @@
       "label_num": null,
       "difficulty": "하",
       "score": 4.7,
-      "problem_text": "(가) [식:alpha], [식:beta], [식:gamma] 중 적어도 하나는 정수이다.(나) [식:left( alpha -3 beta +3 gamma r]",
+      "problem_text": "정수 에 대하여 삼차방정식 이 서로 다른 세 근 , , 를 갖고, 세 근 , , 가 다음 조건을 만족시킬 때 의 값은? (가) [식:alpha], [식:beta], [식:gamma] 중 적어도 하나는 정수이다.(나) [식:left( alpha -3 beta +3 gamma r]",
       "equations": [
+        "a`",
+        "x^{3}-5x^{2}+ax-6=0`",
+        "a^{2}`",
         "alpha",
         "beta",
         "gamma",
@@ -571,7 +574,7 @@
         "100",
         "144"
       ],
-      "eq_count": 9,
+      "eq_count": 12,
       "choices": {
         "①": "[식:25]",
         "②": "[식:64]",
@@ -655,7 +658,7 @@
       "label_num": null,
       "difficulty": "하",
       "score": 6.5,
-      "problem_text": "[식:0] 이상 [식:9] 이하의 서로 다른 네 정수 [식:a], [식:b], [식:c], [식:d`]에 대하여 네 자리 자연수 [식:a times 10^{3}+b times 10^{2}+] 를 만들 때, [식:b > c > d`]를 만족시키는 짝수의 개수를 구하시오. 2025_1_1_b_공수1_광주제일고 ※ 이곳에 검수사항을 기재해주세요",
+      "problem_text": "[식:0] 이상 [식:9] 이하의 서로 다른 네 정수 [식:a], [식:b], [식:c], [식:d`]에 대하여 네 자리 자연수 [식:a times 10^{3}+b times 10^{2}+] 를 만들 때, [식:b > c > d`]를 만족시키는 짝수의 개수를 구하시오.",
       "equations": [
         "0",
         "9",
