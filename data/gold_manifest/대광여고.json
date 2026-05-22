@@ -1,0 +1,695 @@
+{
+  "school": "대광여고",
+  "header": {
+    "subject": "공통수학1",
+    "range": "여러 가지 방정식 ~ 행렬",
+    "district": "남구",
+    "school": "대광여자고등학교",
+    "term": "2025년 1학년 1학기 기말"
+  },
+  "obj_count": 19,
+  "subj_count": 3,
+  "obj_numbers": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    21,
+    23,
+    24
+  ],
+  "subj_numbers": [
+    22,
+    25,
+    26
+  ],
+  "score_list": {
+    "1": 2.0,
+    "2": 2.0,
+    "3": 2.3,
+    "4": 5.0,
+    "5": 2.5,
+    "6": 2.5,
+    "7": 3.0,
+    "8": 3.0,
+    "9": 3.2,
+    "10": 3.4,
+    "11": 3.4,
+    "12": 3.6,
+    "13": 3.6,
+    "14": 3.8,
+    "15": 4.0,
+    "16": 4.2,
+    "21": 5.2,
+    "23": 5.8,
+    "24": 6.0,
+    "서술형22": 5.4,
+    "서술형25": 4.0,
+    "서술형26": 6.0
+  },
+  "total_equations": 258,
+  "total_tables": 28,
+  "total_pics": 4,
+  "total_bin_files": 5,
+  "total_endnotes": 26,
+  "choice_marker_total": 120,
+  "score_position_stats": {
+    "없음": 22
+  },
+  "problems": {
+    "1": {
+      "number": 1,
+      "is_subjective": false,
+      "difficulty": "하",
+      "score": 2.0,
+      "problem_text": "방정식 [식:x^{4}-16=0`]의 해가 아닌 것은?",
+      "equations": [
+        "x^{4}-16=0`",
+        "2",
+        "-2",
+        "2i",
+        "-2i",
+        "0"
+      ],
+      "eq_count": 6,
+      "choices": {
+        "①": "[식:2]",
+        "②": "[식:-2]",
+        "③": "[식:2i]",
+        "④": "[식:-2i]",
+        "⑤": "[식:0]"
+      },
+      "choice_count": 5,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "2": {
+      "number": 2,
+      "is_subjective": false,
+      "difficulty": "하",
+      "score": 2.0,
+      "problem_text": "[식:36`]의 양의 약수의 개수는?",
+      "equations": [
+        "36`",
+        "4",
+        "9",
+        "16",
+        "25",
+        "36"
+      ],
+      "eq_count": 6,
+      "choices": {
+        "①": "[식:4]",
+        "②": "[식:9]",
+        "③": "[식:16]",
+        "④": "[식:25]",
+        "⑤": "[식:36]"
+      },
+      "choice_count": 5,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "3": {
+      "number": 3,
+      "is_subjective": false,
+      "difficulty": "하",
+      "score": 2.3,
+      "problem_text": "부등식 [식:left|` x`right| le 1`]의 해로 올바른 것은?",
+      "equations": [
+        "left|` x`right| le 1`",
+        "-1 < x < 1",
+        "-1 le x le 1",
+        "x > 1",
+        "x <`-1",
+        "x ge 1",
+        "x leq`-1",
+        "x=1",
+        "x=`-1"
+      ],
+      "eq_count": 9,
+      "choices": {
+        "①": "[식:-1 < x < 1]",
+        "②": "[식:-1 le x le 1]",
+        "③": "[식:x > 1] 또는 [식:x <`-1]",
+        "④": "[식:x ge 1] 또는 [식:x leq`-1]",
+        "⑤": "[식:x=1] 또는 [식:x=`-1]"
+      },
+      "choice_count": 5,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "4": {
+      "number": 4,
+      "is_subjective": false,
+      "difficulty": "하",
+      "score": 5.0,
+      "problem_text": "[식:9] 이하의 자연수가 하나씩 적혀 있는 [식:9`]장의 카드가 들어 있는 상자에서 카드를 한 장씩 차례로 [식:4`]번 꺼낸다. [식:1 le k le 4`]인 자연수 [식:k`]에 대하여 [식:k`]번째 꺼낸 카드에 적혀 있는 수를 [식:a_{k}`]라 할 때 네 가지의 수 [식:left(a_{1},``a_{2},``a_{3},``a] 중 최댓값이 [식:6`]인 모든 순서쌍 [식:left(a_{1},``a_{2},``a_{3},``a]의 개수를 [식:M``]이라 하고 네 가지의 수 [식:left(a_{1},``a_{2},``a_{3},``a] 중 최솟값이 [식:5`]인 모든 순서쌍 [식:left(a_{1},``a_{2},``a_{3},``a]의 개수를 [식:m`]이라 하자. [식:M`+m`]의 값은?",
+      "equations": [
+        "9",
+        "9`",
+        "4`",
+        "1 le k le 4`",
+        "k`",
+        "k`",
+        "a_{k}`",
+        "left(a_{1},``a_{2},``a_{3},``a_{4} right)",
+        "6`",
+        "left(a_{1},``a_{2},``a_{3},``a_{4} right)`",
+        "M``",
+        "left(a_{1},``a_{2},``a_{3},``a_{4} right)",
+        "5`",
+        "left(a_{1},``a_{2},``a_{3},``a_{4} right)`",
+        "m`",
+        "M`+m`",
+        "330",
+        "333",
+        "336",
+        "339",
+        "342"
+      ],
+      "eq_count": 21,
+      "choices": {
+        "①": "[식:330]",
+        "②": "[식:333]",
+        "③": "[식:336]",
+        "④": "[식:339]",
+        "⑤": "[식:342]"
+      },
+      "choice_count": 5,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "5": {
+      "number": 5,
+      "is_subjective": false,
+      "difficulty": "",
+      "score": 2.5,
+      "problem_text": "연립방정식 [식:cases {``x-y=0 #`` x^{2}+y^{2}]의 해가 될 수 있는 것은?",
+      "equations": [
+        "cases {``x-y=0 #`` x^{2}+y^{2}=50}`",
+        "x=1",
+        "y=1",
+        "x=2",
+        "y=2",
+        "x=3",
+        "y=3",
+        "x=4",
+        "y=4",
+        "x=5",
+        "y=5"
+      ],
+      "eq_count": 11,
+      "choices": {
+        "①": "[식:x=1], [식:y=1]",
+        "②": "[식:x=2], [식:y=2]",
+        "③": "[식:x=3], [식:y=3]",
+        "④": "[식:x=4], [식:y=4]",
+        "⑤": "[식:x=5], [식:y=5]"
+      },
+      "choice_count": 5,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "6": {
+      "number": 6,
+      "is_subjective": false,
+      "difficulty": "",
+      "score": 2.5,
+      "problem_text": "대전에서 여수까지 가는 방법은 [식:3`]가지, 여수에서 광주까지 가는 방법은 [식:2`]가지, 대전에서 광주까지 가는 방법은 [식:1`]가지가 있다고 한다. 대전에서 여수를 거쳐 광주까지 가는 경우의 수는? (단, 같은 지점은 두 번 이상 지나지 않는다.)",
+      "equations": [
+        "3`",
+        "2`",
+        "1`",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7"
+      ],
+      "eq_count": 8,
+      "choices": {
+        "①": "[식:3]",
+        "②": "[식:4]",
+        "③": "[식:5]",
+        "④": "[식:6]",
+        "⑤": "[식:7]"
+      },
+      "choice_count": 5,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "7": {
+      "number": 7,
+      "is_subjective": false,
+      "difficulty": "하",
+      "score": 3.0,
+      "problem_text": "등식 [식:left( rpile{ 2x && 8 # 3 && 3x]을 만족시키는 실수 [식:x`]의 값은?",
+      "equations": [
+        "left( rpile{ 2x && 8 # 3 && 3x } right)= left( rpile{ 4 && 8 # 3 && 6 } right)`",
+        "x`",
+        "-2",
+        "-1",
+        "2",
+        "1",
+        "0"
+      ],
+      "eq_count": 7,
+      "choices": {
+        "①": "[식:-2]",
+        "②": "[식:-1]",
+        "③": "[식:2]",
+        "④": "[식:1]",
+        "⑤": "[식:0]"
+      },
+      "choice_count": 5,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "8": {
+      "number": 8,
+      "is_subjective": false,
+      "difficulty": "",
+      "score": 3.0,
+      "problem_text": "연립방정식 [식:cases {``x^{2}-xy-2y^{2}=0 #``]의 해가 아닌 것은?",
+      "equations": [
+        "cases {``x^{2}-xy-2y^{2}=0 #`` x^{2}+y^{2}=10}`",
+        "cases {``x=`- sqrt{5} #`` y= sqrt{5}}",
+        "cases {``x= sqrt{5} #`` y=`- sqrt{5}}",
+        "cases {``x=2 sqrt{2} #`` y= sqrt{2}}",
+        "cases {``x=`-2 sqrt{2} #`` y=`- sqrt{2}}",
+        "cases {``x=2 sqrt{2} #`` y=`- sqrt{2}}"
+      ],
+      "eq_count": 6,
+      "choices": {
+        "①": "[식:cases {``x=`- sqrt{5} #`` y= s]",
+        "②": "[식:cases {``x= sqrt{5} #`` y=`- s]",
+        "③": "[식:cases {``x=2 sqrt{2} #`` y= sq]",
+        "④": "[식:cases {``x=`-2 sqrt{2} #`` y=`]",
+        "⑤": "[식:cases {``x=2 sqrt{2} #`` y=`- ]"
+      },
+      "choice_count": 5,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "9": {
+      "number": 9,
+      "is_subjective": false,
+      "difficulty": "",
+      "score": 3.2,
+      "problem_text": "두 행렬 [식:A`= left( rpile{ 5 && -2 # 1 &], [식:B`= left( rpile{ 4 && 7 # -3 &]에 대하여 행렬 [식:2A`+B``]의 모든 성분의 합은?",
+      "equations": [
+        "A`= left( rpile{ 5 && -2 # 1 && 0 } right)",
+        "B`= left( rpile{ 4 && 7 # -3 && 9 } right)`",
+        "2A`+B``",
+        "10",
+        "12",
+        "17",
+        "23",
+        "25"
+      ],
+      "eq_count": 8,
+      "choices": {
+        "①": "[식:10]",
+        "②": "[식:12]",
+        "③": "[식:17]",
+        "④": "[식:23]",
+        "⑤": "[식:25]"
+      },
+      "choice_count": 5,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "10": {
+      "number": 10,
+      "is_subjective": false,
+      "difficulty": "",
+      "score": 3.4,
+      "problem_text": "[식:6`]장의 카드에 [식:0], [식:1], [식:2], [식:3], [식:4], [식:5`]의 숫자가 각각 적혀 있다. 이를 모두 이용하여 세 자리 자연수를 만들 때, 짝수의 개수는?",
+      "equations": [
+        "6`",
+        "0",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5`",
+        "52",
+        "54",
+        "56",
+        "58",
+        "60"
+      ],
+      "eq_count": 12,
+      "choices": {
+        "①": "[식:52]",
+        "②": "[식:54]",
+        "③": "[식:56]",
+        "④": "[식:58]",
+        "⑤": "[식:60]"
+      },
+      "choice_count": 5,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "11": {
+      "number": 11,
+      "is_subjective": false,
+      "difficulty": "",
+      "score": 3.4,
+      "problem_text": "부등식 [식:2 left|` x+2`right| +3 left|` ]의 해는?",
+      "equations": [
+        "2 left|` x+2`right| +3 left|` x-1`right| le 14`",
+        "-3 LEQ x LEQ 5",
+        "-3 LEQ x LEQ { 13} over {5 }",
+        "-{ 13} over { 5} LEQ x LEQ 3",
+        "x LEQ`-3",
+        "x GEQ { 13} over {5 }",
+        "x LEQ`- {13} over {5}",
+        "x GEQ 3"
+      ],
+      "eq_count": 8,
+      "choices": {
+        "①": "[식:-3 LEQ x LEQ 5]",
+        "②": "[식:-3 LEQ x LEQ { 13} over {5 }]",
+        "③": "[식:-{ 13} over { 5} LEQ x LEQ 3]",
+        "④": "[식:x LEQ`-3] 또는 [식:x GEQ { 13} over {5 }]",
+        "⑤": "[식:x LEQ`- {13} over {5}] 또는 [식:x GEQ 3]"
+      },
+      "choice_count": 5,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "12": {
+      "number": 12,
+      "is_subjective": false,
+      "difficulty": "",
+      "score": 3.6,
+      "problem_text": "두 행렬 [식:A`= left( rpile{ 3 && -2 # 3 &], [식:B`= left( rpile{ -1 && 4 # -6 ]과 두 실수 [식:p], [식:q`]에 대하여 [식:pA`+qB`=5E``]일 때, [식:2p+q`]의 값은? (단, [식:E``]는 단위행렬이다.)",
+      "equations": [
+        "A`= left( rpile{ 3 && -2 # 3 && -1 } right)",
+        "B`= left( rpile{ -1 && 4 # -6 && 7 } right)`",
+        "p",
+        "q`",
+        "pA`+qB`=5E``",
+        "2p+q`",
+        "E``",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6"
+      ],
+      "eq_count": 12,
+      "choices": {
+        "①": "[식:2]",
+        "②": "[식:3]",
+        "③": "[식:4]",
+        "④": "[식:5]",
+        "⑤": "[식:6]"
+      },
+      "choice_count": 5,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "13": {
+      "number": 13,
+      "is_subjective": false,
+      "difficulty": "",
+      "score": 3.6,
+      "problem_text": "[식:it_{n}{ rm{P}}it_{r}+ it_{n}{ ], [식:it_{n}{ rm{P}}it_{r }- it_{n}{]일 때, [식:n-r`]의 값은? (단, [식:n], [식:r`]은 자연수이다.)",
+      "equations": [
+        "it_{n}{ rm{P}}it_{r}+ it_{n}{ rm{C}}it_{r}=108",
+        "it_{n}{ rm{P}}it_{r }- it_{n}{ rm{C}}it_{r }=36`",
+        "n-r`",
+        "n",
+        "r`",
+        "5",
+        "7",
+        "9",
+        "11",
+        "13"
+      ],
+      "eq_count": 10,
+      "choices": {
+        "①": "[식:5]",
+        "②": "[식:7]",
+        "③": "[식:9]",
+        "④": "[식:11]",
+        "⑤": "[식:13]"
+      },
+      "choice_count": 5,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "14": {
+      "number": 14,
+      "is_subjective": false,
+      "difficulty": "",
+      "score": 3.8,
+      "problem_text": "어느 고등학교 [식:1`]학년 전체 학생들이 강당의 의자에 앉으려고 한다. 한 의자에 [식:5`]명씩 앉으면 [식:15`]명의 학생이 앉지 못하고, [식:6`]명씩 앉으면 의자가 [식:5`]개 남는다고 한다. 의자 개수의 최솟값과 최댓값의 합은?",
+      "equations": [
+        "1`",
+        "5`",
+        "15`",
+        "6`",
+        "5`",
+        "93",
+        "94",
+        "95",
+        "96",
+        "97"
+      ],
+      "eq_count": 10,
+      "choices": {
+        "①": "[식:93]",
+        "②": "[식:94]",
+        "③": "[식:95]",
+        "④": "[식:96]",
+        "⑤": "[식:97]"
+      },
+      "choice_count": 5,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "15": {
+      "number": 15,
+      "is_subjective": false,
+      "difficulty": "",
+      "score": 4.0,
+      "problem_text": "두 행렬 [식:A`= left( rpile{ 1 && 2 # 0 &&], [식:B`= left( rpile{ 3 && -5 # 1 &]에 대하여 행렬 [식:A`^{2}B`-A`B``^{2}`]의 모든 성분의 합은?",
+      "equations": [
+        "A`= left( rpile{ 1 && 2 # 0 && -1 } right)",
+        "B`= left( rpile{ 3 && -5 # 1 && 4 } right)`",
+        "A`^{2}B`-A`B``^{2}`",
+        "16",
+        "20",
+        "26",
+        "30",
+        "36"
+      ],
+      "eq_count": 8,
+      "choices": {
+        "①": "[식:16]",
+        "②": "[식:20]",
+        "③": "[식:26]",
+        "④": "[식:30]",
+        "⑤": "[식:36]"
+      },
+      "choice_count": 5,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "16": {
+      "number": 16,
+      "is_subjective": false,
+      "difficulty": "",
+      "score": 4.2,
+      "problem_text": "삼차방정식 [식:x^{3}+ left(2k-3 right)x^{2}+ ] 이 한 개의 실근만 갖도록 하는 [식:k`]값의 범위를 구한 것은?",
+      "equations": [
+        "x^{3}+ left(2k-3 right)x^{2}+ left(3k-4 right)x+k=0",
+        "k`",
+        "k < 1",
+        "k > 4",
+        "k < 0",
+        "k > 5",
+        "k < 1",
+        "k > 5",
+        "1 < k < 4",
+        "0 < k < 5"
+      ],
+      "eq_count": 10,
+      "choices": {
+        "①": "[식:k < 1] 또는 [식:k > 4]",
+        "②": "[식:k < 0] 또는 [식:k > 5]",
+        "③": "[식:k < 1] 또는 [식:k > 5]",
+        "④": "[식:1 < k < 4]",
+        "⑤": "[식:0 < k < 5]"
+      },
+      "choice_count": 5,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "21": {
+      "number": 21,
+      "is_subjective": false,
+      "difficulty": "하",
+      "score": 5.2,
+      "problem_text": "[식:x`]에 대한 연립부등식 [식:cases {``x^{2}-3x-18 < 0 #`` l] 를 만족시키는 정수 [식:x`]의 개수가 [식:2`]가 되도록 하는 실수 [식:k`]의 범위를 구하시오.",
+      "equations": [
+        "x`",
+        "cases {``x^{2}-3x-18 < 0 #`` left|` 3x-9`right| ge k}",
+        "x`",
+        "2`",
+        "k`",
+        "9 < k le 12",
+        "9 le k < 12",
+        "8 < k le 12",
+        "8 le k < 12",
+        "8 < k < 12"
+      ],
+      "eq_count": 10,
+      "choices": {
+        "①": "[식:9 < k le 12]",
+        "②": "[식:9 le k < 12]",
+        "③": "[식:8 < k le 12]",
+        "④": "[식:8 le k < 12]",
+        "⑤": "[식:8 < k < 12]"
+      },
+      "choice_count": 5,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "23": {
+      "number": 23,
+      "is_subjective": false,
+      "difficulty": "하",
+      "score": 5.8,
+      "problem_text": "이차항 계수의 절댓값이 같고 부호가 다른 두 이차함수 [식:f left(x right)], [식:g left(x right)`]가 다음 조건을 만족한다. 정수 [식:m`]의 값은? (가) 부등식 [식:f left(x right) ge 3`]의 해는 [식:x=`-1`]이다.(나) [식:f left(0 right)=1`]이다.(다) 부등식 [식:f left(x right)-g left(x right]라고 할 때 [식:h left(x right) ge 0`]의 해는 [식:-1 le x le 3`]이다.(라) [식:f left(x right)+k=0`]이 실근을 갖지 않고 [식:g left(x right)-m+k=0`]이 실근을 갖지 않도록 하는 정수 [식:k`]의 개수는 [식:9`]이다.",
+      "equations": [
+        "f left(x right)",
+        "g left(x right)`",
+        "m`",
+        "f left(x right) ge 3`",
+        "x=`-1`",
+        "f left(0 right)=1`",
+        "f left(x right)-g left(x right)=h left(x right)`",
+        "h left(x right) ge 0`",
+        "-1 le x le 3`",
+        "f left(x right)+k=0`",
+        "g left(x right)-m+k=0`",
+        "k`",
+        "9`",
+        "-42",
+        "-28",
+        "0",
+        "24",
+        "42"
+      ],
+      "eq_count": 18,
+      "choices": {
+        "①": "[식:-42]",
+        "②": "[식:-28]",
+        "③": "[식:0]",
+        "④": "[식:24]",
+        "⑤": "[식:42]"
+      },
+      "choice_count": 5,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "24": {
+      "number": 24,
+      "is_subjective": false,
+      "difficulty": "하",
+      "score": 6.0,
+      "problem_text": "두 정수 [식:a], [식:b`]에 대하여 [식:x`]에 대한 방정식 [식:x^{3}-x^{2}-bx-6a=0`]은 [식:a`]를 포함한 서로 다른 세 정수를 근으로 갖고, [식:x`]에 대한 방정식 [식:x^{3}+bx^{2}+ax+ab=0`]도 서로 다른 세 정수를 근으로 갖는다. [식:a+b`]값은?",
+      "equations": [
+        "a",
+        "b`",
+        "x`",
+        "x^{3}-x^{2}-bx-6a=0`",
+        "a`",
+        "x`",
+        "x^{3}+bx^{2}+ax+ab=0`",
+        "a+b`",
+        "6",
+        "8",
+        "10",
+        "12",
+        "14"
+      ],
+      "eq_count": 13,
+      "choices": {
+        "①": "[식:6]",
+        "②": "[식:8]",
+        "③": "[식:10]",
+        "④": "[식:12]",
+        "⑤": "[식:14]"
+      },
+      "choice_count": 5,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "서술형22": {
+      "number": 22,
+      "is_subjective": true,
+      "difficulty": "하",
+      "score": 5.4,
+      "problem_text": "",
+      "equations": [],
+      "eq_count": 0,
+      "choices": {},
+      "choice_count": 0,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "서술형25": {
+      "number": 25,
+      "is_subjective": true,
+      "difficulty": "하",
+      "score": 4.0,
+      "problem_text": "모든 실수 [식:x`]에 대하여 행렬의 곱 [식:left(a~1 right) left(pile{a&&5]의 성분이 음수가 아닐 때, 실수 [식:a`]의 최솟값을 구하고 그 과정을 서술하시오.",
+      "equations": [
+        "x`",
+        "left(a~1 right) left(pile{a&&5 # 3 && a}  right) left( rpile{ x # 1 } right) right.`",
+        "a`"
+      ],
+      "eq_count": 3,
+      "choices": {},
+      "choice_count": 0,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "서술형26": {
+      "number": 26,
+      "is_subjective": true,
+      "difficulty": "하",
+      "score": 6.0,
+      "problem_text": "함수 [식:f left(x right)=x^{2}+2x-3`]에 대하여 부등식 [식:left|` f left(x right)`right| ]을 만족시키는 정수 [식:x`]의 개수가 [식:13`]이 되도록 하는 실수 [식:m`]값의 범위를 구하고 그 과정을 서술하시오. 2025_1_1_b_공수1_대광여고 ※ 이곳에 검수사항을 기재해주세요",
+      "equations": [
+        "f left(x right)=x^{2}+2x-3`",
+        "left|` f left(x right)`right| -2f left(x right) ge m left(x+3 right)`",
+        "x`",
+        "13`",
+        "m`"
+      ],
+      "eq_count": 5,
+      "choices": {},
+      "choice_count": 0,
+      "score_position": "없음",
+      "has_endnote": true
+    }
+  }
+}

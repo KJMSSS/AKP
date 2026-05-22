@@ -1,0 +1,761 @@
+{
+  "school": "동성고",
+  "header": {
+    "subject": "공통수학1",
+    "range": "부등식 ~ 행렬",
+    "district": "남구",
+    "school": "동성고등학교",
+    "term": "2025년 1학년 1학기 기말"
+  },
+  "obj_count": 20,
+  "subj_count": 4,
+  "obj_numbers": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20
+  ],
+  "subj_numbers": [
+    21,
+    22,
+    23,
+    24
+  ],
+  "score_list": {
+    "1": 5.1,
+    "2": 5.1,
+    "3": 5.1,
+    "4": 5.15,
+    "5": 5.3,
+    "6": 5.3,
+    "7": 5.3,
+    "8": 6.0,
+    "9": 6.7,
+    "10": 6.7,
+    "11": 6.7,
+    "12": 6.85,
+    "13": 6.9,
+    "14": 6.9,
+    "15": 6.9,
+    "16": 10.0,
+    "17": 10.0,
+    "18": 10.0,
+    "19": 10.0,
+    "20": 10.0,
+    "서술형21": 10.0,
+    "서술형22": 10.0,
+    "서술형23": 10.0,
+    "서술형24": 10.0
+  },
+  "total_equations": 228,
+  "total_tables": 26,
+  "total_pics": 3,
+  "total_bin_files": 4,
+  "total_endnotes": 24,
+  "choice_marker_total": 100,
+  "score_position_stats": {
+    "없음": 24
+  },
+  "problems": {
+    "1": {
+      "number": 1,
+      "is_subjective": false,
+      "difficulty": "하",
+      "score": 5.1,
+      "problem_text": "이차부등식 [식:x^{2}+2 left(k+1 right)x+7 le ]의 해가 오직 한 개 존재하도록 하는 모든 실수 [식:k`]의 값의 곱은?",
+      "equations": [
+        "x^{2}+2 left(k+1 right)x+7 le 0`",
+        "k`",
+        "-4",
+        "-6",
+        "-8",
+        "-10",
+        "-12"
+      ],
+      "eq_count": 7,
+      "choices": {
+        "①": "[식:-4]",
+        "②": "[식:-6]",
+        "③": "[식:-8]",
+        "④": "[식:-10]",
+        "⑤": "[식:-12]"
+      },
+      "choice_count": 5,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "2": {
+      "number": 2,
+      "is_subjective": false,
+      "difficulty": "하",
+      "score": 5.1,
+      "problem_text": "동성고등학교 학생회장 선거에 출마한 [식:5`]명의 학생 중에서 회장, 부회장을 각각 한 명씩 뽑는 경우의 수는?",
+      "equations": [
+        "5`",
+        "120",
+        "60",
+        "20",
+        "10",
+        "5"
+      ],
+      "eq_count": 6,
+      "choices": {
+        "①": "[식:120]",
+        "②": "[식:60]",
+        "③": "[식:20]",
+        "④": "[식:10]",
+        "⑤": "[식:5]"
+      },
+      "choice_count": 5,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "3": {
+      "number": 3,
+      "is_subjective": false,
+      "difficulty": "하",
+      "score": 5.1,
+      "problem_text": "두 행렬 [식:A`= left( rpile{ 1 && 2 # 3 &&], [식:B`= left( rpile{ 4 && -3 # -2 ]에 대하여 행렬 [식:A`+B``]의 모든 성분의 합은?",
+      "equations": [
+        "A`= left( rpile{ 1 && 2 # 3 && 4 } right)",
+        "B`= left( rpile{ 4 && -3 # -2 && 0 } right)`",
+        "A`+B``",
+        "9",
+        "10",
+        "11",
+        "12",
+        "13"
+      ],
+      "eq_count": 8,
+      "choices": {
+        "①": "[식:9]",
+        "②": "[식:10]",
+        "③": "[식:11]",
+        "④": "[식:12]",
+        "⑤": "[식:13]"
+      },
+      "choice_count": 5,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "4": {
+      "number": 4,
+      "is_subjective": false,
+      "difficulty": "",
+      "score": 5.15,
+      "problem_text": "연립부등식 [식:cases {``2x+7 < 3 left(x+3 rig]을 만족시키는 정수 [식:x`]가 [식:4`]개가 되도록 하는 실수 [식:a`]의 값의 범위가 [식:p < a le q`]일 때 [식:p+q`]의 값은?",
+      "equations": [
+        "cases {``2x+7 < 3 left(x+3 right) #`` 4x < 2x+a-1}`",
+        "x`",
+        "4`",
+        "a`",
+        "p < a le q`",
+        "p+q`",
+        "12",
+        "13",
+        "14",
+        "15",
+        "16"
+      ],
+      "eq_count": 11,
+      "choices": {
+        "①": "[식:12]",
+        "②": "[식:13]",
+        "③": "[식:14]",
+        "④": "[식:15]",
+        "⑤": "[식:16]"
+      },
+      "choice_count": 5,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "5": {
+      "number": 5,
+      "is_subjective": false,
+      "difficulty": "",
+      "score": 5.3,
+      "problem_text": "[식:left(a+b+c+d right) left(l+m+n]를 전개하였을 때, [식:x`]를 포함한 항의 개수는?",
+      "equations": [
+        "left(a+b+c+d right) left(l+m+n right) left(x+y right)`",
+        "x`",
+        "7",
+        "8",
+        "9",
+        "12",
+        "24"
+      ],
+      "eq_count": 7,
+      "choices": {
+        "①": "[식:7]",
+        "②": "[식:8]",
+        "③": "[식:9]",
+        "④": "[식:12]",
+        "⑤": "[식:24]"
+      },
+      "choice_count": 5,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "6": {
+      "number": 6,
+      "is_subjective": false,
+      "difficulty": "",
+      "score": 5.3,
+      "problem_text": "두 행렬 [식:A`= left( rpile{ 2 && -1 # -5 ], [식:B`= left( rpile{ 4 && -5 # 2 &]에 대하여 [식:-X`-2A`=`-2 left(X`+B` right)`]를 만족시키는 행렬 [식:X``]의 모든 성분의 합은?",
+      "equations": [
+        "A`= left( rpile{ 2 && -1 # -5 && 3 } right)",
+        "B`= left( rpile{ 4 && -5 # 2 && 3 } right)`",
+        "-X`-2A`=`-2 left(X`+B` right)`",
+        "X``",
+        "-2",
+        "-4",
+        "-6",
+        "-8",
+        "-10"
+      ],
+      "eq_count": 9,
+      "choices": {
+        "①": "[식:-2]",
+        "②": "[식:-4]",
+        "③": "[식:-6]",
+        "④": "[식:-8]",
+        "⑤": "[식:-10]"
+      },
+      "choice_count": 5,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "7": {
+      "number": 7,
+      "is_subjective": false,
+      "difficulty": "하",
+      "score": 5.3,
+      "problem_text": "부등식 [식:left|` x+1`right| + left|` x`r]의 해가 이차부등식 [식:ax^{2}+2x+b < 0`]의 해와 같을 때, 상수 [식:a], [식:b`]에 대하여 [식:a-b`]의 값은?",
+      "equations": [
+        "left|` x+1`right| + left|` x`right| < 3`",
+        "ax^{2}+2x+b < 0`",
+        "a",
+        "b`",
+        "a-b`",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7"
+      ],
+      "eq_count": 10,
+      "choices": {
+        "①": "[식:3]",
+        "②": "[식:4]",
+        "③": "[식:5]",
+        "④": "[식:6]",
+        "⑤": "[식:7]"
+      },
+      "choice_count": 5,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "8": {
+      "number": 8,
+      "is_subjective": false,
+      "difficulty": "",
+      "score": 6.0,
+      "problem_text": "부등식 [식:left|` x+2`right| + left|` x-1]의 해가 없을 때, 정수 [식:k`]의 최댓값은?",
+      "equations": [
+        "left|` x+2`right| + left|` x-1`right| < k`",
+        "k`",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6"
+      ],
+      "eq_count": 7,
+      "choices": {
+        "①": "[식:2]",
+        "②": "[식:3]",
+        "③": "[식:4]",
+        "④": "[식:5]",
+        "⑤": "[식:6]"
+      },
+      "choice_count": 5,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "9": {
+      "number": 9,
+      "is_subjective": false,
+      "difficulty": "",
+      "score": 6.7,
+      "problem_text": "[식:x`]에 대한 연립부등식 [식:cases {``x^{2}- left(k-2 right]을 만족시키는 정수 [식:x`]의 개수가 [식:1`]개가 되도록 하는 실수 [식:k`]의 최솟값과 최댓값의 합은?",
+      "equations": [
+        "x`",
+        "cases {``x^{2}- left(k-2 right)x-2k < 0 #`` x^{2}- left(k+4 right)x+4k < 0}`",
+        "x`",
+        "1`",
+        "k`",
+        "12",
+        "6",
+        "2",
+        "1",
+        "0"
+      ],
+      "eq_count": 10,
+      "choices": {
+        "①": "[식:12]",
+        "②": "[식:6]",
+        "③": "[식:2]",
+        "④": "[식:1]",
+        "⑤": "[식:0]"
+      },
+      "choice_count": 5,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "10": {
+      "number": 10,
+      "is_subjective": false,
+      "difficulty": "",
+      "score": 6.7,
+      "problem_text": "어른 [식:5`]명과 어린이 [식:3`]명이 한 줄로 서서 등산을 하려고 한다. 이때 어린이끼리 서로 이웃하지 않도록 서는 경우의 수는?",
+      "equations": [
+        "5`",
+        "3`",
+        "240",
+        "720",
+        "2880",
+        "7200",
+        "14400"
+      ],
+      "eq_count": 7,
+      "choices": {
+        "①": "[식:240]",
+        "②": "[식:720]",
+        "③": "[식:2880]",
+        "④": "[식:7200]",
+        "⑤": "[식:14400]"
+      },
+      "choice_count": 5,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "11": {
+      "number": 11,
+      "is_subjective": false,
+      "difficulty": "",
+      "score": 6.7,
+      "problem_text": "남교사 [식:1`]명, 여교사 [식:1`]명, 학생 [식:3`]이 일렬로 설 때, 교사 사이에 한 명의 학생이 끼는 경우의 수는?",
+      "equations": [
+        "1`",
+        "1`",
+        "3`",
+        "18",
+        "24",
+        "36",
+        "72",
+        "120"
+      ],
+      "eq_count": 8,
+      "choices": {
+        "①": "[식:18]",
+        "②": "[식:24]",
+        "③": "[식:36]",
+        "④": "[식:72]",
+        "⑤": "[식:120]"
+      },
+      "choice_count": 5,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "12": {
+      "number": 12,
+      "is_subjective": false,
+      "difficulty": "",
+      "score": 6.85,
+      "problem_text": "[식:1`]부터 [식:n`]까지의 자연수를 일렬로 나열할 때, [식:1`]과 [식:2] 사이에 [식:2`]개의 자연수가 들어가도록 나열하는 경우의 수가 [식:24`]일 때, [식:n`]의 값은?",
+      "equations": [
+        "1`",
+        "n`",
+        "1`",
+        "2",
+        "2`",
+        "24`",
+        "n`",
+        "8",
+        "7",
+        "6",
+        "5",
+        "4"
+      ],
+      "eq_count": 12,
+      "choices": {
+        "①": "[식:8]",
+        "②": "[식:7]",
+        "③": "[식:6]",
+        "④": "[식:5]",
+        "⑤": "[식:4]"
+      },
+      "choice_count": 5,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "13": {
+      "number": 13,
+      "is_subjective": false,
+      "difficulty": "",
+      "score": 6.9,
+      "problem_text": "[식:2 times 2`]행렬 [식:A``]의 [식:left(i,``j right)`]성분 [식:a_{ij}`]가 [식:a_{ij}=2i-3j+1`]이고, 행렬 [식:B`= left( pile{ 0 && x+y # 2 &]일 때, [식:A`=B``]를 만족시키는 [식:x], [식:y`]에 대하여 [식:x+y`]의 값은?",
+      "equations": [
+        "2 times 2`",
+        "A``",
+        "left(i,``j right)`",
+        "a_{ij}`",
+        "a_{ij}=2i-3j+1`",
+        "B`= left( pile{ 0 && x+y # 2 && x-y } right)`",
+        "A`=B``",
+        "x",
+        "y`",
+        "x+y`",
+        "-3",
+        "-2",
+        "-1",
+        "0",
+        "1"
+      ],
+      "eq_count": 15,
+      "choices": {
+        "①": "[식:-3]",
+        "②": "[식:-2]",
+        "③": "[식:-1]",
+        "④": "[식:0]",
+        "⑤": "[식:1]"
+      },
+      "choice_count": 5,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "14": {
+      "number": 14,
+      "is_subjective": false,
+      "difficulty": "",
+      "score": 6.9,
+      "problem_text": "자연수 [식:n`]에 대하여 행렬 [식:left( rpile{ 2 && 3 # 0 && 0 }]의 [식:left(1,``2 right)`]의 성분이 [식:1536`]일 때, [식:n`]의 값은?",
+      "equations": [
+        "n`",
+        "left( rpile{ 2 && 3 # 0 && 0 } right)^{n}`",
+        "left(1,``2 right)`",
+        "1536`",
+        "n`",
+        "6",
+        "7",
+        "8",
+        "9",
+        "10"
+      ],
+      "eq_count": 10,
+      "choices": {
+        "①": "[식:6]",
+        "②": "[식:7]",
+        "③": "[식:8]",
+        "④": "[식:9]",
+        "⑤": "[식:10]"
+      },
+      "choice_count": 5,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "15": {
+      "number": 15,
+      "is_subjective": false,
+      "difficulty": "",
+      "score": 6.9,
+      "problem_text": "남학생과 여학생을 합하여 [식:7`]명이 있는 동아리에서 [식:2`]명의 대표를 뽑으려고 한다. 여학생이 적어도 한 명 포함되도록 뽑는 경우의 수가 [식:15`]일 때, 이 동아리의 남학생 수는?",
+      "equations": [
+        "7`",
+        "2`",
+        "15`",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6"
+      ],
+      "eq_count": 8,
+      "choices": {
+        "①": "[식:2]",
+        "②": "[식:3]",
+        "③": "[식:4]",
+        "④": "[식:5]",
+        "⑤": "[식:6]"
+      },
+      "choice_count": 5,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "16": {
+      "number": 16,
+      "is_subjective": false,
+      "difficulty": "",
+      "score": 10.0,
+      "problem_text": "자연수 [식:n`]에 대하여 연립부등식 [식:cases {``x^{2} < left(2n+1 rig] 을 만족시키는 정수 [식:x`]의 개수를 [식:f left(n right)`]이라 하자. 이때 부등식 [식:f left(n^{2} right) > 121`]을 만족시키는 자연수 [식:n`]의 최솟값은?",
+      "equations": [
+        "n`",
+        "cases {``x^{2} < left(2n+1 right)x #`` x^{2}- left(n+2 right)x+n+1 ge 0}",
+        "x`",
+        "f left(n right)`",
+        "f left(n^{2} right) > 121`",
+        "n`",
+        "10",
+        "11",
+        "12",
+        "13",
+        "14"
+      ],
+      "eq_count": 11,
+      "choices": {
+        "①": "[식:10]",
+        "②": "[식:11]",
+        "③": "[식:12]",
+        "④": "[식:13]",
+        "⑤": "[식:14]"
+      },
+      "choice_count": 5,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "17": {
+      "number": 17,
+      "is_subjective": false,
+      "difficulty": "",
+      "score": 10.0,
+      "problem_text": "[식:-2 le x le 2`]에서 부등식 [식:-2 le ax^{2}+bx le 6`]이 항상 성립하도록 하는 자연수 [식:a], [식:b`]의 순서쌍 [식:left(a,``b right)`]의 개수는?",
+      "equations": [
+        "-2 le x le 2`",
+        "-2 le ax^{2}+bx le 6`",
+        "a",
+        "b`",
+        "left(a,``b right)`",
+        "5",
+        "4",
+        "3",
+        "2",
+        "1"
+      ],
+      "eq_count": 10,
+      "choices": {
+        "①": "[식:5]",
+        "②": "[식:4]",
+        "③": "[식:3]",
+        "④": "[식:2]",
+        "⑤": "[식:1]"
+      },
+      "choice_count": 5,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "18": {
+      "number": 18,
+      "is_subjective": false,
+      "difficulty": "",
+      "score": 10.0,
+      "problem_text": "이차정사각행렬 [식:A``]의 [식:left(i,``j right)`]성분 [식:a_{ij}`]가 [식:a_{ij}=i-j`]일 때, 행렬 [식:A`+A`^{2}+A`^{3}+`cdots` +A`^{]의 성분의 합은?",
+      "equations": [
+        "A``",
+        "left(i,``j right)`",
+        "a_{ij}`",
+        "a_{ij}=i-j`",
+        "A`+A`^{2}+A`^{3}+`cdots` +A`^{2026}`",
+        "-4",
+        "-2",
+        "0",
+        "2",
+        "4"
+      ],
+      "eq_count": 10,
+      "choices": {
+        "①": "[식:-4]",
+        "②": "[식:-2]",
+        "③": "[식:0]",
+        "④": "[식:2]",
+        "⑤": "[식:4]"
+      },
+      "choice_count": 5,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "19": {
+      "number": 19,
+      "is_subjective": false,
+      "difficulty": "",
+      "score": 10.0,
+      "problem_text": "이차방정식 [식:x^{2}-2x-3=0`]의 두 근을 [식:alpha], [식:beta`]라 할 때, 행렬 [식:A`= left( rpile{ alpha && -3 #]에 대하여 행렬 [식:A`^{10}`]의 모든 성분의 곱이 [식:2^{p} times 3^{q}`]일 때, [식:p+q`]의 값은?",
+      "equations": [
+        "x^{2}-2x-3=0`",
+        "alpha",
+        "beta`",
+        "A`= left( rpile{ alpha && -3 # 1 && beta } right)`",
+        "A`^{10}`",
+        "2^{p} times 3^{q}`",
+        "p+q`",
+        "11",
+        "26",
+        "30",
+        "38",
+        "42"
+      ],
+      "eq_count": 12,
+      "choices": {
+        "①": "[식:11]",
+        "②": "[식:26]",
+        "③": "[식:30]",
+        "④": "[식:38]",
+        "⑤": "[식:42]"
+      },
+      "choice_count": 5,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "20": {
+      "number": 20,
+      "is_subjective": false,
+      "difficulty": "",
+      "score": 10.0,
+      "problem_text": "[식:1`]부터 [식:9`]까지의 서로 다른 자연수 [식:a], [식:b], [식:c], [식:d], [식:e`]에 대하여 [식:a times 10^{4}+b times 10^{3}+]로 나타내어지는 다섯 자리 자연수 [식:abcde] 중에서 [식:a > b > c], [식:c < d < e`]를 만족시키고 [식:60000] 이하인 자연수의 개수는?",
+      "equations": [
+        "1`",
+        "9`",
+        "a",
+        "b",
+        "c",
+        "d",
+        "e`",
+        "a times 10^{4}+b times 10^{3}+c times 10^{2}+d times 10+e`",
+        "abcde",
+        "a > b > c",
+        "c < d < e`",
+        "60000",
+        "126",
+        "174",
+        "197",
+        "220",
+        "250"
+      ],
+      "eq_count": 17,
+      "choices": {
+        "①": "[식:126]",
+        "②": "[식:174]",
+        "③": "[식:197]",
+        "④": "[식:220]",
+        "⑤": "[식:250]"
+      },
+      "choice_count": 5,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "서술형21": {
+      "number": 21,
+      "is_subjective": true,
+      "difficulty": "",
+      "score": 10.0,
+      "problem_text": "[식:11`]쌍의 부부가 참석한 모임에서 남자는 자신의 배우자를 제외한 모든 사람과 악수를 하였고, 여자끼리는 악수를 하지 않았다. 참석한 [식:22`]명의 나눈 악수의 횟수를 구하는 과정을 서술하시오.",
+      "equations": [
+        "11`",
+        "22`"
+      ],
+      "eq_count": 2,
+      "choices": {},
+      "choice_count": 0,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "서술형22": {
+      "number": 22,
+      "is_subjective": true,
+      "difficulty": "",
+      "score": 10.0,
+      "problem_text": "각 면에 [식:1], [식:2], [식:3], [식:4], [식:5], [식:6`]이 각각 하나씩 적힌 서로 다른 세 개의 주사위를 동시에 던질 때, 나오는 눈의 수를 각각 [식:x], [식:y], [식:z`]라 할 때, [식:xy+yz+zx`]의 값이 짝수가 되는 경우의 수를 구하는 과정을 서술하시오.",
+      "equations": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6`",
+        "x",
+        "y",
+        "z`",
+        "xy+yz+zx`"
+      ],
+      "eq_count": 10,
+      "choices": {},
+      "choice_count": 0,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "서술형23": {
+      "number": 23,
+      "is_subjective": true,
+      "difficulty": "",
+      "score": 10.0,
+      "problem_text": "두 행렬 [식:A`= left({1} over {0},``{2} ov], [식:B`= left({1} over {0},``{3} ov]에 대하여 [식:A`^{m}-B`^{n}`]의 모든 성분의 합이 [식:15`]라고 한다. [식:m+n=25`]일 때, 자연수 [식:m], [식:n`]의 값을 구하는 과정을 서술하시오.",
+      "equations": [
+        "A`= left({1} over {0},``{2} over {1} right)",
+        "B`= left({1} over {0},``{3} over {1} right)`",
+        "A`^{m}-B`^{n}`",
+        "15`",
+        "m+n=25`",
+        "m",
+        "n`"
+      ],
+      "eq_count": 7,
+      "choices": {},
+      "choice_count": 0,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "서술형24": {
+      "number": 24,
+      "is_subjective": true,
+      "difficulty": "",
+      "score": 10.0,
+      "problem_text": "그림과 같이 [식:{ bar{A`C`}}=15`], [식:{ bar{B`C`}}=9`]인 직각삼각형 [식:{rm{ABC}it}`]가 있다. 빗변 [식:{rm{AB}it}] 위의 점 [식:{rm{P}it}`]에서 변 [식:{rm{BC}it}`]와 변 [식:{rm{AC}it}`]에 내린 수선의 발을 각각 [식:{rm{Q}it}`], [식:{rm{R}it}`]라 할 때, 사각형 [식:{rm{PQCR}it}`]의 넓이는 삼각형 [식:{rm{APR}it}`]의 넓이보다는 작고 삼각형 [식:{rm{PBQ}it}`]의 넓이보다는 크다. [식:{ bar{C`Q`}}= a`]일 때, 이를 만족시키는 자연수 [식:a`]의 값을 구하는 과정을 서술하시오. 2025_1_1_b_공수1_동성고 ※ 이곳에 검수사항을 기재해주세요",
+      "equations": [
+        "{ bar{A`C`}}=15`",
+        "{ bar{B`C`}}=9`",
+        "{rm{ABC}it}`",
+        "{rm{AB}it}",
+        "{rm{P}it}`",
+        "{rm{BC}it}`",
+        "{rm{AC}it}`",
+        "{rm{Q}it}`",
+        "{rm{R}it}`",
+        "{rm{PQCR}it}`",
+        "{rm{APR}it}`",
+        "{rm{PBQ}it}`",
+        "{ bar{C`Q`}}= a`",
+        "a`"
+      ],
+      "eq_count": 14,
+      "choices": {},
+      "choice_count": 0,
+      "score_position": "없음",
+      "has_endnote": true
+    }
+  }
+}

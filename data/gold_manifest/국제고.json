@@ -1,0 +1,529 @@
+{
+  "school": "국제고",
+  "header": {
+    "subject": "공통수학1",
+    "range": "이차함수와 이차방정식~행렬",
+    "district": "북구",
+    "school": "국제고등학교",
+    "term": "2025년 1학년 1학기 기말"
+  },
+  "obj_count": 13,
+  "subj_count": 4,
+  "obj_numbers": [
+    3,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16
+  ],
+  "subj_numbers": [
+    4,
+    21,
+    22,
+    23
+  ],
+  "score_list": {
+    "16": 4.0,
+    "3": 3.2,
+    "5": 3.4,
+    "6": 3.5,
+    "7": 3.5,
+    "8": 3.6,
+    "9": 3.6,
+    "10": 3.7,
+    "11": 3.8,
+    "12": 3.9,
+    "13": 3.9,
+    "14": 3.9,
+    "15": 4.0,
+    "서술형4": 6.0,
+    "서술형21": 7.0,
+    "서술형22": 8.0,
+    "서술형23": 9.0
+  },
+  "total_equations": 214,
+  "total_tables": 25,
+  "total_pics": 3,
+  "total_bin_files": 4,
+  "total_endnotes": 23,
+  "choice_marker_total": 95,
+  "score_position_stats": {
+    "없음": 17
+  },
+  "problems": {
+    "16": {
+      "number": 16,
+      "is_subjective": false,
+      "difficulty": "",
+      "score": 4.0,
+      "problem_text": "행렬 [식:A`= left( rpile{ 0 && 1 # -1 &]에 대하여 [식:A`^{8}`]의 모든 성분의 합은?",
+      "equations": [
+        "A`= left( rpile{ 0 && 1 # -1 && 2 } right)`",
+        "A`^{8}`",
+        "-1",
+        "0",
+        "1",
+        "2",
+        "3"
+      ],
+      "eq_count": 7,
+      "choices": {
+        "①": "[식:-1]",
+        "②": "[식:0]",
+        "③": "[식:1]",
+        "④": "[식:2]",
+        "⑤": "[식:3]"
+      },
+      "choice_count": 5,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "3": {
+      "number": 3,
+      "is_subjective": false,
+      "difficulty": "하",
+      "score": 3.2,
+      "problem_text": "서로 다른 두 개의 주사위를 동시에 던질 때, 나오는 눈의 수의 합이 [식:5`]의 배수가 되는 경우의 수는?",
+      "equations": [
+        "5`",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9"
+      ],
+      "eq_count": 6,
+      "choices": {
+        "①": "[식:5]",
+        "②": "[식:6]",
+        "③": "[식:7]",
+        "④": "[식:8]",
+        "⑤": "[식:9]"
+      },
+      "choice_count": 5,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "5": {
+      "number": 5,
+      "is_subjective": false,
+      "difficulty": "",
+      "score": 3.4,
+      "problem_text": "[식:x], [식:y`]에 대한 연립방정식 [식:cases {``2x+y=1 #`` x^{2}+3y=k]가 오직 한 쌍의 해 [식:x= alpha], [식:y= beta`]를 가질 때, [식:alpha - beta +k`]의 값은? (단, [식:k`]는 실수이다.)",
+      "equations": [
+        "x",
+        "y`",
+        "cases {``2x+y=1 #`` x^{2}+3y=k}`",
+        "x= alpha",
+        "y= beta`",
+        "alpha - beta +k`",
+        "k`",
+        "-8",
+        "-3",
+        "2",
+        "7",
+        "12"
+      ],
+      "eq_count": 12,
+      "choices": {
+        "①": "[식:-8]",
+        "②": "[식:-3]",
+        "③": "[식:2]",
+        "④": "[식:7]",
+        "⑤": "[식:12]"
+      },
+      "choice_count": 5,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "6": {
+      "number": 6,
+      "is_subjective": false,
+      "difficulty": "",
+      "score": 3.5,
+      "problem_text": "이차방정식 [식:x^{2}-2x+2=0`]의 두 근을 [식:alpha], [식:beta`]라 할 때, 두 행렬 [식:A`= left( rpile{ alpha && beta], [식:B`= left( rpile{ beta && alpha]에 대하여 행렬 [식:B`A``]의 모든 성분의 합은?",
+      "equations": [
+        "x^{2}-2x+2=0`",
+        "alpha",
+        "beta`",
+        "A`= left( rpile{ alpha && beta # 0 && alpha } right)",
+        "B`= left( rpile{ beta && alpha # 0 && beta } right)`",
+        "B`A``",
+        "2",
+        "4",
+        "6",
+        "8",
+        "10"
+      ],
+      "eq_count": 11,
+      "choices": {
+        "①": "[식:2]",
+        "②": "[식:4]",
+        "③": "[식:6]",
+        "④": "[식:8]",
+        "⑤": "[식:10]"
+      },
+      "choice_count": 5,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "7": {
+      "number": 7,
+      "is_subjective": false,
+      "difficulty": "하",
+      "score": 3.5,
+      "problem_text": "등식 [식:it_{n}{ rm{C}}it_{n-2}+ it_{n+]를 만족시키는 자연수 [식:n`]을 구하면?",
+      "equations": [
+        "it_{n}{ rm{C}}it_{n-2}+ it_{n+1}{ rm{C}}it_{3}=3 times it_{n}{ rm{P}}it_{2}`",
+        "n`",
+        "8",
+        "10",
+        "12",
+        "14",
+        "16"
+      ],
+      "eq_count": 7,
+      "choices": {
+        "①": "[식:8]",
+        "②": "[식:10]",
+        "③": "[식:12]",
+        "④": "[식:14]",
+        "⑤": "[식:16]"
+      },
+      "choice_count": 5,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "8": {
+      "number": 8,
+      "is_subjective": false,
+      "difficulty": "",
+      "score": 3.6,
+      "problem_text": "사차방정식 [식:x^{4}+10x^{3}+ left(24-2a righ]의 서로 다른 네 실근을 갖도록 하는 정수 [식:a`]의 최솟값은?",
+      "equations": [
+        "x^{4}+10x^{3}+ left(24-2a right)x^{2}-8ax=0`",
+        "a`",
+        "-3",
+        "-1",
+        "1",
+        "3",
+        "5"
+      ],
+      "eq_count": 7,
+      "choices": {
+        "①": "[식:-3]",
+        "②": "[식:-1]",
+        "③": "[식:1]",
+        "④": "[식:3]",
+        "⑤": "[식:5]"
+      },
+      "choice_count": 5,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "9": {
+      "number": 9,
+      "is_subjective": false,
+      "difficulty": "",
+      "score": 3.6,
+      "problem_text": "연립부등식 [식:cases {`` left|` x-1`right| > ]를 만족하는 정수 [식:x`]의 최댓값은?",
+      "equations": [
+        "cases {`` left|` x-1`right| > 3 #`` 2x-3 le x-2}`",
+        "x`",
+        "-5",
+        "-4",
+        "-3",
+        "-2",
+        "-1"
+      ],
+      "eq_count": 7,
+      "choices": {
+        "①": "[식:-5]",
+        "②": "[식:-4]",
+        "③": "[식:-3]",
+        "④": "[식:-2]",
+        "⑤": "[식:-1]"
+      },
+      "choice_count": 5,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "10": {
+      "number": 10,
+      "is_subjective": false,
+      "difficulty": "",
+      "score": 3.7,
+      "problem_text": "[식:x`]에 대한 이차함수 [식:y=x^{2}-4ax+3a^{2}-3a`]의 최솟값을 [식:f left(a right)`]라고 할 때, [식:-1 le a le 3`]에서 함수 [식:f left(a right)`]의 최댓값은?",
+      "equations": [
+        "x`",
+        "y=x^{2}-4ax+3a^{2}-3a`",
+        "f left(a right)`",
+        "-1 le a le 3`",
+        "f left(a right)`",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5"
+      ],
+      "eq_count": 10,
+      "choices": {
+        "①": "[식:1]",
+        "②": "[식:2]",
+        "③": "[식:3]",
+        "④": "[식:4]",
+        "⑤": "[식:5]"
+      },
+      "choice_count": 5,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "11": {
+      "number": 11,
+      "is_subjective": false,
+      "difficulty": "",
+      "score": 3.8,
+      "problem_text": "[식:6`]개의 숫자 [식:0], [식:1], [식:2], [식:3], [식:4], [식:5`]에서 서로 다른 [식:4`]개의 숫자를 택하여 네 자리 자연수를 만들 때, 그 자연수가 [식:3`]의 배수가 되는 경우의 수는?",
+      "equations": [
+        "6`",
+        "0",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5`",
+        "4`",
+        "3`",
+        "96",
+        "97",
+        "98",
+        "99",
+        "100"
+      ],
+      "eq_count": 14,
+      "choices": {
+        "①": "[식:96]",
+        "②": "[식:97]",
+        "③": "[식:98]",
+        "④": "[식:99]",
+        "⑤": "[식:100]"
+      },
+      "choice_count": 5,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "12": {
+      "number": 12,
+      "is_subjective": false,
+      "difficulty": "",
+      "score": 3.9,
+      "problem_text": "여학생 [식:4`]명과 남학생 [식:3`]명을 일렬로 세울 때, 남학생 [식:2`]명이 이웃하는 경우의 수는?",
+      "equations": [
+        "4`",
+        "3`",
+        "2`",
+        "180",
+        "360",
+        "720",
+        "1440",
+        "2880"
+      ],
+      "eq_count": 8,
+      "choices": {
+        "①": "[식:180]",
+        "②": "[식:360]",
+        "③": "[식:720]",
+        "④": "[식:1440]",
+        "⑤": "[식:2880]"
+      },
+      "choice_count": 5,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "13": {
+      "number": 13,
+      "is_subjective": false,
+      "difficulty": "",
+      "score": 3.9,
+      "problem_text": "[식:1 < x < 2`]인 모든 실수 [식:x`]에 대하여 이차함수 [식:f left(x right)=x^{2}-2kx+3`]이 항상 양의 값을 가질 때, 정수 [식:k`]의 최댓값은?",
+      "equations": [
+        "1 < x < 2`",
+        "x`",
+        "f left(x right)=x^{2}-2kx+3`",
+        "k`",
+        "0",
+        "1",
+        "2",
+        "3",
+        "4"
+      ],
+      "eq_count": 9,
+      "choices": {
+        "①": "[식:0]",
+        "②": "[식:1]",
+        "③": "[식:2]",
+        "④": "[식:3]",
+        "⑤": "[식:4]"
+      },
+      "choice_count": 5,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "14": {
+      "number": 14,
+      "is_subjective": false,
+      "difficulty": "",
+      "score": 3.9,
+      "problem_text": "이차정사각행렬 [식:A`], [식:B``]에 대하여 행렬 [식:A``]의 [식:left(i,``j right)`]성분 [식:a_{ij}`]를 [식:a_{ij}= cases {``3i+j && left(]로 정의하고, 행렬 [식:B``]의 [식:left(i,``j right)`]성분 [식:b_{ij}`]를 [식:b_{ij}=ij-2`]로 정의할 때, 행렬 [식:A`+2B``]의 모든 성분의 합은?",
+      "equations": [
+        "A`",
+        "B``",
+        "A``",
+        "left(i,``j right)`",
+        "a_{ij}`",
+        "a_{ij}= cases {``3i+j && left(i 가~홀수일~때 right) #`` 3i-j&& left(i가~짝수일~때 right)}`",
+        "B``",
+        "left(i,``j right)`",
+        "b_{ij}`",
+        "b_{ij}=ij-2`",
+        "A`+2B``",
+        "16",
+        "17",
+        "18",
+        "19",
+        "20"
+      ],
+      "eq_count": 16,
+      "choices": {
+        "①": "[식:16]",
+        "②": "[식:17]",
+        "③": "[식:18]",
+        "④": "[식:19]",
+        "⑤": "[식:20]"
+      },
+      "choice_count": 5,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "15": {
+      "number": 15,
+      "is_subjective": false,
+      "difficulty": "",
+      "score": 4.0,
+      "problem_text": "학생들에게 초콜릿을 나누어 주는데 학생 한 명에게 [식:4`]개씩 주면 초콜릿이 [식:23`]개 남고, [식:6`]개씩 주면 학생 [식:5`]명은 받지 못할 때 학생 수의 최댓값은?",
+      "equations": [
+        "4`",
+        "23`",
+        "6`",
+        "5`",
+        "29",
+        "30",
+        "31",
+        "32",
+        "33"
+      ],
+      "eq_count": 9,
+      "choices": {
+        "①": "[식:29]",
+        "②": "[식:30]",
+        "③": "[식:31]",
+        "④": "[식:32]",
+        "⑤": "[식:33]"
+      },
+      "choice_count": 5,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "서술형4": {
+      "number": 4,
+      "is_subjective": true,
+      "difficulty": "하",
+      "score": 6.0,
+      "problem_text": "연립방정식 [식:cases {``2x^{2}+xy-y^{2}=0 #``]을 푸시오.",
+      "equations": [
+        "cases {``2x^{2}+xy-y^{2}=0 #`` x^{2}-xy+y^{2}=3}`"
+      ],
+      "eq_count": 1,
+      "choices": {},
+      "choice_count": 0,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "서술형21": {
+      "number": 21,
+      "is_subjective": true,
+      "difficulty": "하",
+      "score": 7.0,
+      "problem_text": "㉠ 탁자에 [식:1`]부터 [식:8`]까지 적힌 카드가 놓여 있고, ㉡ 탁자에 [식:4`]부터 [식:11`]까지 적힌 카드가 놓여 있다. [식:{rm{A}}it`]학생이 먼저 ㉠ 탁자에서 [식:8], [식:7], [식:6], [식:5], [식:4], [식:3], [식:2], [식:1`]의 순서대로 카드를 선택했을 때, [식:{rm{B}}it`]학생이 ㉡ 탁자에서 다음 조건에 따라 [식:8`]장의 카드를 선택할 수 있는 모든 경우의 수를 구하시오. (단, 한 번에 한 장의 카드만 선택하며 중복하여 선택할 수 없고, 총 [식:8`]번 시행한다.) (가) [식:{rm{A}}it`]학생이 뽑은 카드가 [식:2`]의 배수이면 [식:{rm{B}}it`]학생도 [식:2`]의 배수를 선택한다.(나) [식:{rm{A}}it`]학생이 뽑은 카드가 [식:2`]의 배수가 아니면, [식:{rm{B}}it`]학생은 [식:{rm{A}}it`]학생의 카드보다 큰 카드를 선택한다.",
+      "equations": [
+        "1`",
+        "8`",
+        "4`",
+        "11`",
+        "{rm{A}}it`",
+        "8",
+        "7",
+        "6",
+        "5",
+        "4",
+        "3",
+        "2",
+        "1`",
+        "{rm{B}}it`",
+        "8`",
+        "8`",
+        "{rm{A}}it`",
+        "2`",
+        "{rm{B}}it`",
+        "2`",
+        "{rm{A}}it`",
+        "2`",
+        "{rm{B}}it`",
+        "{rm{A}}it`"
+      ],
+      "eq_count": 24,
+      "choices": {},
+      "choice_count": 0,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "서술형22": {
+      "number": 22,
+      "is_subjective": true,
+      "difficulty": "하",
+      "score": 8.0,
+      "problem_text": "",
+      "equations": [],
+      "eq_count": 0,
+      "choices": {},
+      "choice_count": 0,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "서술형23": {
+      "number": 23,
+      "is_subjective": true,
+      "difficulty": "하",
+      "score": 9.0,
+      "problem_text": "이차방정식 [식:x^{2}-2 left(a+2 right)x-a=0`]이 [식:-2 le x le 3`]에서 실근을 갖도록 하는 실수 [식:a`]의 값의 범위를 구하시오. 2025_1_1_b_공수1_국제고 ※ 이곳에 검수사항을 기재해주세요",
+      "equations": [
+        "x^{2}-2 left(a+2 right)x-a=0`",
+        "-2 le x le 3`",
+        "a`"
+      ],
+      "eq_count": 3,
+      "choices": {},
+      "choice_count": 0,
+      "score_position": "없음",
+      "has_endnote": true
+    }
+  }
+}

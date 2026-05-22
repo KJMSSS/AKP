@@ -1,0 +1,521 @@
+{
+  "school": "동명고",
+  "header": {
+    "subject": "공통수학1",
+    "range": "여러 가지 방정식 ~ 행렬",
+    "district": "동구",
+    "school": "동명고등학교",
+    "term": "2025년 1학년 1학기 기말"
+  },
+  "obj_count": 15,
+  "subj_count": 1,
+  "obj_numbers": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15
+  ],
+  "subj_numbers": [
+    16
+  ],
+  "score_list": {
+    "1": 5.1,
+    "2": 5.1,
+    "3": 5.1,
+    "4": 5.15,
+    "5": 5.3,
+    "6": 5.3,
+    "7": 5.3,
+    "8": 6.0,
+    "9": 6.7,
+    "10": 6.7,
+    "11": 6.7,
+    "12": 6.85,
+    "13": 6.9,
+    "14": 6.9,
+    "15": 6.9,
+    "서술형16": 10.0
+  },
+  "total_equations": 146,
+  "total_tables": 19,
+  "total_pics": 3,
+  "total_bin_files": 4,
+  "total_endnotes": 16,
+  "choice_marker_total": 75,
+  "score_position_stats": {
+    "없음": 16
+  },
+  "problems": {
+    "1": {
+      "number": 1,
+      "is_subjective": false,
+      "difficulty": "하",
+      "score": 5.1,
+      "problem_text": "다음 부등식 [식:left|` x-2`right| < 5`]의 해가 [식:alpha < x < beta`]일 때, [식:alpha + beta`]값은?",
+      "equations": [
+        "left|` x-2`right| < 5`",
+        "alpha < x < beta`",
+        "alpha + beta`",
+        "4",
+        "10",
+        "14",
+        "-3",
+        "-7"
+      ],
+      "eq_count": 8,
+      "choices": {
+        "①": "[식:4]",
+        "②": "[식:10]",
+        "③": "[식:14]",
+        "④": "[식:-3]",
+        "⑤": "[식:-7]"
+      },
+      "choice_count": 5,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "2": {
+      "number": 2,
+      "is_subjective": false,
+      "difficulty": "하",
+      "score": 5.1,
+      "problem_text": "다음 [식:cases {``x-y=`-4 #`` x^{2}+xy+]이 성립방정식을 풀면 그 해가 [식:cases {``x= alpha #`` y= beta}] 또는 [식:cases {``x= gamma #`` y= delta]이다. [식:alpha times beta times gamma t]의 값은?",
+      "equations": [
+        "cases {``x-y=`-4 #`` x^{2}+xy+y^{2}=7}`",
+        "cases {``x= alpha #`` y= beta}",
+        "cases {``x= gamma #`` y= delta}`",
+        "alpha times beta times gamma times delta`",
+        "0",
+        "9",
+        "-9",
+        "12",
+        "-12"
+      ],
+      "eq_count": 9,
+      "choices": {
+        "①": "[식:0]",
+        "②": "[식:9]",
+        "③": "[식:-9]",
+        "④": "[식:12]",
+        "⑤": "[식:-12]"
+      },
+      "choice_count": 5,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "3": {
+      "number": 3,
+      "is_subjective": false,
+      "difficulty": "하",
+      "score": 5.1,
+      "problem_text": "연립부등식 [식:2 left(5-2x right) le 3x-4 <`-]을 만족시키는 정수 [식:x`]의 값의 합은?",
+      "equations": [
+        "2 left(5-2x right) le 3x-4 <`-2 left(x-8 right)`",
+        "x`",
+        "1",
+        "3",
+        "5",
+        "7",
+        "9"
+      ],
+      "eq_count": 7,
+      "choices": {
+        "①": "[식:1]",
+        "②": "[식:3]",
+        "③": "[식:5]",
+        "④": "[식:7]",
+        "⑤": "[식:9]"
+      },
+      "choice_count": 5,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "4": {
+      "number": 4,
+      "is_subjective": false,
+      "difficulty": "",
+      "score": 5.15,
+      "problem_text": "두 행렬 [식:A`= left( rpile{ -2 && 4 # 6 &]과 [식:B`= left( rpile{ 1 && -5 # 2 &]에 대하여 [식:2A`+5B``]를 계산하면?",
+      "equations": [
+        "A`= left( rpile{ -2 && 4 # 6 && 0 } right)`",
+        "B`= left( rpile{ 1 && -5 # 2 && -4 } right)`",
+        "2A`+5B``",
+        "left( rpile{ 1 && 1 # 20 && -20 } right)",
+        "left( rpile{ 1 && 15 # 18 && 20 } right)",
+        "left( rpile{ 1 && 0 # 0 && 1 } right)",
+        "left( rpile{ 1 && -17 # 22 && -20 } right)",
+        "left( rpile{ 1 && -17 # 26 && -30 } right)"
+      ],
+      "eq_count": 8,
+      "choices": {
+        "①": "[식:left( rpile{ 1 && 1 # 20 && -2]",
+        "②": "[식:left( rpile{ 1 && 15 # 18 && 2]",
+        "③": "[식:left( rpile{ 1 && 0 # 0 && 1 }]",
+        "④": "[식:left( rpile{ 1 && -17 # 22 && ]",
+        "⑤": "[식:left( rpile{ 1 && -17 # 26 && ]"
+      },
+      "choice_count": 5,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "5": {
+      "number": 5,
+      "is_subjective": false,
+      "difficulty": "",
+      "score": 5.3,
+      "problem_text": "연립부등식 [식:cases {`` left|` x-1`right| le]의 해가 [식:a le x < b`]일 때, [식:a+b`]의 값은?",
+      "equations": [
+        "cases {`` left|` x-1`right| le 3 #`` x^{2}-8x+15 > 0}`",
+        "a le x < b`",
+        "a+b`",
+        "5",
+        "4",
+        "3",
+        "2",
+        "1"
+      ],
+      "eq_count": 8,
+      "choices": {
+        "①": "[식:5]",
+        "②": "[식:4]",
+        "③": "[식:3]",
+        "④": "[식:2]",
+        "⑤": "[식:1]"
+      },
+      "choice_count": 5,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "6": {
+      "number": 6,
+      "is_subjective": false,
+      "difficulty": "",
+      "score": 5.3,
+      "problem_text": "음이 아닌 정수 [식:x`]와 [식:y`]에 대하여 [식:x+y le 4`]를 만족시키는 순서쌍 [식:left(x,``y right)`]의 개수를 구하면?",
+      "equations": [
+        "x`",
+        "y`",
+        "x+y le 4`",
+        "left(x,``y right)`",
+        "1`",
+        "3`",
+        "6`",
+        "10`",
+        "15`"
+      ],
+      "eq_count": 9,
+      "choices": {
+        "①": "[식:1`]개",
+        "②": "[식:3`]개",
+        "③": "[식:6`]개",
+        "④": "[식:10`]개",
+        "⑤": "[식:15`]개"
+      },
+      "choice_count": 5,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "7": {
+      "number": 7,
+      "is_subjective": false,
+      "difficulty": "하",
+      "score": 5.3,
+      "problem_text": "[식:2 times 2`]행렬 [식:A``]의 [식:left(i,``j right)`]성분 [식:a_{ij}`]가 [식:a_{28}=2i-j+3`]일 때, 행렬 [식:A``]의 모든 성분의 합은?",
+      "equations": [
+        "2 times 2`",
+        "A``",
+        "left(i,``j right)`",
+        "a_{ij}`",
+        "a_{28}=2i-j+3`",
+        "A``",
+        "12",
+        "14",
+        "16",
+        "18",
+        "20"
+      ],
+      "eq_count": 11,
+      "choices": {
+        "①": "[식:12]",
+        "②": "[식:14]",
+        "③": "[식:16]",
+        "④": "[식:18]",
+        "⑤": "[식:20]"
+      },
+      "choice_count": 5,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "8": {
+      "number": 8,
+      "is_subjective": false,
+      "difficulty": "",
+      "score": 6.0,
+      "problem_text": "행렬 [식:A`= left( rpile{ -2 && 5 && 7 ]에 대하여 옳은 것을 <보기>에서 모두 고르면? | 보 기 |ㄱ. 제[식:1 `]행은 [식:left(4-1 right)`]이다.ㄴ. 행렬 [식:4`]의 [식:left(4,``3 right)`]성분은 없다.ㄷ. 제[식:3`]행의 성분의 합은 [식:19`]이다.",
+      "equations": [
+        "A`= left( rpile{ -2 && 5 && 7 # 4 && -1 && 6 # 8 && 8 && 3 } right)`",
+        "1 `",
+        "left(4-1 right)`",
+        "4`",
+        "left(4,``3 right)`",
+        "3`",
+        "19`"
+      ],
+      "eq_count": 7,
+      "choices": {
+        "①": "ㄱ",
+        "②": "ㄴ, ㄷ",
+        "③": "ㄱ, ㄷ",
+        "④": "ㄴ",
+        "⑤": "ㄱ, ㄴ, ㄷ"
+      },
+      "choice_count": 5,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "9": {
+      "number": 9,
+      "is_subjective": false,
+      "difficulty": "",
+      "score": 6.7,
+      "problem_text": "이차부등식 [식:x^{2}+2kx+4k-3 > 0`]이 모든 실수 [식:x`]에 대하여 성립하도록 하는 실수 [식:k`]의 값의 범위를 구하면?",
+      "equations": [
+        "x^{2}+2kx+4k-3 > 0`",
+        "x`",
+        "k`",
+        "-1 < k < 5",
+        "1 < k < 3",
+        "-1 < k < 2",
+        "1 < k < 2",
+        "-1 < k < 7"
+      ],
+      "eq_count": 8,
+      "choices": {
+        "①": "[식:-1 < k < 5]",
+        "②": "[식:1 < k < 3]",
+        "③": "[식:-1 < k < 2]",
+        "④": "[식:1 < k < 2]",
+        "⑤": "[식:-1 < k < 7]"
+      },
+      "choice_count": 5,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "10": {
+      "number": 10,
+      "is_subjective": false,
+      "difficulty": "",
+      "score": 6.7,
+      "problem_text": "두 행렬 [식:A`= left( rpile{ 4 && 3 # 5 &&]과 [식:B`= left( rpile{ 0 && 1 # a &&]에 대하여 [식:A`B`=B`A``]일 때, [식:a times b`]의 값은?",
+      "equations": [
+        "A`= left( rpile{ 4 && 3 # 5 && 8 } right)`",
+        "B`= left( rpile{ 0 && 1 # a && b } right)`",
+        "A`B`=B`A``",
+        "a times b`",
+        "{20} over {9}",
+        "{16} over {9}",
+        "{14} over {9}",
+        "{10} over {9}",
+        "{8} over {9}"
+      ],
+      "eq_count": 9,
+      "choices": {
+        "①": "[식:{20} over {9}]",
+        "②": "[식:{16} over {9}]",
+        "③": "[식:{14} over {9}]",
+        "④": "[식:{10} over {9}]",
+        "⑤": "[식:{8} over {9}]"
+      },
+      "choice_count": 5,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "11": {
+      "number": 11,
+      "is_subjective": false,
+      "difficulty": "",
+      "score": 6.7,
+      "problem_text": "사과, 배, 바나나를 포함한 과일 [식:9`]종류 중에서 [식:4`]종류를 택할 때, 바나나는 포함하지 않고 사과와 배는 모두 포함하는 경우의 수를 구하면?",
+      "equations": [
+        "9`",
+        "4`",
+        "5",
+        "10",
+        "15",
+        "20",
+        "25"
+      ],
+      "eq_count": 7,
+      "choices": {
+        "①": "[식:5]",
+        "②": "[식:10]",
+        "③": "[식:15]",
+        "④": "[식:20]",
+        "⑤": "[식:25]"
+      },
+      "choice_count": 5,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "12": {
+      "number": 12,
+      "is_subjective": false,
+      "difficulty": "",
+      "score": 6.85,
+      "problem_text": "봅슬레이 [식:4`]인승 경기에 네 명의 선수 [식:{rm{A}it}], [식:{rm{B}it}], [식:{rm{C}it}], [식:{rm{D}it}`]가 한 팀을 이루어 출전할 때, [식:{rm{A}it}`]와 [식:{rm{B}it}`]가 서로 이웃하지 않게 썰매에 앉는 경우의 수는?",
+      "equations": [
+        "4`",
+        "{rm{A}it}",
+        "{rm{B}it}",
+        "{rm{C}it}",
+        "{rm{D}it}`",
+        "{rm{A}it}`",
+        "{rm{B}it}`",
+        "3",
+        "6",
+        "9",
+        "12",
+        "15"
+      ],
+      "eq_count": 12,
+      "choices": {
+        "①": "[식:3]",
+        "②": "[식:6]",
+        "③": "[식:9]",
+        "④": "[식:12]",
+        "⑤": "[식:15]"
+      },
+      "choice_count": 5,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "13": {
+      "number": 13,
+      "is_subjective": false,
+      "difficulty": "",
+      "score": 6.9,
+      "problem_text": "다음 그림에서 찾을 수 있는 크고 작은 직사각형의 개수를 구하면?",
+      "equations": [
+        "150`",
+        "180`",
+        "210`",
+        "240`",
+        "270"
+      ],
+      "eq_count": 5,
+      "choices": {
+        "①": "[식:150`]",
+        "②": "[식:180`]",
+        "③": "[식:210`]",
+        "④": "[식:240`]",
+        "⑤": "[식:270]"
+      },
+      "choice_count": 5,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "14": {
+      "number": 14,
+      "is_subjective": false,
+      "difficulty": "",
+      "score": 6.9,
+      "problem_text": "어느 고등학교의 두 학생회장 후보 [식:{rm{A}it}`]와 [식:{rm{B}it}`]에 대하여 투표를 실시한 결과, [식:{rm{A}it}`]후보는 남학생의 [식:60 ``% `]와 여학생의 [식:40 ``% `]가 지지하였고, [식:{rm{B}it}`]후보는 남학생의 [식:40 ``% `]와 여학생의 [식:55 ``% `]가 지지하였다. 남학생이 [식:150`]명이고 여학생이 [식:100`]명일 때, 다음 [식:box{~~}`] 안에 알맞은 수를 찾아 [식:left(a times b times c right)+]값을 구하고, 당선자가 누구인지 말해 보면? [식:left( rpile{ 0.6 && BOX{~~b~~}][식:left( pile{ 150 # box{~~c~~}} ]",
+      "equations": [
+        "{rm{A}it}`",
+        "{rm{B}it}`",
+        "{rm{A}it}`",
+        "60 ``% `",
+        "40 ``% `",
+        "{rm{B}it}`",
+        "40 ``% `",
+        "55 ``% `",
+        "150`",
+        "100`",
+        "box{~~}`",
+        "left(a times b times c right)+d+e`",
+        "left( rpile{ 0.6 && BOX{~~b~~} # BOX{~~a~~} && 0.55} right)",
+        "left( pile{ 150 # box{~~c~~}} right)= left( pile{ box{~~d~~} # box{~~e~~}} right)",
+        "308",
+        "{rm{B}it}",
+        "298",
+        "{rm{B}it}",
+        "288",
+        "{rm{A}it}",
+        "278",
+        "{rm{A}it}",
+        "268",
+        "{rm{A}it}"
+      ],
+      "eq_count": 24,
+      "choices": {
+        "①": "[식:308], 당선자 [식:{rm{B}it}]",
+        "②": "[식:298], 당선자 [식:{rm{B}it}]",
+        "③": "[식:288], 당선지 [식:{rm{A}it}]",
+        "④": "[식:278], 당선자 [식:{rm{A}it}]",
+        "⑤": "[식:268], 당선자 [식:{rm{A}it}]"
+      },
+      "choice_count": 5,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "15": {
+      "number": 15,
+      "is_subjective": false,
+      "difficulty": "",
+      "score": 6.9,
+      "problem_text": "삼차방정식 [식:x^{3}+ax^{2}+bx-5=0`]의 한 근이 [식:2-i`]일 때, 실수 [식:a`]와 [식:b`]의 값과 나머지 두 근을 [식:alpha], [식:beta`]라 할 때, [식:a+b+ alpha + beta`]값은?",
+      "equations": [
+        "x^{3}+ax^{2}+bx-5=0`",
+        "2-i`",
+        "a`",
+        "b`",
+        "alpha",
+        "beta`",
+        "a+b+ alpha + beta`",
+        "7+i",
+        "9+i",
+        "11+i",
+        "14+i",
+        "17+i"
+      ],
+      "eq_count": 12,
+      "choices": {
+        "①": "[식:7+i]",
+        "②": "[식:9+i]",
+        "③": "[식:11+i]",
+        "④": "[식:14+i]",
+        "⑤": "[식:17+i]"
+      },
+      "choice_count": 5,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "서술형16": {
+      "number": 16,
+      "is_subjective": true,
+      "difficulty": "",
+      "score": 10.0,
+      "problem_text": "삼차방정식 [식:x^{3}-1=0`]의 한 허근을 [식:omega`]라 할 때, 다음 식의 값을 구하여라. 2025_1_1_b_공수1_동명고 ※ 이곳에 검수사항을 기재해주세요",
+      "equations": [
+        "x^{3}-1=0`",
+        "omega`"
+      ],
+      "eq_count": 2,
+      "choices": {},
+      "choice_count": 0,
+      "score_position": "없음",
+      "has_endnote": true
+    }
+  }
+}

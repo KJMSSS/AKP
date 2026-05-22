@@ -1,0 +1,598 @@
+{
+  "school": "동아여고",
+  "header": {
+    "subject": "공통수학1",
+    "range": "여러 가지 방정식 ~ 행렬",
+    "district": "남구",
+    "school": "동아여자고등학교",
+    "term": "2025년 1학년 1학기 기말"
+  },
+  "obj_count": 13,
+  "subj_count": 7,
+  "obj_numbers": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13
+  ],
+  "subj_numbers": [
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20
+  ],
+  "score_list": {
+    "1": 3.0,
+    "2": 3.0,
+    "3": 3.1,
+    "4": 3.2,
+    "5": 3.3,
+    "6": 3.3,
+    "7": 3.6,
+    "8": 3.8,
+    "9": 4.1,
+    "10": 4.2,
+    "11": 4.2,
+    "12": 4.2,
+    "13": 4.2,
+    "서술형14": 4.4,
+    "서술형15": 4.5,
+    "서술형16": 4.6,
+    "서술형17": 4.8,
+    "서술형18": 4.8,
+    "서술형19": 4.8,
+    "서술형20": 4.8
+  },
+  "total_equations": 171,
+  "total_tables": 23,
+  "total_pics": 4,
+  "total_bin_files": 5,
+  "total_endnotes": 20,
+  "choice_marker_total": 65,
+  "score_position_stats": {
+    "없음": 20
+  },
+  "problems": {
+    "1": {
+      "number": 1,
+      "is_subjective": false,
+      "difficulty": "하",
+      "score": 3.0,
+      "problem_text": "[식:left|` x-1`right| < 1`]을 만족시키는 정수 [식:x`]의 개수는?",
+      "equations": [
+        "left|` x-1`right| < 1`",
+        "x`",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5"
+      ],
+      "eq_count": 7,
+      "choices": {
+        "①": "[식:1]",
+        "②": "[식:2]",
+        "③": "[식:3]",
+        "④": "[식:4]",
+        "⑤": "[식:5]"
+      },
+      "choice_count": 5,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "2": {
+      "number": 2,
+      "is_subjective": false,
+      "difficulty": "하",
+      "score": 3.0,
+      "problem_text": "[식:it_{6}{ rm{C}}it_{2}`]의 값은?",
+      "equations": [
+        "it_{6}{ rm{C}}it_{2}`",
+        "10",
+        "15",
+        "30",
+        "360",
+        "720"
+      ],
+      "eq_count": 6,
+      "choices": {
+        "①": "[식:10]",
+        "②": "[식:15]",
+        "③": "[식:30]",
+        "④": "[식:360]",
+        "⑤": "[식:720]"
+      },
+      "choice_count": 5,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "3": {
+      "number": 3,
+      "is_subjective": false,
+      "difficulty": "하",
+      "score": 3.1,
+      "problem_text": "두 행렬 [식:A`= left( rpile{ 2 && 3 # 1 &&], [식:B`= left( rpile{ -1 && 4 # 2 &]에 대하여 행렬 [식:A`B``]의 모든 성분의 값의 합은?",
+      "equations": [
+        "A`= left( rpile{ 2 && 3 # 1 && 4 } right)",
+        "B`= left( rpile{ -1 && 4 # 2 && 1 } right)`",
+        "A`B``",
+        "10",
+        "20",
+        "30",
+        "40",
+        "50"
+      ],
+      "eq_count": 8,
+      "choices": {
+        "①": "[식:10]",
+        "②": "[식:20]",
+        "③": "[식:30]",
+        "④": "[식:40]",
+        "⑤": "[식:50]"
+      },
+      "choice_count": 5,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "4": {
+      "number": 4,
+      "is_subjective": false,
+      "difficulty": "",
+      "score": 3.2,
+      "problem_text": "[식:x`]에 대한 이차방정식 [식:x^{2}+2 left(a-1 right)x-3a+7=]이 중근을 가질 때, [식:y`]에 대한 부등식 [식:left|` 2y-6`right| le a`]를 만족시키는 정수 [식:y`]의 개수는? (단, [식:a`]는 양수이다.)",
+      "equations": [
+        "x`",
+        "x^{2}+2 left(a-1 right)x-3a+7=0`",
+        "y`",
+        "left|` 2y-6`right| le a`",
+        "y`",
+        "a`",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5"
+      ],
+      "eq_count": 11,
+      "choices": {
+        "①": "[식:1]",
+        "②": "[식:2]",
+        "③": "[식:3]",
+        "④": "[식:4]",
+        "⑤": "[식:5]"
+      },
+      "choice_count": 5,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "5": {
+      "number": 5,
+      "is_subjective": false,
+      "difficulty": "",
+      "score": 3.3,
+      "problem_text": "삼차방정식 [식:x^{3}=`-1`]의 한 허근을 [식:omega`]라 할 때, [식:{1} over { omega -1}+{1} over ]의 값은?",
+      "equations": [
+        "x^{3}=`-1`",
+        "omega`",
+        "{1} over { omega -1}+{1} over { omega^{5}-1}-{1} over { omega^{9}-1}`",
+        "-1",
+        "-{3} over {2}",
+        "-2",
+        "-{5} over {2}",
+        "-3"
+      ],
+      "eq_count": 8,
+      "choices": {
+        "①": "[식:-1]",
+        "②": "[식:-{3} over {2}]",
+        "③": "[식:-2]",
+        "④": "[식:-{5} over {2}]",
+        "⑤": "[식:-3]"
+      },
+      "choice_count": 5,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "6": {
+      "number": 6,
+      "is_subjective": false,
+      "difficulty": "",
+      "score": 3.3,
+      "problem_text": "[식:a < 0`]일 때, [식:x`]에 대한 연립부등식 [식:cases {`` left(x-2a right)^{2}]의 해가 [식:b-1 < x < b+1`]이다. [식:a+b`]의 값은?",
+      "equations": [
+        "a < 0`",
+        "x`",
+        "cases {`` left(x-2a right)^{2} < 4a^{2} #`` x^{2}+2a < left(a+2 right)x}`",
+        "b-1 < x < b+1`",
+        "a+b`",
+        "-6",
+        "-5",
+        "-4",
+        "-3",
+        "-2"
+      ],
+      "eq_count": 10,
+      "choices": {
+        "①": "[식:-6]",
+        "②": "[식:-5]",
+        "③": "[식:-4]",
+        "④": "[식:-3]",
+        "⑤": "[식:-2]"
+      },
+      "choice_count": 5,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "7": {
+      "number": 7,
+      "is_subjective": false,
+      "difficulty": "하",
+      "score": 3.6,
+      "problem_text": "[식:1`]층에서 [식:10`]층까지 운행하는 엘리베이터가 있다. [식:1`]층에서 엘리베이터에 탑승한 학생 [식:4`]명이 [식:10`]층까지 올라가는 도중 모두 내린다고 한다. 이때, 서로 연속한 층에서 내리지 않고 내리는 각 층에서는 [식:1`]명씩만 내리는 경우의 수는? (단, [식:1`]층과 [식:10`]층에서는 내리는 사람은 없다.)",
+      "equations": [
+        "1`",
+        "10`",
+        "1`",
+        "4`",
+        "10`",
+        "1`",
+        "1`",
+        "10`",
+        "24",
+        "70",
+        "72",
+        "96",
+        "120"
+      ],
+      "eq_count": 13,
+      "choices": {
+        "①": "[식:24]",
+        "②": "[식:70]",
+        "③": "[식:72]",
+        "④": "[식:96]",
+        "⑤": "[식:120]"
+      },
+      "choice_count": 5,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "8": {
+      "number": 8,
+      "is_subjective": false,
+      "difficulty": "",
+      "score": 3.8,
+      "problem_text": "[식:x`]에 대한 연립부등식 [식:cases {`` left|` x-2`right| le]을 만족시키는 정수 [식:x`]의 개수가 [식:5] 이상 [식:9] 이하가 되도록 하는 모든 자연수 [식:n`]의 값의 합은?",
+      "equations": [
+        "x`",
+        "cases {`` left|` x-2`right| le n #`` x^{2}-3x-10 > 0}`",
+        "x`",
+        "5",
+        "9",
+        "n`",
+        "17",
+        "18",
+        "19",
+        "20",
+        "21"
+      ],
+      "eq_count": 11,
+      "choices": {
+        "①": "[식:17]",
+        "②": "[식:18]",
+        "③": "[식:19]",
+        "④": "[식:20]",
+        "⑤": "[식:21]"
+      },
+      "choice_count": 5,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "9": {
+      "number": 9,
+      "is_subjective": false,
+      "difficulty": "",
+      "score": 4.1,
+      "problem_text": "[식:1`]부터 [식:16`]까지의 자연수가 각각 하나씩 적힌 [식:16`]개의 공이 들어 있는 주머니에서 [식:4`]개의 공을 동시에 뽑을 때, [식:4`]개의 공에 적힌 숫자의 합이 [식:3`]의 배수가 되는 경우의 수는?",
+      "equations": [
+        "1`",
+        "16`",
+        "16`",
+        "4`",
+        "4`",
+        "3`",
+        "155",
+        "300",
+        "305",
+        "455",
+        "605"
+      ],
+      "eq_count": 11,
+      "choices": {
+        "①": "[식:155]",
+        "②": "[식:300]",
+        "③": "[식:305]",
+        "④": "[식:455]",
+        "⑤": "[식:605]"
+      },
+      "choice_count": 5,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "10": {
+      "number": 10,
+      "is_subjective": false,
+      "difficulty": "",
+      "score": 4.2,
+      "problem_text": "[식:x`]에 대한 삼차방정식 [식:x^{3}- left(a^{2}+1 right)x^{2]의 서로 다른 실근의 개수가 [식:2`]가 되도록 하는 모든 실수 [식:a`]의 값의 합은?",
+      "equations": [
+        "x`",
+        "x^{3}- left(a^{2}+1 right)x^{2}+ left(a^{2}-2a right)x+2a=0`",
+        "2`",
+        "a`",
+        "-4",
+        "-5",
+        "-6",
+        "-7",
+        "-8"
+      ],
+      "eq_count": 9,
+      "choices": {
+        "①": "[식:-4]",
+        "②": "[식:-5]",
+        "③": "[식:-6]",
+        "④": "[식:-7]",
+        "⑤": "[식:-8]"
+      },
+      "choice_count": 5,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "11": {
+      "number": 11,
+      "is_subjective": false,
+      "difficulty": "",
+      "score": 4.2,
+      "problem_text": "[식:x`]에 대한 연립부등식 [식:cases {``x^{2}-a^{2}x ge 0 #``]을 만족시키는 정수 [식:x`]의 개수가 [식:1`]이 되기 위한 모든 실수 [식:a`]의 값의 합은? (단, [식:0 < a le 1])",
+      "equations": [
+        "x`",
+        "cases {``x^{2}-a^{2}x ge 0 #`` x^{2}-6ax+9a^{2}-1 < 0}`",
+        "x`",
+        "1`",
+        "a`",
+        "0 < a le 1",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5"
+      ],
+      "eq_count": 11,
+      "choices": {
+        "①": "[식:1]",
+        "②": "[식:2]",
+        "③": "[식:3]",
+        "④": "[식:4]",
+        "⑤": "[식:5]"
+      },
+      "choice_count": 5,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "12": {
+      "number": 12,
+      "is_subjective": false,
+      "difficulty": "",
+      "score": 4.2,
+      "problem_text": "그림과 같이 [식:1`]열, [식:2`]열, [식:3`]열에 각각 [식:2`]개, [식:3`]개, [식:4`]개의 좌석이 있는 영화관에서 [식:{rm{A}it}], [식:{rm{B}it}], [식:{rm{C}it}`]를 포함한 [식:5`]명의 학생이 영화관람을 하려고 한다. [식:{rm{A}it}`]는 같은 열에서 [식:{rm{B}it}`]와 이웃하게 앉고, [식:{rm{C}it}`]는 [식:{rm{A}it}] 옆자리에 앉을 수 없다. 이 [식:5`]명의 학생이 앉아 영화관람을 하는 경우의 수는?",
+      "equations": [
+        "1`",
+        "2`",
+        "3`",
+        "2`",
+        "3`",
+        "4`",
+        "{rm{A}it}",
+        "{rm{B}it}",
+        "{rm{C}it}`",
+        "5`",
+        "{rm{A}it}`",
+        "{rm{B}it}`",
+        "{rm{C}it}`",
+        "{rm{A}it}",
+        "5`",
+        "580",
+        "1160",
+        "1980",
+        "2340",
+        "2520"
+      ],
+      "eq_count": 20,
+      "choices": {
+        "①": "[식:580]",
+        "②": "[식:1160]",
+        "③": "[식:1980]",
+        "④": "[식:2340]",
+        "⑤": "[식:2520]"
+      },
+      "choice_count": 5,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "13": {
+      "number": 13,
+      "is_subjective": false,
+      "difficulty": "",
+      "score": 4.2,
+      "problem_text": "이차정사각행렬 [식:A`], [식:B``]에 대하여 <보기>에서 옳은 것만을 있는 대로 고른 것은? (단, [식:E``]는 단위행렬이고, [식:O``]는 영행렬이다.) | 보 기 |ㄱ. [식:A`^{5}=A`^{7}=E``]이면 [식:A`=E``]이다.ㄴ. [식:A`^{2}B`=O``]이면 [식:A`B`=O``]이다.ㄷ. [식:A`+B`=E``]이면 [식:A`^{2}B`=B`A`^{2}`]이다.",
+      "equations": [
+        "A`",
+        "B``",
+        "E``",
+        "O``",
+        "A`^{5}=A`^{7}=E``",
+        "A`=E``",
+        "A`^{2}B`=O``",
+        "A`B`=O``",
+        "A`+B`=E``",
+        "A`^{2}B`=B`A`^{2}`"
+      ],
+      "eq_count": 10,
+      "choices": {
+        "①": "ㄴ",
+        "②": "ㄱ, ㄴ",
+        "③": "ㄱ, ㄷ",
+        "④": "ㄴ, ㄷ",
+        "⑤": "ㄱ, ㄴ, ㄷ"
+      },
+      "choice_count": 5,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "서술형14": {
+      "number": 14,
+      "is_subjective": true,
+      "difficulty": "",
+      "score": 4.4,
+      "problem_text": "이차부등식 [식:x^{2}+2kx+k+2 > 0`]이 모든 실수 [식:x`]에 대하여 성립하도록 하는 실수 [식:k`]의 값의 범위를 구하시오.",
+      "equations": [
+        "x^{2}+2kx+k+2 > 0`",
+        "x`",
+        "k`"
+      ],
+      "eq_count": 3,
+      "choices": {},
+      "choice_count": 0,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "서술형15": {
+      "number": 15,
+      "is_subjective": true,
+      "difficulty": "",
+      "score": 4.5,
+      "problem_text": "다음 그림과 같이 네 지점 [식:{rm{A}it}], [식:{rm{B}it}], [식:{rm{C}it}], [식:{rm{D}it}`]를 연결하는 도로망이 있다. 주어진 도로를 이용하여 [식:{rm{A}it}`]지점에서 [식:{rm{D}it}`]지점으로 가는 경우의 수를 구하시오. (단, 같은 지점을 다시 가지 않는다.)",
+      "equations": [
+        "{rm{A}it}",
+        "{rm{B}it}",
+        "{rm{C}it}",
+        "{rm{D}it}`",
+        "{rm{A}it}`",
+        "{rm{D}it}`"
+      ],
+      "eq_count": 6,
+      "choices": {},
+      "choice_count": 0,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "서술형16": {
+      "number": 16,
+      "is_subjective": true,
+      "difficulty": "",
+      "score": 4.6,
+      "problem_text": "두 행렬 [식:A`= left( pile{ a-b && 0 # 4 &], [식:B`= left( rpile{ -1 && 0 # 4 &]에 대하여 [식:A`=B``]일 때, [식:left(a+b right)^{2}`]의 값을 구하시오.",
+      "equations": [
+        "A`= left( pile{ a-b && 0 # 4 && 6 } right)",
+        "B`= left( rpile{ -1 && 0 # 4 && 2ab } right)`",
+        "A`=B``",
+        "left(a+b right)^{2}`"
+      ],
+      "eq_count": 4,
+      "choices": {},
+      "choice_count": 0,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "서술형17": {
+      "number": 17,
+      "is_subjective": true,
+      "difficulty": "하",
+      "score": 4.8,
+      "problem_text": "[식:1 le r < n`]일 때, 등식 [식:it_{n}{ rm{C}}it_{r}= it_{n-1}]이 성립함을 계승을 이용하여 증명하시오.",
+      "equations": [
+        "1 le r < n`",
+        "it_{n}{ rm{C}}it_{r}= it_{n-1}{ rm{C}}it_{r}+ it_{n-1}{ rm{C}}it_{r-1}`"
+      ],
+      "eq_count": 2,
+      "choices": {},
+      "choice_count": 0,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "서술형18": {
+      "number": 18,
+      "is_subjective": true,
+      "difficulty": "하",
+      "score": 4.8,
+      "problem_text": "모든 실수 [식:x`]에 대하여 부등식 [식:-x^{2}+3x+2 le mx+n le x^{2}-5] 이 성립할 때, [식:m+n`]의 값을 구하시오. (단, [식:m], [식:n`]은 상수이다.)",
+      "equations": [
+        "x`",
+        "-x^{2}+3x+2 le mx+n le x^{2}-5x+10",
+        "m+n`",
+        "m",
+        "n`"
+      ],
+      "eq_count": 5,
+      "choices": {},
+      "choice_count": 0,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "서술형19": {
+      "number": 19,
+      "is_subjective": true,
+      "difficulty": "하",
+      "score": 4.8,
+      "problem_text": "[식:5`]개의 숫자 [식:2], [식:3], [식:4], [식:6], [식:9`]를 일렬로 나열할 때, 서로 이웃한 두 수의 곱이 모두 [식:6`]의 배수가 되도록 나열하는 경우의 수를 구하시오.",
+      "equations": [
+        "5`",
+        "2",
+        "3",
+        "4",
+        "6",
+        "9`",
+        "6`"
+      ],
+      "eq_count": 7,
+      "choices": {},
+      "choice_count": 0,
+      "score_position": "없음",
+      "has_endnote": true
+    },
+    "서술형20": {
+      "number": 20,
+      "is_subjective": true,
+      "difficulty": "하",
+      "score": 4.8,
+      "problem_text": "두 정수 [식:a], [식:b`]에 대하여 [식:left|` a`right| le 10], [식:left|` b`right| le 10`]일 때, [식:x`]에 대한 사차방정식 [식:x^{4}+ax^{3}+bx^{2}+ax+1=0`]이 중근 [식:1`]개와 중근이 아닌 실근 [식:2`]개를 갖도록 하는 순서쌍 [식:left(a,``b right)`]의 개수를 구하시오. 2025_1_1_b_공수1_동아여고 ※ 이곳에 검수사항을 기재해주세요",
+      "equations": [
+        "a",
+        "b`",
+        "left|` a`right| le 10",
+        "left|` b`right| le 10`",
+        "x`",
+        "x^{4}+ax^{3}+bx^{2}+ax+1=0`",
+        "1`",
+        "2`",
+        "left(a,``b right)`"
+      ],
+      "eq_count": 9,
+      "choices": {},
+      "choice_count": 0,
+      "score_position": "없음",
+      "has_endnote": true
+    }
+  }
+}
