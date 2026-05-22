@@ -32,6 +32,8 @@ HP = "http://www.hancom.co.kr/hwpml/2011/paragraph"
 _B64_RE       = re.compile(r"[A-Za-z0-9+/]{40,}={0,2}")
 _SCORE_RE     = re.compile(r"\[(\d+(?:\.\d+)?)점\]")
 _CHOICE_CHARS = "①②③④⑤"
+_DANDAP_RE    = re.compile(r"\[단답형(\d+)\]")
+_SEOSUL_RE    = re.compile(r"\[서술형(\d+)\]")
 
 
 # ── 표 범위 계산 (중첩 카운터) ────────────────────────────────────────────────
@@ -204,6 +206,7 @@ def _parse_chunk(chunk: str) -> dict:
         return {
             "problem_text": "", "equations": [], "eq_count": 0,
             "choices": {}, "score_position": "없음", "has_endnote": has_endnote,
+            "label_type": None, "label_num": None,
         }
 
     # equation 바깥의 단락만 순회
@@ -252,6 +255,19 @@ def _parse_chunk(chunk: str) -> dict:
                 if cm:
                     choices[marker] = re.sub(r"\s+", " ", cm.group(1)).strip()
 
+    # 단답형/서술형 레이블 감지 ([단답형N], [서술형N])
+    label_type = None
+    label_num  = None
+    for line in lines[:body_end + 1]:
+        m = _DANDAP_RE.search(line)
+        if m:
+            label_type, label_num = "short_answer", int(m.group(1))
+            break
+        m = _SEOSUL_RE.search(line)
+        if m:
+            label_type, label_num = "essay", int(m.group(1))
+            break
+
     return {
         "problem_text":  body_text,
         "equations":     all_eqs,
@@ -259,6 +275,8 @@ def _parse_chunk(chunk: str) -> dict:
         "choices":       choices,
         "score_position": score_pos,
         "has_endnote":   has_endnote,
+        "label_type":    label_type,   # "short_answer" / "essay" / None
+        "label_num":     label_num,    # [단답형N]의 N / None
     }
 
 
@@ -333,6 +351,8 @@ def analyze_hwpx(path: Path) -> dict:
         problems[num_key] = {
             "number":        num,
             "is_subjective": is_subj,
+            "problem_type":  "multiple_choice",  # post-process에서 갱신
+            "label_num":     content["label_num"],
             "difficulty":    meta["difficulty"],
             "score":         meta["score"],
             "problem_text":  content["problem_text"],
@@ -344,26 +364,52 @@ def analyze_hwpx(path: Path) -> dict:
             "has_endnote":   content["has_endnote"],
         }
 
-    # Post-process: 메타 표에 "서술형" 레이블 없는 학교 대응
-    # choice_count == 0 인 문제 = 서술형으로 추론 (골드 HWPX는 선택지가 항상 텍스트로 존재)
+    # Post-process: problem_type 결정
+    # 1. [단답형N]/[서술형N] 레이블이 있으면 최우선 적용
+    # 2. 없으면 choice_count == 0 → is_subjective (단답형과 서술형을 합쳐 "essay"로)
     for key in list(problems.keys()):
         prob = problems[key]
-        if not prob["is_subjective"] and prob["choice_count"] == 0:
+        ltype = None
+        for c in _parse_chunk.__code__.co_consts:  # 사용 안 함 — content에서 직접 가져옴
+            break
+        # label_type은 content에서 이미 넣었음
+        # (재계산: 문제 본문에서 직접 감지)
+        body = prob["problem_text"]
+        m_dandap = _DANDAP_RE.search(body)
+        m_seosul = _SEOSUL_RE.search(body)
+        if m_dandap:
+            prob["problem_type"] = "short_answer"
+            prob["is_subjective"] = True
+            new_key = f"단답형{prob['number']}"
+            problems[new_key] = problems.pop(key)
+        elif m_seosul:
+            prob["problem_type"] = "essay"
+            prob["is_subjective"] = True
+            new_key = f"서술형{prob['number']}"
+            problems[new_key] = problems.pop(key)
+        elif not prob["is_subjective"] and prob["choice_count"] == 0:
+            prob["problem_type"] = "essay"
             prob["is_subjective"] = True
             new_key = f"서술형{prob['number']}"
             problems[new_key] = problems.pop(key)
 
-    obj_nums  = [v["number"] for v in problems.values() if not v["is_subjective"]]
-    subj_nums = [v["number"] for v in problems.values() if v["is_subjective"]]
+    obj_nums   = [v["number"] for v in problems.values() if v["problem_type"] == "multiple_choice"]
+    subj_nums  = [v["number"] for v in problems.values() if v["is_subjective"]]
+    sa_nums    = [v["number"] for v in problems.values() if v["problem_type"] == "short_answer"]
+    essay_nums = [v["number"] for v in problems.values() if v["problem_type"] == "essay"]
 
     return {
-        "school":          school,
-        "header":          header_info,
-        "obj_count":       len(obj_nums),
-        "subj_count":      len(subj_nums),
-        "obj_numbers":     sorted(obj_nums),
-        "subj_numbers":    sorted(subj_nums),
-        "score_list":      {k: v["score"] for k, v in problems.items()},
+        "school":              school,
+        "header":              header_info,
+        "obj_count":           len(obj_nums),
+        "subj_count":          len(subj_nums),
+        "short_answer_count":  len(sa_nums),
+        "essay_count":         len(essay_nums),
+        "obj_numbers":         sorted(obj_nums),
+        "subj_numbers":        sorted(subj_nums),
+        "short_answer_numbers": sorted(sa_nums),
+        "essay_numbers":       sorted(essay_nums),
+        "score_list":          {k: v["score"] for k, v in problems.items()},
         "total_equations": total_eqs,
         "total_tables":    total_tbls,
         "total_pics":      total_pics,
@@ -385,8 +431,13 @@ def _print_summary(r: dict):
     h = r["header"]
     print(f"  헤더: {h.get('subject','')} / {h.get('range','')} / "
           f"{h.get('district','')} {h.get('school','')} / {h.get('term','')}")
-    print(f"  객관식 {r['obj_count']}개  {r['obj_numbers']}")
-    print(f"  서술형 {r['subj_count']}개  {r['subj_numbers']}")
+    print(f"  객관식(선다형) {r['obj_count']}개  {r['obj_numbers']}")
+    sa = r.get('short_answer_count', 0)
+    es = r.get('essay_count', 0)
+    if sa or es:
+        print(f"  단답형 {sa}개  {r.get('short_answer_numbers',[])}  /  서술형 {es}개  {r.get('essay_numbers',[])}")
+    else:
+        print(f"  서술형(미구분) {r['subj_count']}개  {r['subj_numbers']}")
     print(f"  수식 {r['total_equations']}개 | 표 {r['total_tables']}개 | "
           f"이미지 {r['total_pics']}개 | 바이너리 {r['total_bin_files']}개 | "
           f"미주 {r['total_endnotes']}개")
@@ -394,7 +445,8 @@ def _print_summary(r: dict):
     print(f"  점수 위치 통계: {r['score_position_stats']}")
     print()
     for key, p in r["problems"].items():
-        tag  = "서술형" if p["is_subjective"] else "객관식"
+        ptype = p.get("problem_type", "")
+        tag = {"multiple_choice": "선다형", "short_answer": "단답형", "essay": "서술형"}.get(ptype, "??")
         body = p["problem_text"][:72].replace("\n", " ")
         ch1  = next(iter(p["choices"].values()), "")[:12] if p["choices"] else ""
         print(f"  [{tag:3s}] {key:>8s}번  배점={p['score']}  난이도={p['difficulty']:1s}  "

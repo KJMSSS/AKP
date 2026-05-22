@@ -9,6 +9,8 @@
   },
   "obj_count": 18,
   "subj_count": 6,
+  "short_answer_count": 0,
+  "essay_count": 6,
   "obj_numbers": [
     1,
     2,
@@ -30,6 +32,15 @@
     18
   ],
   "subj_numbers": [
+    19,
+    20,
+    21,
+    22,
+    23,
+    24
+  ],
+  "short_answer_numbers": [],
+  "essay_numbers": [
     19,
     20,
     21,
@@ -76,6 +87,8 @@
     "1": {
       "number": 1,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "하",
       "score": 2.5,
       "problem_text": "[식:it_{4}{ rm{P}}it_{2}`]의 값은?",
@@ -102,6 +115,8 @@
     "2": {
       "number": 2,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "하",
       "score": 2.5,
       "problem_text": "이차정사각행렬 [식:A``]의 [식:left(i,``j right)`]성분 [식:a_{ij}`]를 [식:a_{ij}=i+j~ left(i=1,``2,``j=1] 라 하자. 행렬 [식:A``]의 [식:left(1,``2 right)`]성분은?",
@@ -133,6 +148,8 @@
     "3": {
       "number": 3,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "하",
       "score": 3.0,
       "problem_text": "연립방정식 [식:left. cases {``y=`-2x+3 #`` x^] 의 해를 [식:x=a], [식:y=b`]라 할 때, [식:3a-b`]의 값은?",
@@ -162,6 +179,8 @@
     "4": {
       "number": 4,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 3.0,
       "problem_text": "부등식 [식:left|` x-4`right| < 2`]를 만족시키는 모든 정수 [식:x`]의 값의 합은?",
@@ -189,6 +208,8 @@
     "5": {
       "number": 5,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 3.0,
       "problem_text": "삼차방정식 [식:x^{3}+2x^{2}+3x-6=0] 의 두 허근을 [식:alpha], [식:beta`]라 할 때, [식:alpha beta`]의 값은?",
@@ -218,6 +239,8 @@
     "6": {
       "number": 6,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 3.0,
       "problem_text": "그림과 같이 한 모서리의 길이가 [식:1`]인 정육면체 모양의 [블록 1]과 세 모서리의 길이가 각각 [식:2], [식:1], [식:1`]인 직육면체 모양의 [블록 2]가 있다. 이 두 종류의 블록을 사용하여 세 모서리의 길이가 각각 [식:7], [식:1], [식:1`]인 직육면체 모양의 상자를 빈 공같이 없도록 채우려고 한다. 왼쪽부터 빈틈없이 차례로 채워 넣을 수 있는 모든 경우의 수는? (단, 두 종류의 블록을 모두 사용하지 않아도 되며, 블록이 상자 밖으로 나가는 경우는 생각하지 않는다.)",
@@ -250,6 +273,8 @@
     "7": {
       "number": 7,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "하",
       "score": 3.1,
       "problem_text": "[식:x`]에 대한 삼차방정식 [식:x^{3}+3x^{2}+ left(a-4 right)x]의 서로 다른 실근의 개수가 [식:2`]가 되도록 하는 모든 실수 [식:a`]의 값의 합은?",
@@ -279,6 +304,8 @@
     "8": {
       "number": 8,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 3.2,
       "problem_text": "[식:x`]에 대한 삼차방정식 [식:x^{3}+ left(k-1 right)x^{2}-k=]의 한 허근을 [식:z`]라 할 때, [식:z+{ bar{z}}=`-3`]이다. 실수 [식:k`]의 값은?",
@@ -309,6 +336,8 @@
     "9": {
       "number": 9,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 3.7,
       "problem_text": "[식:angle{rm{C}it}=90 DEG `]인 직각삼각형 [식:{rm{ABC}it}`]가 있다. 그림과 같이 점 [식:{rm{D}it}`]는 꼭짓점 [식:{rm{C}it}`]에서 선분 [식:{rm{AB}it}`]에 내린 수선의 발이고 [식:{ bar{rm{CD}it}}=12`]이다. 삼각형 [식:{rm{ABC}it}`]의 둘레의 길이가 [식:60`]일 때, 선분 [식:{rm{AB}it}`]의 길이는?",
@@ -343,6 +372,8 @@
     "10": {
       "number": 10,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 4.4,
       "problem_text": "실수 [식:x`]에 대하여 복소수 [식:z`]가 다음 조건을 만족시킨다. (가) [식:z=3x+ left(2x-5 right)i](나) [식:z^{2}+ left({ bar{z}} right)^{]은 음수이다. 이때 정수 [식:x`]의 개수는? (단, [식:i= sqrt{-1}`]이고, [식:{ bar{z}}`]는 [식:z`]의 켤레복소수이다.)",
@@ -376,6 +407,8 @@
     "11": {
       "number": 11,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 4.3,
       "problem_text": "[식:0`]이 아닌 실수 [식:p`]에 대하여 이차함수 [식:f left(x right)=x^{2}+px+p`]의 그래프의 꼭짓점을 [식:{rm{A}it}], 이 이차함수의 그래프가 [식:y`]축과 만나는 점을 [식:{rm{B}it}`]라 할 때, 두 점 [식:{rm{A}it}], [식:{rm{B}it}`]를 지나는 직선을 [식:l`]이라 하자. 직선 [식:l`]의 방정식을 [식:y=g left(x right)`]라 하자. 부등식 [식:f left(x right)-g left(x right]을 만족시키는 정수 [식:x`]의 개수가 [식:9`]가 되도록 하는 정수 [식:p`]의 최댓값을 [식:M`], 최솟값을 [식:m`]이라 할 때, [식:M`-m`]의 값은?",
@@ -419,6 +452,8 @@
     "12": {
       "number": 12,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 4.5,
       "problem_text": "[식:x`]에 대한 삼차방정식 [식:left(x-2 right) left(x^{2}+ax+]의 서로 다른 세 근을 [식:alpha], [식:beta], [식:gamma`]라 하자. [식:left(2 alpha +2 beta - gamma r]일 때, [식:left(4+ alpha right) left(4+ b]의 값은?",
@@ -451,6 +486,8 @@
     "13": {
       "number": 13,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 3.5,
       "problem_text": "두 이차정사각행렬 [식:A`], [식:B``]에 대하여 옳은 것만을 <보기>에서 있는 대로 고른 것은? (단, [식:E``]는 단위행렬이고, [식:O``]는 영행렬이다.) | 보 기 |ㄱ. [식:left(A`+B` right)^{2}=A`^{2}+2]이면 [식:left(A`B` right)^{2}=A`^{2}B`^]이다.ㄴ. [식:left(A`-E` right) left(A`+E` r]이면 [식:A`=E``]이다.ㄷ. [식:left(A`+B` right)^{2}= left(A`]이면 [식:left(A`B` right)^{3}=`-A`^{3}B]이다.",
@@ -481,6 +518,8 @@
     "14": {
       "number": 14,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 3.6,
       "problem_text": "표는 [식:2025`]학년도 신입생 모집에서 어느 대학 [식:{rm{A}}it`]학과와 [식:{rm{B}}it`]학과의 선발 인원수와 경쟁률을 나타낸 것이다. <선발 인원수>구분[식:{rm{A}}it`]학과[식:{rm{B}}it`]학과수시모집[식:20][식:10]정시모집[식:30][식:40]<경쟁률>구분수식모집정시모집[식:{rm{A}}it`]학과[식:{rm{5.2}}it][식:{rm{3.2}}it][식:{rm{B}}it`]학과[식:9.5][식:{rm{4.5}}it] 경쟁률은 [식:{ left( 지원자~수 right)} over { l]의 값이고, 수시모집과 정시모집에 동시에 지원할 수 없으며, [식:{rm{A}}it`]학과와 [식:{rm{B}}it`]학과에 동시에 지원할 수 없다고 한다. [식:2025`]학년도 신입생 모집에서 이 대학 [식:{rm{A}}it], [식:{rm{B}}it`]학과의 정시모집 지원자 수의 합을 [식:p], [식:{rm{A}}it`]학과의 수시모집과 정시모집 지원자의 수의 합을 [식:q`]라 하자. 두 행렬 [식:P`= left( rpile{ 20 && 10 # 30], [식:Q`= left( rpile{ 5.2 && 3.7 # ]에 대하여 [식:p+q`]의 값과 같은 것은?",
@@ -548,6 +587,8 @@
     "15": {
       "number": 15,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 3.9,
       "problem_text": "각 자리의 수가 서로 다른 세 자리 자연수를 큰 수부터 차례로 나열할 때, [식:230`]번째에 나열되는 수는?",
@@ -574,6 +615,8 @@
     "16": {
       "number": 16,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 4.0,
       "problem_text": "여섯 개의 문자 [식:{rm{A}}it], [식:{rm{B}}it], [식:{rm{C}}it], [식:{rm{D}}it], [식:{rm{E}}it], [식:{rm{F}}it`]를 모두 사용하여 만든 [식:6`]자리 문자열 중에서 다음 조건을 모두 만족시키는 문자열의 개수는? (가) [식:{rm{A}}it`]의 바로 다음 자리에 [식:{rm{B}}it`]가 온다.(나) [식:{rm{B}}it`]의 바로 다음 자리에 [식:{rm{C}}it`]가 올 수 없다.(다) [식:{rm{C}}it`]의 바로 다음 자리에 [식:{rm{A}}it`]가 올 수 없다.",
@@ -612,6 +655,8 @@
     "17": {
       "number": 17,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "하",
       "score": 4.2,
       "problem_text": "반지름의 길이와 색이 모두 다른 나무 원판 [식:5`]개가 있다. [식:5`]개의 원판의 중심이 일치하도록 원판을 쌓으려고 한다. 그림은 위에서 내려다봤을 때 원판 [식:3`]개가 보이도록 원판 [식:5`]개를 쌓은 한가지 예를 측면에서 바라본 것이다. 위에서 내려다 봤을 때 원판 [식:3`]개가 보이도록 원판 [식:5`]개를 쌓는 방법의 수는?",
@@ -643,6 +688,8 @@
     "18": {
       "number": 18,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "하",
       "score": 4.6,
       "problem_text": "그림과 같이 [식:1`]번부터 [식:21`]번까지 번호가 적힌 [식:21`]개의 칸이 있는 사물함이 있다. 같은 모양의 [식:6`]개의 공을 [식:1`]개, [식:2`]개, [식:3`]개로 나누어 사물함의 서로 다른 [식:3`]개의 칸에 넣으려 한다. 이때 홀수 번호가 적힌 칸에는 홀수 개, 짝수 번호가 적힌 칸에는 짝수 개를 넣고, 공이 들어갈 칸 중에서 오른쪽으로 갈수록 공의 개수가 많아지도록 공을 넣는 경우의 수는?",
@@ -676,6 +723,8 @@
     "서술형19": {
       "number": 19,
       "is_subjective": true,
+      "problem_type": "essay",
+      "label_num": null,
       "difficulty": "하",
       "score": 5.0,
       "problem_text": "등식 [식:it_{9}{ rm{P}}it_{4}=n times i]를 만족시키는 [식:n`]의 값을 구하고 그 과정을 서술하시오.",
@@ -692,6 +741,8 @@
     "서술형20": {
       "number": 20,
       "is_subjective": true,
+      "problem_type": "essay",
+      "label_num": null,
       "difficulty": "하",
       "score": 5.0,
       "problem_text": "연립부등식 [식:cases {``x+3 < 3x #`` 3x+4 < 2]의 해가 [식:a < x < b`]일 때, [식:ab`]의 값을 구하고 그 과정을 서술하시오.",
@@ -709,6 +760,8 @@
     "서술형21": {
       "number": 21,
       "is_subjective": true,
+      "problem_type": "essay",
+      "label_num": null,
       "difficulty": "하",
       "score": 6.0,
       "problem_text": "어느 건물에서 출입을 통제하기 위하여 각 자리가 ‘[식:0]’과 ‘[식:1]’로 이루어진 [식:10`]자리 문자열의 보안카드를 이용하고 있다. 다음 두 가지 조건 중 한 가지 조건을 만족하면 출입문을 통과할 수 있다. (가) ‘[식:1]’의 개수가 [식:5`]개(나) 문자열의 처음 [식:5`]자리가 ‘[식:10101]’ 예를 들어, 보안카드의 분자열이 ‘[식:1011010100]’이거나 ‘[식:1010100111]’이면 이 건물에 출입할 수 있다. 이 건물의 출입문을 통과할 수 있는 서로 다른 보안카드의 총 개수를 구하고 그 과정을 서술하시오.",
@@ -732,6 +785,8 @@
     "서술형22": {
       "number": 22,
       "is_subjective": true,
+      "problem_type": "essay",
+      "label_num": null,
       "difficulty": "하",
       "score": 6.0,
       "problem_text": "행렬 [식:A`= left( rpile{ -1 && -3 # 1 ]에 대하여 [식:A`+A`^{2}+A`^{3}+`cdots` A`^{2]일 때, [식:x^{3}+y^{3}`]의 값을 구하고 그 과정을 서술하시오. (단, [식:x], [식:y`]는 실수이고, [식:E``]는 단위행렬이다.)",
@@ -752,6 +807,8 @@
     "서술형23": {
       "number": 23,
       "is_subjective": true,
+      "problem_type": "essay",
+      "label_num": null,
       "difficulty": "하",
       "score": 7.0,
       "problem_text": "그림과 같이 직선 위에 [식:{ bar{rm{AB}it}}=8`]인 두 점 [식:{rm{A}it}], [식:{rm{B}it}`]가 있다. 선분 [식:{rm{AB}it}] 위의 점 [식:{rm{C}it}`]에 대하여 선분 [식:{rm{AC}it}`]의 중점을 [식:{rm{P}it}_{1}], 선분 [식:{rm{CB}it}`]의 중점을 [식:{rm{P}it}_{2}`]라 하고 [식:{ bar{{rm{P}it}_{1}{rm{C}it}}}], [식:{ bar{{rm{CP}it}_{2}}}=b`]라 하자. 점 [식:{rm{P}it}_{1}`]을 중심으로 하고 반지름의 길이가 [식:a+{1} over {2}`]인 반원 [식:O`_{1}], 점 [식:{rm{P}it}_{2}`]를 중심으로 하고 반지름의 길이가 [식:b+{1} over {2}`]인 반원 [식:O`_{2}`]를 각각 그린 후, 선분 [식:{rm{P}it}it_{1}{ rm{P}}it_{2}`]를 지름으로 하는 반원을 그린다. 두 반원 [식:O`_{1}`]과 [식:O`_{2}`]의 교점이 호 [식:{rm{P}it}it_{1}{ rm{P}}it_{2}] 위에 있을 때, [식:ab`]의 값을 구하고 그 과정을 서술하시오. (단, [식:a < b])",
@@ -789,6 +846,8 @@
     "서술형24": {
       "number": 24,
       "is_subjective": true,
+      "problem_type": "essay",
+      "label_num": null,
       "difficulty": "하",
       "score": 7.0,
       "problem_text": "[식:x`]에 대한 삼차방정식 [식:x^{3}-5x^{2}+ left(k-8 right)x]이 [식:1`]보다 작은 한 근과 [식:1`]보다 큰 서로 다른 두 실근을 갖도록 하는 모든 정수 [식:k`]의 값의 합을 구하고 그 과정을 서술하시오. 2025_1_1_b_공수1_경신여고 ※ 이곳에 검수사항을 기재해주세요",

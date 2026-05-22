@@ -9,6 +9,8 @@
   },
   "obj_count": 20,
   "subj_count": 2,
+  "short_answer_count": 0,
+  "essay_count": 2,
   "obj_numbers": [
     1,
     2,
@@ -32,6 +34,11 @@
     20
   ],
   "subj_numbers": [
+    21,
+    22
+  ],
+  "short_answer_numbers": [],
+  "essay_numbers": [
     21,
     22
   ],
@@ -72,6 +79,8 @@
     "1": {
       "number": 1,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "하",
       "score": 4.1,
       "problem_text": "부등식 [식:left|` 2x-3`right| le 1`]을 만족하는 정수 [식:x`]의 개수는?",
@@ -99,6 +108,8 @@
     "2": {
       "number": 2,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "하",
       "score": 4.0,
       "problem_text": "[식:it_{5}{ rm{P}}it_{2}+ it_{6}{ ]의 값은?",
@@ -125,6 +136,8 @@
     "3": {
       "number": 3,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "하",
       "score": 3.5,
       "problem_text": "행렬 [식:left( rpile{ -1 && 1 && 2 # -2]의 행의 개수가 [식:a`]개, 열의 개수가 [식:b`]개일 때, [식:a+b`]의 값은?",
@@ -154,6 +167,8 @@
     "4": {
       "number": 4,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 4.5,
       "problem_text": "삼차방정식 [식:x^{3}+x^{2}-4x+a=0`]의 서로 다른 세 근이 [식:-1], [식:alpha], [식:beta`]일 때, [식:left( alpha - beta right)^{2}`]의 값은? (단, [식:a`]는 실수이다.)",
@@ -185,6 +200,8 @@
     "5": {
       "number": 5,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 4.5,
       "problem_text": "[식:1`]부터 [식:9`]까지의 자연수가 하나씩 적혀 있는 [식:9`]장의 카드 중에서 [식:4`]장의 카드를 동시에 택할 때, 짝수가 적힌 카드가 적어도 [식:1`]장 포함되도록 택하는 경우의 수는?",
@@ -215,6 +232,8 @@
     "6": {
       "number": 6,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 4.3,
       "problem_text": "두 행렬 [식:A`= left( rpile{ 2 && 1 # -1 &], [식:B`= left( rpile{ -2 && 1 # 3 &]에 대하여 행렬 [식:A`-2B``]의 모든 성분의 합은?",
@@ -243,6 +262,8 @@
     "7": {
       "number": 7,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "하",
       "score": 4.5,
       "problem_text": "삼차방정식 [식:x^{3}+1=0`]의 한 허근을 [식:omega`]라 할 때, [식:omega + omega^{2}+ omega^{3}+ ] 를 만족시키는 두 실수 [식:a], [식:b`]에 대하여 [식:a-b`]의 값은?",
@@ -274,6 +295,8 @@
     "8": {
       "number": 8,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 4.4,
       "problem_text": "연립부등식 [식:5-2x le 2x-4 <`-2x+8`]을 만족시키는 정수 [식:x`]의 개수는?",
@@ -300,6 +323,8 @@
     "9": {
       "number": 9,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 4.6,
       "problem_text": "[식:x`]에 대한 이차부등식 [식:x^{2}-2 left(n+3 right)x+ left]을 만족시키는 [식:x`]의 개수가 [식:1`]이 되도록 하는 모든 정수 [식:n`]의 값의 합은?",
@@ -330,6 +355,8 @@
     "10": {
       "number": 10,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 4.6,
       "problem_text": "[식:x], [식:y`]에 대한 연립방정식 [식:cases {``x+y=4a #`` x^{2}+y^{2]의 해 중 실수 [식:x], [식:y`]의 값이 존재하지 않을 때 정수 [식:a`]의 개수는?",
@@ -360,6 +387,8 @@
     "11": {
       "number": 11,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 4.7,
       "problem_text": "[식:1`]부터 [식:7`]까지의 자연수 중에서 서로 다른 [식:3`]개를 택해 일렬로 나열하여 세 자리의 자연수를 만들 때, 다음 조건을 만족시키는 자연수의 개수는? (가) 백의 자리의 수는 짝수이다.(나) 각 자리의 수 중 홀수끼리는 이웃하지 않는다.",
@@ -388,6 +417,8 @@
     "12": {
       "number": 12,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 4.6,
       "problem_text": "[식:x`]에 대한 이차방정식 [식:x^{2}-{19} over {10} it_{n}{ r]의 두 근이 [식:4`]와 [식:15`]일 때, [식:n+r`]의 값은?",
@@ -418,6 +449,8 @@
     "13": {
       "number": 13,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 4.5,
       "problem_text": "[식:A`= left( rpile{ 2a && 1 # -7 ], [식:B`= left( rpile{ -b && 2 # -2 ], [식:C`= left( rpile{ -4 && -3 # ab]에 대하여 [식:C`=A`-2B``]일 때, [식:a^{3}+b^{3}`]의 값은?",
@@ -448,6 +481,8 @@
     "14": {
       "number": 14,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 4.4,
       "problem_text": "세 행렬 [식:A`= left( rpile{ 1 && 3 # 2 &&], [식:B`= left( rpile{ 1 && 3 && 5 #], [식:C`= left(1,``2 right)], [식:D`= left( rpile{ 3 # 2 } right]에 대하여 다음 중 행렬의 곱셈이 불가능한 것은?",
@@ -477,6 +512,8 @@
     "15": {
       "number": 15,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 4.7,
       "problem_text": "[식:x`]에 대한 연립부등식 [식:cases {`` left|` x-k`right| < ]을 만족시키는 정수 [식:x`]가 존재할 때, 이 연립부등식을 만족시키는 모든 정수 [식:x`]의 값의 합을 [식:p`]라 하자. [식:p=2`]가 되도록 하는 모든 정수 [식:k`]의 값의 개수는?",
@@ -509,6 +546,8 @@
     "16": {
       "number": 16,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 4.7,
       "problem_text": "[식:5`]개의 숫자 [식:0], [식:1], [식:2], [식:3], [식:4`]를 한 번씩만 사용하여 만들 수 있는 다섯 자리의 자연수를 크기가 작은 수부터 크기 순으로 모두 나열할 때, [식:92`]번째 수는?",
@@ -541,6 +580,8 @@
     "17": {
       "number": 17,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "하",
       "score": 4.7,
       "problem_text": "이차정사각행렬 [식:A``]가 다음 조건을 만족시킨다. (가) [식:A` left( rpile{ 1 # 0 } right)](나) [식:A` left( rpile{ 0 # 2 } right)] 행렬 [식:A` left( rpile{ 4 # 3 } right)]의 모든 성분의 합은?",
@@ -570,6 +611,8 @@
     "18": {
       "number": 18,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "하",
       "score": 4.9,
       "problem_text": "[식:1`]부터 [식:8`]까지의 자연수가 각각 하나씩 적혀 있는 [식:8`]장의 카드 중에서 동시에 [식:5`]장의 카드를 선택하려고 한다. 선택한 카드에 적혀 있는 수의 합이 짝수인 경우의 수는?",
@@ -599,6 +642,8 @@
     "19": {
       "number": 19,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "하",
       "score": 4.9,
       "problem_text": "노란색, 빨간색, 파란색 구슬이 각각 [식:9`]개씩 들어 있는 주머니가 있다. 이 주머니에서 노란색 구슬을 한 번에 [식:1`]개씩 [식:x`]번 꺼내고, 빨간색 구슬을 한 번에 [식:2`]개씩 [식:y`]번 꺼내고, 파란색 구슬을 한 번에 [식:3`]개씩 [식:z`]번 꺼내려고 한다. 꺼낸 전체 구슬의 개수가 [식:15] 이하가 되도록 하는 세 자연수 [식:x], [식:y], [식:z`]의 모든 순서쌍 [식:left(x,``y,``z right)`]의 개수는? (단, 같은 색 구슬끼리는 서로 구별하지 않고 꺼낸 구슬은 다시 주머니에 넣지 않는다.)",
@@ -636,6 +681,8 @@
     "20": {
       "number": 20,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "하",
       "score": 4.9,
       "problem_text": "최고차항의 계수가 각각 [식:-1], [식:1`]인 두 이차함수 [식:f left(x right)], [식:g left(x right)`]가 다음 조건을 만족시킨다. (가) 부등식 [식:f left(x right) ge 2`]의 해는 [식:x=1`]이다.(나) 부등식 [식:g left(x right)-f left(x right]의 해는 [식:-1 le x le 3`]이다.[식:x`]에 대한 방정식 [식:f left(x right)-k=0`]이 실근을 갖지 않고, [식:x`]에 대한 방정식 [식:g left(x right)+n-k=0`]이 실근을 갖지 않도록 하는 정수 [식:k`]의 개수가 [식:5`]일 때, 정수 [식:n`]의 값은?",
@@ -676,6 +723,8 @@
     "서술형21": {
       "number": 21,
       "is_subjective": true,
+      "problem_type": "essay",
+      "label_num": null,
       "difficulty": "하",
       "score": 5.0,
       "problem_text": "모든 실수 [식:x`]에 대하여 부등식 [식:left(a-2 right)x^{2}+3 left(a-]이 성립하도록 하는 정수 [식:a`]의 개수를 구하시오.",
@@ -693,6 +742,8 @@
     "서술형22": {
       "number": 22,
       "is_subjective": true,
+      "problem_type": "essay",
+      "label_num": null,
       "difficulty": "하",
       "score": 5.0,
       "problem_text": "이차정사각행렬 [식:A``]의 [식:left(i,``j right)`]성분 [식:a_{ij}~ left(i=1,``2,``j=1,``2]가 [식:a_{ij}= cases {``i+j-1 & & lef]일 때, 행렬 [식:A`^{2}`]의 [식:left(2,``2 right)`]성분을 구하시오. 2025_1_1_b_공수1_명진고 ※ 이곳에 검수사항을 기재해주세요",

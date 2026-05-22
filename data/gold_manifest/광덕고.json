@@ -9,6 +9,8 @@
   },
   "obj_count": 28,
   "subj_count": 7,
+  "short_answer_count": 3,
+  "essay_count": 4,
   "obj_numbers": [
     1,
     2,
@@ -48,6 +50,17 @@
     34,
     35
   ],
+  "short_answer_numbers": [
+    29,
+    30,
+    31
+  ],
+  "essay_numbers": [
+    32,
+    33,
+    34,
+    35
+  ],
   "score_list": {
     "1": 2.0,
     "2": 2.0,
@@ -77,9 +90,9 @@
     "26": 3.5,
     "27": 3.5,
     "28": 3.5,
-    "서술형29": 2.5,
-    "서술형30": 3.5,
-    "서술형31": 4.0,
+    "단답형29": 2.5,
+    "단답형30": 3.5,
+    "단답형31": 4.0,
     "서술형32": 4.0,
     "서술형33": 5.0,
     "서술형34": 5.0,
@@ -98,6 +111,8 @@
     "1": {
       "number": 1,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "하",
       "score": 2.0,
       "problem_text": "[식:x`]에 대한 이차부등식 [식:x^{2}-ax+8 < 0`]의 해가 [식:2 < x < 4`]일 때, 상수 [식:a`]의 값은?",
@@ -127,6 +142,8 @@
     "2": {
       "number": 2,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "하",
       "score": 2.0,
       "problem_text": "방정식 [식:x^{3}-8=0`]의 실근은?",
@@ -153,6 +170,8 @@
     "3": {
       "number": 3,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "하",
       "score": 3.0,
       "problem_text": "[식:it_{5}{ rm{P}}it_{2}`]의 값은?",
@@ -179,6 +198,8 @@
     "4": {
       "number": 4,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 2.0,
       "problem_text": "부등식 [식:left|` x-2`right| < 3`]을 만족시키는 모든 정수 [식:x`]의 값의 합은?",
@@ -206,6 +227,8 @@
     "5": {
       "number": 5,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 2.0,
       "problem_text": "다항식 [식:left(a+b right) left(p+q+r rig]를 전개하였을 때 항의 개수는?",
@@ -232,6 +255,8 @@
     "6": {
       "number": 6,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 2.0,
       "problem_text": "두 행렬 [식:A`= left( rpile{ 1 && -2 # 0 &], [식:B`= left( rpile{ -1 && 5 # 4 &]에 대하여 [식:4A`-B``]의 모든 성분의 합은?",
@@ -260,6 +285,8 @@
     "7": {
       "number": 7,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "하",
       "score": 2.0,
       "problem_text": "다음은 어느 식당의 메뉴판이다. [식전 메뉴][메인 요리][디저트] 야채 수프 양송이 수프 타르타르 세비체  연어샐러드} 식전 메뉴, 메인 요리, 디저트가 각각 한 개씩 구성된 코스요리를 만들 수 있는 경우의 수는?",
@@ -285,6 +312,8 @@
     "8": {
       "number": 8,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 3.0,
       "problem_text": "등식 [식:left( pile{ a+b && 4 # -1 && a]이 성립하도록 하는 [식:a], [식:b], [식:c], [식:d`]에 대하여 [식:a+b+c+d`]의 값은?",
@@ -316,6 +345,8 @@
     "9": {
       "number": 9,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 2.0,
       "problem_text": "연립방정식 [식:cases {``-2x+y=1 #`` 5x^{2}-y^] 의 해를 [식:x= alpha], [식:y= beta`]라 할 때, [식:alpha - beta`]의 값은?",
@@ -345,6 +376,8 @@
     "10": {
       "number": 10,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 2.0,
       "problem_text": "삼차방정식 [식:x^{3}+4x^{2}+x-6=0`]의 세 근을 [식:alpha], [식:beta], [식:gamma`]라 할 때, [식:left(3- alpha right) left(3- b]의 값은?",
@@ -375,6 +408,8 @@
     "11": {
       "number": 11,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 2.3,
       "problem_text": "[식:8`]개의 숫자 [식:0], [식:0], [식:0], [식:1], [식:1], [식:1], [식:1], [식:2`]를 [식:0`]끼리는 어느 것도 이웃하지 않도록 일렬로 나열하여 만들 수 있는 여덟 자리의 자연수의 개수는?",
@@ -410,6 +445,8 @@
     "12": {
       "number": 12,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 2.3,
       "problem_text": "두 행렬 [식:A`= left( rpile{ a && -1 # 2 &], [식:B`= left( rpile{ 2 && b # 1 &&]에 대하여 [식:A`B`=B`A``]가 성립할 때, [식:a+b`]의 값은?",
@@ -439,6 +476,8 @@
     "13": {
       "number": 13,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 2.3,
       "problem_text": "어느 고등학교 [식:{rm{A}it}`]와 [식:{rm{B}it}`]에서는 체육활동으로 테니스와 배드민턴을 배우고 있다. 두 학교 [식:{rm{A}it}], [식:{rm{B}it}`]의 [식:1`]학년과 [식:2`]학년의 학생 수는 [표 [식:1]]과 같다. 두 학교 모두 [표 [식:2]]와 같이 [식:1`]학년 학생의 [식:60 ``% `]는 테니스를, [식:40 ``% `]는 배드민턴을 배우고, [식:2`]학년의 학생의 [식:70 ``% `]는 테니스를, [식:30 ``% `]는 배드민턴을 배운다고 한다. [단위 : 명] 학교학년}[식:{rm{A}it}][식:{rm{B}it}][식:1`]학년[식:2`]학년[식:200][식:150]학년활동}[식:1학년][식:2학년]테니스[식:60][식:70]배드민턴[식:40][식:30] 표와 <표 [식:2]> 를 각각 행렬 [식:P`= left( rpile{ 250 && 200 # ], [식:Q`= left( rpile{ 0.6 && 0.7 # ] 으로 나타날 때, [식:{rm{B}it}`]학교에서 테니스를 배우는 학생 수를 나타낸 것은?",
@@ -499,6 +538,8 @@
     "14": {
       "number": 14,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 2.3,
       "problem_text": "이차다항식 [식:P` left(x right)`]가 다음 조건을 만족시킬 때, [식:P` left(5 right)`]의 값은? (가) 부등식 [식:P` left(x right) > 2x`]의 해는 [식:x ne 1`]인 모든 실수이다.(나) 방정식 [식:P` left(x right)=0`]은 중근을 갖는다.",
@@ -529,6 +570,8 @@
     "15": {
       "number": 15,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 2.3,
       "problem_text": "다음 조건을 만족시키는 세 자리의 자연수의 개수는? (가) 각 자리의 숫자의 합은 짝수이다.(나) 각 자리의 숫자는 서로 다르다.",
@@ -554,6 +597,8 @@
     "16": {
       "number": 16,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 2.6,
       "problem_text": "어느 학교에서 학생들에게 나눠줄 사탕을 상자에 담으려고 한다. 한 상자에 사탕을 [식:10`]개씩 담으면 사탕이 [식:30`]개가 남고, 한 상자에 [식:12`]개씩 담으면 [식:12`]개가 채워지지 않는 상자가 [식:1`]개 있으며, 빈 상자는 [식:4`]개 남게 된다고 한다. 상자 개수의 최댓값을 [식:M`], 최솟값을 [식:m`]이라 할 때, [식:M`+m`]의 값은?",
@@ -588,6 +633,8 @@
     "17": {
       "number": 17,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "하",
       "score": 2.6,
       "problem_text": "[식:x`]에 대한 사차방정식 [식:x^{4}+ left(1-2a right)x^{2}+a]이 실근과 허근을 모두 가지도록 하는 모든 정수 [식:a`]의 개수는?",
@@ -616,6 +663,8 @@
     "18": {
       "number": 18,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "하",
       "score": 2.6,
       "problem_text": "그림과 같이 다섯 개의 영역으로 나누어진 도형을 서로 다른 [식:5`]가지 색을 사용하여 칠하려고 한다. 같은 색을 중복하여 사용해도 좋으나 인접한 영역은 서로 다른 색을 칠하는 경우의 수는?",
@@ -642,6 +691,8 @@
     "19": {
       "number": 19,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "하",
       "score": 2.6,
       "problem_text": "서로 다른 네 종류의 인형이 각각 [식:3`]개씩 있다. 이 [식:12`]개의 인형 중에서 [식:5`]개를 선택하는 경우의 수는? (단, 같은 종류의 인형끼리는 서로 구별하지 않는다.)",
@@ -670,6 +721,8 @@
     "20": {
       "number": 20,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "하",
       "score": 2.6,
       "problem_text": "이차정사각행렬 [식:A``]에 대하여 [식:A` left( rpile{ 2 # 1 } right)], [식:A` left( rpile{ 1 # 1 } right)]이다. 행렬 [식:P`= left( rpile{ 2 && 1 # 1 &&]과 [식:D`= left( rpile{ a && 0 # 0 &&]에 대하여 [식:A`P`=P`D``]일 때, [식:a^{2}+2b^{2}`]의 값은?",
@@ -702,6 +755,8 @@
     "21": {
       "number": 21,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "하",
       "score": 3.0,
       "problem_text": "어느 고등학교에는 [식:1], [식:2`]학년 학생 [식:25`]명으로 이루어진 건축 동아리가 있다. 이 동아리에서 회원들 모두가 한 번씩 짝을 지어 건축모형을 만든 후 [식:1`]학년 학생끼리 만든 건축모형은 [식:200`]원, [식:1], [식:2`]학년 학생이 함께 만든 건축모형은 [식:300`]원, [식:2`]학년 학생끼리 만든 건축모형은 [식:400`]원에 판매하려고 한다. 이 동아리에서 만든 건축모형이 모두 판매되었을 때, 수익금이 [식:9`]만 [식:1200`]원이라면 [식:25`]명의 동아리 회원 중에서 [식:1`]학년 학생의 수는?",
@@ -741,6 +796,8 @@
     "22": {
       "number": 22,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "하",
       "score": 3.0,
       "problem_text": "행렬 [식:A`= left( rpile{ 1 && -1 # 1 &]에 대하여 행렬 [식:A`+A`^{2}+A`^{3}+`cdots` +A`^{]의 모든 성분의 합이 [식:-2`]가 되도록 하는 [식:100] 이하의 자연수 [식:n`]의 개수는?",
@@ -771,6 +828,8 @@
     "23": {
       "number": 23,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "하",
       "score": 3.0,
       "problem_text": "그림과 같이 둥근 의자 [식:3`]개와 사각 의자 [식:3`]개가 교대로 나열되어 있다. [식:1`]학년 학생 [식:2`]명, [식:2`]학년 학생 [식:2`]명, [식:3`]학년 학생 [식:2`]명이 다음 조건을 만족시키도록 이 [식:6`]개의 의자에 모두 앉는 경우의 수는? (가) [식:2`]학년 학생 중 적어도 [식:1`]명은 사각 의자에 앉는다.(나) 같은 학년 학생은 서로 이웃하여 앉지 않는다.",
@@ -807,6 +866,8 @@
     "24": {
       "number": 24,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "하",
       "score": 3.0,
       "problem_text": "두 이차함수 [식:f left(x right)], [식:g left(x right)`]가 다음 조건을 만족시킨다. (가) 모든 실수 [식:x`]에 대하여 [식:f left(x right) le 2 le g left]이다.(나) [식:k-3 le x le k+3`]에서 함수 [식:f left(x right)`]의 최댓값과 [식:k-3 le x le k+3`]에서 함수 [식:g left(x right)`]의 최솟값이 같게 되도록 하는 실수 [식:k`]의 최솟값은 [식:0], 최댓값은 [식:2`]이다.[식:f left(2 right)=`-1], [식:g left(2 right)=4`]일 때, [식:f left(-2 right)+g left(5 righ]의 최댓값은?",
@@ -846,6 +907,8 @@
     "25": {
       "number": 25,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "하",
       "score": 3.0,
       "problem_text": "그림과 같이 [식:3`]인용 의자와 [식:4`]인용 의자가 있는 회의실에 [식:7`]명의 학생 [식:{rm{A}it}`], [식:{rm{B}it}`], [식:{rm{C}it}`], [식:{rm{D}it}`], [식:{rm{E}it}`], [식:{rm{F}it}`], [식:{rm{G}it}`]가 회의를 하기 위해 앉으려고 한다. [식:7`]명의 학생이 다음 조건을 만족시키도록 비어 있는 [식:7`]개의 의자에 앉는 경우의 수는? (가) [식:{rm{A}it}`]와 [식:{rm{B}it}`]는 같은 줄에 이웃하여 앉는다.(나) [식:{rm{C}it}`]와 [식:{rm{D}it}`]는 같은 줄에 이웃하여 앉지 않는다.",
@@ -887,6 +950,8 @@
     "26": {
       "number": 26,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "하",
       "score": 3.5,
       "problem_text": "러시아의 마트료시카 인형은 크기가 서로 다른 같은 모양의 인형들이 큰 인형 속에 차례대로 들어가는 구조로 되어 있다. 똑같은 모양을 가진 마트료시카 인형이 작은 인형 [식:4`]개, 중간 인형 [식:4`]개, 대형 인형 [식:4`]개가 있고, 각 인형에는 [식:1`]부터 [식:4`]까지의 숫자가 하나씩 적혀 있고, 인형을 다음 규칙에 따라 넣는다. (가) 작은 인형 [식:4`]개를 겹치지 않게 각각 다른 중간 인형에 넣는다.(나) 작은 인형이 들어 있는 중간 인형 [식:4`]개를 겹치지 않게 각각 다른 대형 인형에 넣는다. 이 과정을 거쳐 [식:4`]개의 인형 세트를 만들었을 때, 각 인형 세트에 속한 인형들의 번호가 [식:2`]개만 일치할 경우의 수는?",
@@ -921,6 +986,8 @@
     "27": {
       "number": 27,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "하",
       "score": 3.5,
       "problem_text": "[식:x`]에 대한 연립부등식 [식:cases {``x^{2}-a^{2}x ge 0 #``] 을 만족시키는 정수 [식:x`]의 개수가 [식:1`]이 되기 위한 실수 [식:a`]에 대하여 [식:a`]의 최댓값을 [식:M`], 최솟값을 [식:m`]이라 하자. [식:M`^{2}+m^{2}`]의 값은?",
@@ -955,6 +1022,8 @@
     "28": {
       "number": 28,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "하",
       "score": 3.5,
       "problem_text": "[식:-3], [식:-2], [식:-1], [식:0], [식:0], [식:1], [식:2], [식:3`]의 여덟 개의 정수를 각 성분에 하나씩 대입하여 만든 [식:2 times 4`]행렬 [식:A``]가 있다. 행렬 [식:A``]의 [식:left(i,``j right)`]성분 [식:a_{ij}`]가 다음 조건을 만족시킨다. (가) 같은 열의 두 성분의 곱은 [식:0] 이하다.(나) 같은 행에서 [식:j`]열 성분과 [식:j+1`]열 성분의 곱은 [식:0] 이하다. (단 [식:j=1], [식:2], [식:3])(다) [식:a_{mn}= left|` a_{pq}`right| n]인 경우 [식:10m+n ge 10p+q`]이다. (단, [식:m=1], [식:2], [식:p=1], [식:2], [식:n=1], [식:2], [식:3], [식:4], [식:q=1], [식:2], [식:3], [식:4`]이다.) [식:a_{14}= left|` a_{14}`right|], [식:a_{24}= left|` a_{24}`right| `]일 때, 행렬 [식:A``]의 개수는?",
@@ -1014,12 +1083,14 @@
       "score_position": "없음",
       "has_endnote": true
     },
-    "서술형29": {
+    "단답형29": {
       "number": 29,
       "is_subjective": true,
+      "problem_type": "short_answer",
+      "label_num": 1,
       "difficulty": "하",
       "score": 2.5,
-      "problem_text": "각 면에 [식:1`]에서부터 [식:6`]까지의 정수가 적힌 정육면체의 주사위를 세 번 던져서 나온 수를 차례로 [식:x], [식:y], [식:z`]라 할 때, [식:x+2y+3z=14`]를 만족시키는 순서쌍 [식:left(x,``y,``z right)`]의 개수를 구하시오.",
+      "problem_text": "[단답형1]각 면에 [식:1`]에서부터 [식:6`]까지의 정수가 적힌 정육면체의 주사위를 세 번 던져서 나온 수를 차례로 [식:x], [식:y], [식:z`]라 할 때, [식:x+2y+3z=14`]를 만족시키는 순서쌍 [식:left(x,``y,``z right)`]의 개수를 구하시오.",
       "equations": [
         "1`",
         "6`",
@@ -1035,12 +1106,14 @@
       "score_position": "없음",
       "has_endnote": true
     },
-    "서술형30": {
+    "단답형30": {
       "number": 30,
       "is_subjective": true,
+      "problem_type": "short_answer",
+      "label_num": 2,
       "difficulty": "하",
       "score": 3.5,
-      "problem_text": "자연수 [식:n`]에 대하여 [식:x`]에 대한 연립부등식 [식:cases {``x^{2}-11x+24 < 0 #`` ] 을 만족시키는 자연수 [식:x`]의 개수가 [식:2`]가 되도록 하는 모든 [식:n`]값의 합을 구하시오.",
+      "problem_text": "[단답형2]자연수 [식:n`]에 대하여 [식:x`]에 대한 연립부등식 [식:cases {``x^{2}-11x+24 < 0 #`` ] 을 만족시키는 자연수 [식:x`]의 개수가 [식:2`]가 되도록 하는 모든 [식:n`]값의 합을 구하시오.",
       "equations": [
         "n`",
         "x`",
@@ -1055,12 +1128,14 @@
       "score_position": "없음",
       "has_endnote": true
     },
-    "서술형31": {
+    "단답형31": {
       "number": 31,
       "is_subjective": true,
+      "problem_type": "short_answer",
+      "label_num": 3,
       "difficulty": "하",
       "score": 4.0,
-      "problem_text": "다항식 [식:f left(x right)=x^{4}+ax^{3}+b]과 최고차항의 계수가 [식:1`]이고 계수와 상수항이 모두 자연수인 두 이차다항식 [식:g left(x right)], [식:h left(x right)`]가 다음 조건을 만족시킨다. (가) 방정식 [식:f left(x right)=0`]은 실근을 갖지 않는다.(나) 다항식 [식:f left(x right)`]는 두 이차다항식 [식:g left(x right)], [식:h left(x right)`]를 인수로 갖고, [식:g left(x right)-h left(x right]의 해는 [식:x > 0`]이다. [식:a+b+g left(1 right)+h left(2 r]의 값을 구하시오. (단, [식:a], [식:b`]는 상수이다.)",
+      "problem_text": "[단답형3]다항식 [식:f left(x right)=x^{4}+ax^{3}+b]과 최고차항의 계수가 [식:1`]이고 계수와 상수항이 모두 자연수인 두 이차다항식 [식:g left(x right)], [식:h left(x right)`]가 다음 조건을 만족시킨다. (가) 방정식 [식:f left(x right)=0`]은 실근을 갖지 않는다.(나) 다항식 [식:f left(x right)`]는 두 이차다항식 [식:g left(x right)], [식:h left(x right)`]를 인수로 갖고, [식:g left(x right)-h left(x right]의 해는 [식:x > 0`]이다. [식:a+b+g left(1 right)+h left(2 r]의 값을 구하시오. (단, [식:a], [식:b`]는 상수이다.)",
       "equations": [
         "f left(x right)=x^{4}+ax^{3}+bx^{2}+ left(a+15 right)x+16`",
         "1`",
@@ -1085,9 +1160,11 @@
     "서술형32": {
       "number": 32,
       "is_subjective": true,
+      "problem_type": "essay",
+      "label_num": 1,
       "difficulty": "하",
       "score": 4.0,
-      "problem_text": "[식:1`]부터 [식:10`]까지 자연수 중에서 서로 다른 세 수를 택할 때, 세 수의 합이 홀수가 되는 경우의 수를 구하시오.",
+      "problem_text": "[서술형1][식:1`]부터 [식:10`]까지 자연수 중에서 서로 다른 세 수를 택할 때, 세 수의 합이 홀수가 되는 경우의 수를 구하시오.",
       "equations": [
         "1`",
         "10`"
@@ -1101,9 +1178,11 @@
     "서술형33": {
       "number": 33,
       "is_subjective": true,
+      "problem_type": "essay",
+      "label_num": 2,
       "difficulty": "하",
       "score": 5.0,
-      "problem_text": "삼차방정식 [식:x^{3}-ax^{2}+2ax-8=0`]이 한 개의 실근과 두 개의 허근을 가질 때, 두 허근을 [식:alpha], [식:beta`]라고 하자. 이때, [식:alpha^{2}+ beta`^{2}`]의 최솟값을 구하시오. (단, [식:a`]는 실수이다.)",
+      "problem_text": "[서술형2]삼차방정식 [식:x^{3}-ax^{2}+2ax-8=0`]이 한 개의 실근과 두 개의 허근을 가질 때, 두 허근을 [식:alpha], [식:beta`]라고 하자. 이때, [식:alpha^{2}+ beta`^{2}`]의 최솟값을 구하시오. (단, [식:a`]는 실수이다.)",
       "equations": [
         "x^{3}-ax^{2}+2ax-8=0`",
         "alpha",
@@ -1120,9 +1199,11 @@
     "서술형34": {
       "number": 34,
       "is_subjective": true,
+      "problem_type": "essay",
+      "label_num": 3,
       "difficulty": "하",
       "score": 5.0,
-      "problem_text": "[식:5] 이상의 자연수 [식:n`]에 대하여 다항식 [식:P`_{n} left(x right)= left(1-x] 이 [식:x^{2}-x+1`]로 나누어떨어지도록 하는 모든 자연수 [식:n`]의 값의 합을 구하시오.",
+      "problem_text": "[서술형3][식:5] 이상의 자연수 [식:n`]에 대하여 다항식 [식:P`_{n} left(x right)= left(1-x] 이 [식:x^{2}-x+1`]로 나누어떨어지도록 하는 모든 자연수 [식:n`]의 값의 합을 구하시오.",
       "equations": [
         "5",
         "n`",
@@ -1139,9 +1220,11 @@
     "서술형35": {
       "number": 35,
       "is_subjective": true,
+      "problem_type": "essay",
+      "label_num": 4,
       "difficulty": "하",
       "score": 4.0,
-      "problem_text": "그림과 같이 좌석 번호가 적힌 [식:10`]개의 의자가 배열되어 있다. 두 학생 [식:{rm{A}it}`], [식:{rm{B}it}`]를 포함한 [식:4`]명의 학생이 다음 규칙에 따라 [식:10`]개의 의자 중에서 서로 다른 [식:4`]개의 의자에 앉는 경우의 수를 구하시오. (가) [식:{rm{A}it}`]의 좌석 번호는 [식:24] 이상이고, [식:{rm{B}it}`]의 좌석 번호는 [식:14] 이하이다.(나) [식:4`]명의 학생 중에서 어느 두 학생도 좌석 번호의 차가 [식:1`]이 되도록 앉지 않는다.(다) [식:4`]명의 학생 중에서 어느 두 학생도 좌석 번호의 차가 [식:10`]이 되도록 앉지 않는다. 2025_1_1_b_공수1_광덕고 ※ 이곳에 검수사항을 기재해주세요",
+      "problem_text": "[서술형4]그림과 같이 좌석 번호가 적힌 [식:10`]개의 의자가 배열되어 있다. 두 학생 [식:{rm{A}it}`], [식:{rm{B}it}`]를 포함한 [식:4`]명의 학생이 다음 규칙에 따라 [식:10`]개의 의자 중에서 서로 다른 [식:4`]개의 의자에 앉는 경우의 수를 구하시오. (가) [식:{rm{A}it}`]의 좌석 번호는 [식:24] 이상이고, [식:{rm{B}it}`]의 좌석 번호는 [식:14] 이하이다.(나) [식:4`]명의 학생 중에서 어느 두 학생도 좌석 번호의 차가 [식:1`]이 되도록 앉지 않는다.(다) [식:4`]명의 학생 중에서 어느 두 학생도 좌석 번호의 차가 [식:10`]이 되도록 앉지 않는다. 2025_1_1_b_공수1_광덕고 ※ 이곳에 검수사항을 기재해주세요",
       "equations": [
         "10`",
         "{rm{A}it}`",

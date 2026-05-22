@@ -9,6 +9,8 @@
   },
   "obj_count": 18,
   "subj_count": 2,
+  "short_answer_count": 0,
+  "essay_count": 2,
   "obj_numbers": [
     1,
     2,
@@ -30,6 +32,11 @@
     18
   ],
   "subj_numbers": [
+    19,
+    20
+  ],
+  "short_answer_numbers": [],
+  "essay_numbers": [
     19,
     20
   ],
@@ -68,6 +75,8 @@
     "1": {
       "number": 1,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "하",
       "score": 4.0,
       "problem_text": "다음 부등식 [식:left|` x+2`right| < 3`]의 해가 될 수 있는 것은?",
@@ -94,6 +103,8 @@
     "2": {
       "number": 2,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "하",
       "score": 4.0,
       "problem_text": "다음 연립부등식 [식:cases {``6 left(x-1 right) < x]의 해는?",
@@ -120,6 +131,8 @@
     "3": {
       "number": 3,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "하",
       "score": 4.3,
       "problem_text": "사차방정식 [식:left(x^{2}+x right)^{2}-14 lef]의 네 실근 중 가장 큰 근을 [식:M`], 가장 작은 근을 [식:m`]이라 할 때, [식:2M`-m`]의 값은?",
@@ -149,6 +162,8 @@
     "4": {
       "number": 4,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 4.3,
       "problem_text": "[식:x], [식:y`]에 대한 연립방정식 [식:cases {``2x+y=4 #`` 3x^{2}-y^{]가 오직 한 쌍의 해를 갖도록 하는 상수 [식:k`]의 값은?",
@@ -178,6 +193,8 @@
     "5": {
       "number": 5,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 4.5,
       "problem_text": "이차함수 [식:y=f left(x right)`]의 그래프와 직선 [식:y=g left(x right)`]가 그림과 같이 두 점 [식:{rm{A}it}], [식:{rm{B}it}`]에서 만날 때, 이차부등식 [식:g left(x right)-f left(x right]을 만족시키는 모든 정수 [식:x`]의 값의 합은?",
@@ -209,6 +226,8 @@
     "6": {
       "number": 6,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 4.5,
       "problem_text": "부등식 [식:left|` x+1`right| - sqrt{x^{2}]의 해는?",
@@ -235,6 +254,8 @@
     "7": {
       "number": 7,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "하",
       "score": 4.7,
       "problem_text": "[식:50] 이하의 자연수 [식:n`]에 대하여 사차다항식 [식:f left(x right)`]가 [식:f left(x right)=x^{4}-6nx^{2}+]일 때, 방정식 [식:f left(x right)=0`]을 만족시키는 자연수 [식:x`]가 존재하도록 하는 모든 [식:n`]의 개수는?",
@@ -267,6 +288,8 @@
     "8": {
       "number": 8,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 4.7,
       "problem_text": "두 이차함수 [식:f left(x right)=2x^{2}+ax+b], [식:g left(x right)=3x^{2}-3bx-5a+] 에 대하여 연립부등식 [식:cases {``f left(x right) le 0 ]의 해가 [식:3 < x le 5`]이다. 부등식 [식:g left(x right)-f left(x right]을 만족시키는 모든 정수 [식:x`]의 개수는? (단, [식:a], [식:b`]는 상수이다.)",
@@ -300,6 +323,8 @@
     "9": {
       "number": 9,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 5.0,
       "problem_text": "[식:5] 이상의 자연수 [식:n`]에 대하여 다항식 [식:P`_{n} left(x right)= left(1+x] 가 [식:x^{2}+x+1`]로 나누어떨어지도록 하는 모든 자연수 [식:n`]의 값의 합은?",
@@ -330,6 +355,8 @@
     "10": {
       "number": 10,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 4.3,
       "problem_text": "그림과 같이 네 지역 [식:{rm{A}it}], [식:{rm{B}it}], [식:{rm{C}it}], [식:{rm{D}it}`]를 연결하는 도로망이 있다. [식:{rm{A}it}`]지역에서 출발하여 [식:{rm{B}it}], [식:{rm{C}it}`] 두 지역을 모두 거쳐 [식:{rm{D}it}`]지역에 도착하는 경우의 수는? (단, 한 번 지나간 지역은 다시 지나지 않는다.)",
@@ -363,6 +390,8 @@
     "11": {
       "number": 11,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 4.7,
       "problem_text": "[식:0], [식:1], [식:2], [식:cdots], [식:9`]의 숫자가 각각 하나씩 적혀 있는 [식:10`]장의 카드가 있다. 다음 조건을 만족시키는 세 자리 자연수를 만들 때 그 경우의 수는? (가) 모든 자리의 숫자는 다르다.(나) [식:5`]의 배수이다.(다) 십의 자리의 숫자는 소수이다.",
@@ -395,6 +424,8 @@
     "12": {
       "number": 12,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 4.0,
       "problem_text": "등식 [식:it_{n-1}{ rm{P}}it_{2}+4= it_{]을 만족시키는 모든 자연수 [식:n`]의 값의 곱은?",
@@ -422,6 +453,8 @@
     "13": {
       "number": 13,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 4.5,
       "problem_text": "그림과 같이 같은 간격으로 놓인 [식:16`]개의 점이 있다. 이 중 두 점을 이어 만들 수 있는 서로 다른 직선의 개수는?",
@@ -448,6 +481,8 @@
     "14": {
       "number": 14,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 4.5,
       "problem_text": "[식:0`]부터 [식:9`]까지 [식:10`]개의 숫자를 사용하여 네 자리 수의 비밀번호를 설정하려고 한다. 다음 조건을 따르는 비밀번호의 개수는? (가) 모든 자리의 숫자는 다르다.(나) [식:0`]과 [식:9`]가 모두 포함되고 [식:0`]과 [식:9`]는 이웃한 자리에 오도록 설정한다.",
@@ -480,6 +515,8 @@
     "15": {
       "number": 15,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 4.7,
       "problem_text": "그림과 같이 [식:16`]개의 칸으로 나누어진 정사각형의 각 칸에 [식:1`]부터 [식:16`]까지의 자연수가 적혀 있다. 이 [식:16`]개의 숫자 중 다음 조건을 만족시키도록 [식:2`]개의 숫자를 선택하려고 한다. 이 [식:16`]개의 숫자 중 다음 조건을 만족시키도록 [식:3`]개의 숫자를 선택하려고 한다. (가) 선택한 [식:3`]개의 숫자는 서로 다른 가로줄에 있다.(나) 선택한 [식:3`]개의 숫자는 서로 다른 세로줄에 있다. 예를 들어, 숫자 [식:1], [식:6], [식:11`]을 선택하는 것은 조건을 만족시키지만, 숫자 [식:5], [식:10], [식:14`]를 선택하는 것은 조건을 만족시키지 않는다. 조건을 만족시키도록 [식:3`]개의 숫자를 선택하는 경우의 수는?",
@@ -521,6 +558,8 @@
     "16": {
       "number": 16,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 5.0,
       "problem_text": "그림과 같이 [식:{rm{A}it}], [식:{rm{B}it}`] 이름이 적힌 두 개의 정삼각형과 세 개의 정사각형으로 배열하였더니 도형이 있다. 숫자 [식:1], [식:2], [식:3], [식:4], [식:5], [식:6], [식:7] 중에서 중복을 허락하여 다섯 개를 택해 다섯 개의 정다각형 내부에 하나씩 적을 때, 다음 조건을 만족시키는 경우의 수는? (가) 세 개의 정사각형에 적혀 있는 수는 모두 정삼각형 [식:A``]에 적혀 있는 수보다 작다.(나) 세 개의 정사각형에 적혀 있는 수는 모두 정삼각형 [식:B``]에 적혀 있는 수보다 크다.(다) 변을 공유하는 두 정사각형에 적혀 있는 수는 서로 다르다.",
@@ -557,6 +596,8 @@
     "17": {
       "number": 17,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "하",
       "score": 4.3,
       "problem_text": "어느 고등학교 [식:{rm{A}}it`]와 [식:{rm{B}}it`]에서는 체육활동으로 테니스와 배드민턴을 배우고 있다. 두 학교 [식:{rm{A}}it], [식:{rm{B}}it`]의 [식:1`]학년과 [식:2`]학년의 학생 수는 다음 표와 같다. 두 학교 모두 [표[식:2]]와 같이 [식:1`]학년 학생의 [식:70 ``% `]는 테니스를[식:,][식:30``%]는 배드민턴을 배우고, [식:2]학년 학생의 [식:60``%`]는 테니스를, [식:40 ``% `]는 배드민턴을 배운다고 한다. (단위 : 명)학교[식:{rm{A}}it][식:{rm{B}}it][식:1`]학년[식:300][식:200][식:2`]학년[식:250][식:150] [표[식:1]] (단위 : [식:``%])학년[식:1학년][식:2학년]테니스[식:70][식:60]배드민턴[식:30][식:40] [표[식:2]] [표[식:1]]과 [표[식:2]]를 각각 행렬 [식:P`= left( rpile{ 300 && 200 # ], [식:Q`= left( rpile{ 0.7 && 0.6 # ]로 나타낼 때, [식:B``]학교에서 테니스를 배우는 학생 수를 나타낸 것은?",
@@ -623,6 +664,8 @@
     "18": {
       "number": 18,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "하",
       "score": 4.0,
       "problem_text": "이차정사각행렬 [식:A``]의 [식:left(i,``j right)`]성분 [식:a_{ij}`]가 [식:a_{ij}=i+j+1][식:left(i=1,``2,``j=1,``2 right)`]일 때, 행렬 [식:A``]의 모든 성분의 합은?",
@@ -654,6 +697,8 @@
     "서술형19": {
       "number": 19,
       "is_subjective": true,
+      "problem_type": "essay",
+      "label_num": null,
       "difficulty": "하",
       "score": 10.0,
       "problem_text": "[식:x`]에 대한 삼차방정식 [식:x^{3}+3kpx^{2}-4k^{3}=0`]은 중근 [식:alpha`]와 다른 한 실근 [식:beta`]를 갖는다. [식:alpha > beta`]이고 [식:alpha^{2}+ beta`^{2}=20`]일 때, 연립부등식 [식:cases {``kp left(x- alpha righ]을 만족시키는 정수해의 개수가 [식:6`]이 되도록 하는 모든 자연수 [식:n`]의 값을 구하는 과정을 서술하시오. (단, [식:k], [식:p`]는 실수이다.)",
@@ -679,6 +724,8 @@
     "서술형20": {
       "number": 20,
       "is_subjective": true,
+      "problem_type": "essay",
+      "label_num": null,
       "difficulty": "하",
       "score": 10.0,
       "problem_text": "그림과 같이 [식:1`]부터 [식:6`]까지 번호가 적힌 [식:6`]개의 의자가 나란히 설치되어 있다. [식:1`]학년 학생 [식:2`]명, [식:2`]학년 학생 [식:2`]명, [식:3`]학년 학생 [식:2`]명이 다음 조건을 만족시키도록 이 [식:6`]개의 의자에 모두 앉으려고 한다. 다음 물음에 답하시오. (1) [식:1`]학년 학생끼리는 이웃하지 않게 앉는 경우의 수를 구하시오. (2) 다음 조건을 만족시키도록 모두 앉는 경우의 수를 구하시오. (가) [식:1`]학년 학생은 짝수, 번호가 적힌 의자에만 앉는다.(나) 같은 학년 학생은 서로 이웃하여 앉지 않는다. 2025_1_1_b_공수1_광주고 ※ 이곳에 검수사항을 기재해주세요",

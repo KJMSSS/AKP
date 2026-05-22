@@ -9,6 +9,8 @@
   },
   "obj_count": 20,
   "subj_count": 3,
+  "short_answer_count": 0,
+  "essay_count": 3,
   "obj_numbers": [
     1,
     2,
@@ -32,6 +34,12 @@
     20
   ],
   "subj_numbers": [
+    21,
+    22,
+    23
+  ],
+  "short_answer_numbers": [],
+  "essay_numbers": [
     21,
     22,
     23
@@ -74,6 +82,8 @@
     "1": {
       "number": 1,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "하",
       "score": 3.4,
       "problem_text": "삼차방정식 [식:x^3 -1= 0]의 실근의 값은?",
@@ -100,6 +110,8 @@
     "2": {
       "number": 2,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "하",
       "score": 3.4,
       "problem_text": "이차방정식 [식:x^{2}+2x+3=0`]의 두 근을 [식:alpha], [식:beta`]라고 할 때, [식:alpha + beta`]의 값은?",
@@ -129,6 +141,8 @@
     "3": {
       "number": 3,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "하",
       "score": 3.6,
       "problem_text": "연립부등식 [식:cases {``3x-3 < 2x #`` 5-2x le]의 해가 [식:alpha le x < beta`]일 때, [식:alpha + beta`]의 값은?",
@@ -157,6 +171,8 @@
     "4": {
       "number": 4,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 3.6,
       "problem_text": "연립방정식 [식:cases {``x+y+xy=11 #`` x+y-xy=]의 해를 [식:x= alpha], [식:y= beta`]라고 할 때, [식:alpha^{2}+ beta`^{2}`]의 값은?",
@@ -186,6 +202,8 @@
     "5": {
       "number": 5,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 3.7,
       "problem_text": "이차함수 [식:y=x^{2}+5x`]의 그래프에 접하고, 기울기가 [식:1`]인 직선의 [식:y`]절편은?",
@@ -214,6 +232,8 @@
     "6": {
       "number": 6,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 3.7,
       "problem_text": "[식:2^{3} times a`]의 양의 약수의 개수가 [식:8`]일 때, 다음 중 [식:a`]의 값이 될 수 없는 것은?",
@@ -242,6 +262,8 @@
     "7": {
       "number": 7,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "하",
       "score": 3.9,
       "problem_text": "원 위에 [식:12`]개의 점이 같은 간격으로 놓여 있다. [식:12`]개의 점 중에서 [식:3`]개의 점을 연결하여 만든 직각삼각형의 개수가 [식:a], 정삼각형의 개수가 [식:b`]이다. [식:12`]개의 점 중에서 [식:4`]개의 점을 연결하여 만든 직사각형의 개수를 [식:c`]라고 할 때, [식:{ab} over {c}`]의 값은?",
@@ -276,6 +298,8 @@
     "8": {
       "number": 8,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 3.9,
       "problem_text": "삼차방정식 [식:x^{3}-1=0`]의 한 허근을 [식:omega`]라고 하자. [식:omega^{10000}+{1} over { omega]의 값은?",
@@ -304,6 +328,8 @@
     "9": {
       "number": 9,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 3.9,
       "problem_text": "[식:0 le x le k`]일 때, 이차함수 [식:y=x^{2}-12x+38`]의 최솟값이 [식:2`]가 되도록 하는 [식:8] 이하의 모든 자연수 [식:k`]값의 합은?",
@@ -334,6 +360,8 @@
     "10": {
       "number": 10,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 3.9,
       "problem_text": "여학생과 남학생을 합하여 모두 [식:7`]명인 수학등아리에서 대표 [식:3`]명을 뽑을 때, 여학생이 적어도 [식:1`]명 포함되도록 뽑는 경우의 수는 [식:25`]이다. 수학등아리 [식:7`]명의 학생이 일렬로 나열된 [식:7`]개의 의자에 앉을 때, 여학생끼리는 이웃하지 않고 양 끝 의자에는 모두 남학생이 앉는 경우의 수는?",
@@ -365,6 +393,8 @@
     "11": {
       "number": 11,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 4.1,
       "problem_text": "사차방정식 [식:left(x^{2}-4x+5 right) left(x^]의 서로 다른 실근의 개수는?",
@@ -391,6 +421,8 @@
     "12": {
       "number": 12,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 4.1,
       "problem_text": "다음 그림과 같이 밑면의 반지름의 길이와 높이가 같은 원기둥 모양의 그릇에 [식:50 pi ``{rm{cm}it}^{3} `]의 물을 부었더니 그릇의 위에서부터 [식:3 ``{rm{cm}it}`]를 남기고 물이 채워졌다. 이 그릇의 밑면의 반지름의 길이는? (단, 그릇의 두께는 생각하지 않는다.)",
@@ -418,6 +450,8 @@
     "13": {
       "number": 13,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 4.1,
       "problem_text": "부등식 [식:2 left|` x-4`right| + left|` 5]를 만족하는 실수 [식:x`]가 존재하도록 하는 자연수 [식:k`]의 최솟값은?",
@@ -446,6 +480,8 @@
     "14": {
       "number": 14,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 4.3,
       "problem_text": "다음 <보기>에서 옳은 것만을 있는 대로 고른 것은? (단, [식:n`]과 [식:r`]는 자연수이고, [식:r le n`]이다.) | 보 기 |ㄱ. 등식 [식:it_{10}{ rm{P}}it_{4}=n times ]를 만족시키는 [식:n`]의 값은 [식:4`]이다.ㄴ. [식:it_{3}{ rm{C}}it_{3} times it_]을 만족시키는 [식:n`]의 값은 [식:5`]이다.ㄷ. 등식 [식:it_{n+1}{ rm{P}}it_{n+1}= it_{]을 만족시키는 [식:n`]의 값은 [식:5`]이다.ㄹ. [식:x`]에 대한 이차방정식 [식:x^{2}-r! it_{n}{ rm{C}}it_{n-r]의 중근이 [식:6`]일 때, [식:n +r`]의 값은 [식:6`]이다.ㅁ. 등식 [식:it_{15}{ rm{P}}it_{7}= it_{14}]을 만족시키는 [식:n`]의 값은 [식:7`]이다.",
@@ -486,6 +522,8 @@
     "15": {
       "number": 15,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 4.3,
       "problem_text": "어느 학교 학생 자치회에서는 매년 교복 바자회 행사를 열어 얻은 수익금을 지역 복지 기관에 기부하고 있다. 학생 자치회 총무 팀이 그 동안의 데이터를 바탕으로 올해 교복 바자회 행사의 가격에 따른 판매량을 예측한 결과, 교복 한 벌의 가격을 [식:{rm{10,000}}it`]원으로 정하면 [식:64`]벌이 팔리고, 교복 한 벌의 가격을 [식:x ``%] 내리면 판매량은 [식:2x ``%] 늘어나는 것으로 나타났다. (수익금)[식:=](교복 한 벌의 가격)[식:times](판매량) 이라 하자. 수익금이 최대일 때의 교복 총 판매량은? (단, [식:0 le x le 50])",
@@ -518,6 +556,8 @@
     "16": {
       "number": 16,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 4.3,
       "problem_text": "[식:x`]에 대한 방정식 [식:left(x^{2}+2ax+2a right) left(]의 근 중 서로 다른 허근의 개수가 [식:2`]개이기 위한 정수 [식:a`]의 최솟값은?",
@@ -547,6 +587,8 @@
     "17": {
       "number": 17,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "하",
       "score": 4.4,
       "problem_text": "[식:x`]에 대한 연립부등식 [식:cases {``x^{2}-2x-8 ge 0 #`` x]을 만족시키는 정수 [식:x`]가 [식:6`]개만 존재하도록 하는 모든 정수 [식:k`]의 값의 곱은?",
@@ -577,6 +619,8 @@
     "18": {
       "number": 18,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "하",
       "score": 4.4,
       "problem_text": "이차방정식 [식:x^{2}-x-2=0`]의 두 근을 [식:alpha], [식:beta`]라 할 때, 이차함수 [식:y=x^{2}+ax+b`]의 그래프가 두 점 [식:left( alpha^{2}-1,`` alpha rig], [식:left( beta`^{2}-1,`` beta righ]를 지난다. 두 상수 [식:a], [식:b`]의 곱 [식:a times b`]의 값은?",
@@ -611,6 +655,8 @@
     "19": {
       "number": 19,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "하",
       "score": 4.5,
       "problem_text": "[식:6`]개의 숫자 [식:0], [식:1], [식:2], [식:3], [식:4], [식:5] 중에서 서로 다른 [식:4`]개의 숫자 [식:a], [식:b], [식:c], [식:d`]를 택하여 만들 수 있는 네 자리의 자연수 [식:a times 10^{3}+b times 10^{2}+] 중에서 [식:a+b`]가 짝수이거나 [식:c times d`]가 홀수인 자연수의 개수는?",
@@ -651,6 +697,8 @@
     "20": {
       "number": 20,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "하",
       "score": 4.5,
       "problem_text": "이차함수 [식:f left(x right)=x^{2}-5x+t] 위의 서로 다른 두 점을 각각 [식:{rm{A}it} left(a,``k right)], [식:{rm{B}it} left(b,``k right)`]라 하자. 점 [식:{rm{B}it}`]를 지나고 기울기가 [식:2`]인 직선이 함수 [식:y=f left(x right)`]의 그래프와 만나는 점 중 [식:{rm{B}it}`]가 아닌 점을 [식:{rm{C}it} left(c,``d right)`]라 하자. 점 [식:{rm{C}it}`]를 지나고 기울기가 [식:1`]인 직선이 점 [식:{rm{A}it}`]를 지날 때, 삼각형 [식:{rm{ABC}it}`]의 넓이는? (단, [식:a], [식:b], [식:c], [식:d], [식:t], [식:k`]는 상수이고 [식:a < b < c`]이다.)",
@@ -695,6 +743,8 @@
     "서술형21": {
       "number": 21,
       "is_subjective": true,
+      "problem_type": "essay",
+      "label_num": null,
       "difficulty": "하",
       "score": 6.0,
       "problem_text": "이차함수 [식:y=x^{2}-4kx+8k`]의 그래프와 직선 [식:y=2ax+b-4k^{2}`]이 실수 [식:k`]의 값에 관계없이 항상 접할 때, 상수 [식:a], [식:b`]의 값을 각각 구하는 풀이 과정과 답을 쓰시오.",
@@ -714,6 +764,8 @@
     "서술형22": {
       "number": 22,
       "is_subjective": true,
+      "problem_type": "essay",
+      "label_num": null,
       "difficulty": "하",
       "score": 7.0,
       "problem_text": "[식:-2 le x le 1`]일 때, 이차함수 [식:y=ax^{2}+2ax+b~ left(a > 0 rig]의 최댓값은 [식:1`]이고 최솟값은 [식:-3`]이다. 상수 [식:a], [식:b`]의 값을 각각 구하는 풀이 과정과 답을쓰시오.",
@@ -734,6 +786,8 @@
     "서술형23": {
       "number": 23,
       "is_subjective": true,
+      "problem_type": "essay",
+      "label_num": null,
       "difficulty": "하",
       "score": 7.0,
       "problem_text": "연립부등식 [식:2 le left(a-3 right)x+2b-1 le ] 이 모든 실수 [식:x`]에 대하여 성립하도록 하는 상수 [식:a], [식:b`]에 대하여 [식:a+b`]의 최댓값을 [식:M`], 최솟값을 [식:m`]이라 할 때, [식:M`], [식:m], [식:M`+m] 세 가지 값을 각각 구하는 풀이 과정과 답을 쓰시오. 2025_1_1_b_공수1_광주여고 ※ 이곳에 검수사항을 기재해주세요",

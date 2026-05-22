@@ -9,6 +9,8 @@
   },
   "obj_count": 14,
   "subj_count": 6,
+  "short_answer_count": 0,
+  "essay_count": 6,
   "obj_numbers": [
     1,
     2,
@@ -26,6 +28,15 @@
     14
   ],
   "subj_numbers": [
+    15,
+    16,
+    17,
+    18,
+    19,
+    20
+  ],
+  "short_answer_numbers": [],
+  "essay_numbers": [
     15,
     16,
     17,
@@ -68,6 +79,8 @@
     "1": {
       "number": 1,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "하",
       "score": 3.8,
       "problem_text": "삼차방정식 [식:x^{3}+x-2=0`]의 서로 다른 두 허근을 [식:alpha], [식:beta`]라 할 때, [식:alpha^{3}+ beta`^{3}`]의 값은?",
@@ -97,6 +110,8 @@
     "2": {
       "number": 2,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "하",
       "score": 3.8,
       "problem_text": "연립방정식 [식:cases {``x+2y=5 #`` x^{2}-4y^{]의 해를 [식:x= alpha], [식:y= beta`]라 할 때, [식:alpha + beta`]의 값은?",
@@ -126,6 +141,8 @@
     "3": {
       "number": 3,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "하",
       "score": 3.8,
       "problem_text": "연립부등식 [식:cases {``5x-2 le x+a #`` 3x+4 ]의 해를 수직선 위에 나타내면 다음 그림과 같을 때, 상수 [식:a], [식:b`]에 대하여 [식:a+b`]의 값은?",
@@ -155,6 +172,8 @@
     "4": {
       "number": 4,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 3.8,
       "problem_text": "이차부등식 [식:ax^{2}+5x-b < 0`]의 해가 [식:x <`-1] 또는 [식:x > 2`]일 때, 상수 [식:a], [식:b`]에 대하여 [식:ab`]의 값은?",
@@ -186,6 +205,8 @@
     "5": {
       "number": 5,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 3.8,
       "problem_text": "[식:x`]에 대한 이차방정식 [식:x^{2}+ left(k^{2}-16 right)x+k] 의 두 근의 부호가 서로 다르고 두 근의 절댓값이 같을 때, 실수 [식:k`]의 값은?",
@@ -214,6 +235,8 @@
     "6": {
       "number": 6,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 3.8,
       "problem_text": "[식:it_{n}{ rm{P}}it_{r }=336], [식:it_{n}{ rm{C}}it_{r }=56`]을 만족시키는 자연수 [식:n], [식:r`]에 대하여 [식:n+2r`]의 값을 구하면?",
@@ -244,6 +267,8 @@
     "7": {
       "number": 7,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "하",
       "score": 3.8,
       "problem_text": "[식:10000`]원짜리 지폐 [식:3`]장, [식:5000`]원짜리 지폐 [식:3`]장, [식:1000`]원짜리 지폐 [식:2`]장의 일부 또는 전부를 사용하여 지불할 수 있는 방법의 수를 [식:a], 지불하는 금액의 수를 [식:b`]라 할 때, [식:2b-a`]의 값을 구하면? (단, [식:0`]원을 지불하는 경우는 제외한다.)",
@@ -279,6 +304,8 @@
     "8": {
       "number": 8,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 3.8,
       "problem_text": "두 행렬 [식:A`= left( rpile{ 2 && 3 # -1 &], [식:B`= left( rpile{ 3 && 1 # -1 &]에 대하여 [식:3A`+B`+2X`=A`-2B`+3X``]를 만족시키는 행렬 [식:X``]의 모든 성분의 합을 구하면?",
@@ -308,6 +335,8 @@
     "9": {
       "number": 9,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 4.2,
       "problem_text": "그림과 같이 가로 [식:5`]칸, 세로 [식:3`]칸으로 나누어진 [식:15`]칸 상자가 있다. 각 칸에 [식:1`]부터 [식:15`]까지의 자연수가 적혀있다. [식:1][식:2][식:3][식:4][식:5][식:6][식:7][식:8][식:9][식:10][식:11][식:12][식:13][식:14][식:15] 이 상자에 알파벳 [식:{rm{A}}it], [식:{rm{B}}it], [식:{rm{C}}it], [식:{rm{D}}it], [식:{rm{E}}it], [식:{rm{F}}it], [식:{rm{G}}it], [식:{rm{H}}it`]가 각각 쓰여진 [식:8`]개의 공을 다음 조건을 만족시키도록 넣으려고 한다. (가) 알파벳 [식:{rm{A}}it], [식:{rm{B}}it`]가 쓰여진 공은 [식:6 sim 10`]번 칸에 넣는다.(나) [식:8`]개의 공은 좌우로 이웃하지 않는다. 조건을 만족시키도록 [식:8`]개의 공을 상자에 넣는 경우의 수가 [식:a times 7!`]일 때, 자연수 [식:a`]의 값은? (단, 공은 한 칸에 하나씩 넣는다.)",
@@ -369,6 +398,8 @@
     "10": {
       "number": 10,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 4.0,
       "problem_text": "삼차식 [식:f left(x right)=x^{3}+ax^{2}+b]가 다음 두 조건을 모두 만족시킬 때, 삼차방정식 [식:f left(2x+5 right)=0`]의 모든 근의 합은? (단, [식:a], [식:b], [식:c`]는 실수) (가) [식:f left(x right)`]는 [식:x+1`]로 나누어떨어진다.(나) 삼차방정식 [식:f left(x right)=0`]의 한 근은 [식:1- sqrt{2}i`]이다. (단, [식:i= sqrt{-1}])",
@@ -404,6 +435,8 @@
     "11": {
       "number": 11,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 4.2,
       "problem_text": "두 이차함수 [식:y=f left(x right)], [식:y=g left(x right)`]의 그래프가 그림과 같다. [식:-6 le x le 6`]인 정수 [식:x`]에 대하여 부등식 [식:left {f left(x right) right }^]를 만족시키는 [식:x`]의 개수는? (단, [식:f left(-3 right)=f left(1 righ]이다.)",
@@ -436,6 +469,8 @@
     "12": {
       "number": 12,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 4.0,
       "problem_text": "[식:6`]개의 숫자 [식:1], [식:2], [식:4], [식:5], [식:6], [식:8`]을 일렬로 나열할 때, 다음 조건을 만족시키도록 나열하는 경우의 수를 [식:N``]이라고 하자. [식:{N`} over {16}`]의 값을 구하면? (가) 홀수끼리는 서로 이웃하지 않는다.(나) 양 끝자리 중 적어도 하나는 홀수이다.",
@@ -470,6 +505,8 @@
     "13": {
       "number": 13,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 4.2,
       "problem_text": "그림과 같이 [식:{rm{A}it}], [식:{rm{B}it}], [식:{rm{C}it}], [식:{rm{D}it}], [식:{rm{E}it}], [식:{rm{F}it}], [식:{rm{G}it}`]의 [식:7`]개의 영역을 서로 다른 [식:4`]가지의 색으로 칠하려고 한다. 같은 색을 중복하여 사용해도 좋으나 인접한 영역은 서로 다른 색을 칠하는 경우의 수를 [식:N``]이라 할 때, [식:{N`} over {3!}`]의 값을 구하면?",
@@ -506,6 +543,8 @@
     "14": {
       "number": 14,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 4.0,
       "problem_text": "이차정사각행렬 [식:A``]의 [식:left(i,``j right)`]성분 [식:a_{ij}`]가 아래와 같이 정의될 때, 행렬 [식:A``]의 모든 성분의 곱은? [식:left.a_{ij}= cases {``i-1 & & ]",
@@ -536,6 +575,8 @@
     "서술형15": {
       "number": 15,
       "is_subjective": true,
+      "problem_type": "essay",
+      "label_num": null,
       "difficulty": "",
       "score": 7.0,
       "problem_text": "농구 선수 [식:2`]명, 야구 선수 [식:3`]명, 축구 선수 [식:3`]명을 일렬로 세울 때, 농구 선수끼리는 서로 이웃하고 축구 선수끼리는 서로 이웃하지 않도록 세우는 경우의 수를 구하시오.",
@@ -553,6 +594,8 @@
     "서술형16": {
       "number": 16,
       "is_subjective": true,
+      "problem_type": "essay",
+      "label_num": null,
       "difficulty": "",
       "score": 7.0,
       "problem_text": "연립부등식 [식:cases {`` left|` x-3`right| le]을 만족시키는 정수 [식:x`]의 개수를 구하시오.",
@@ -569,6 +612,8 @@
     "서술형17": {
       "number": 17,
       "is_subjective": true,
+      "problem_type": "essay",
+      "label_num": null,
       "difficulty": "하",
       "score": 7.0,
       "problem_text": "연립부등식 [식:cases {``x^{2}-2x-24 le 0 #`` ]의 해가 존재하도록 하는 정수 [식:a`]를 모두 구하시오.",
@@ -585,6 +630,8 @@
     "서술형18": {
       "number": 18,
       "is_subjective": true,
+      "problem_type": "essay",
+      "label_num": null,
       "difficulty": "하",
       "score": 8.0,
       "problem_text": "부등식 [식:x-4 le x-6 left|` x-2`right| l]을 만족시키는 [식:x`]의 값이 [식:x`]에 대한 부등식 [식:left|` x-2`right| le k left(x-]를 만족시키도록 하는 상수 [식:k`]의 범위를 구하시오.",
@@ -604,6 +651,8 @@
     "서술형19": {
       "number": 19,
       "is_subjective": true,
+      "problem_type": "essay",
+      "label_num": null,
       "difficulty": "하",
       "score": 8.0,
       "problem_text": "두 다항식 [식:f left(x right)=x^{3}+x+2], [식:g left(x right)=x^{3}+2x+5] 에 대하여 방정식 [식:f left(x right)=0`]의 세 근을 [식:alpha], [식:beta], [식:gamma`]라 할 때, [식:g left( alpha right)g left( be]의 값을 구하시오.",
@@ -625,6 +674,8 @@
     "서술형20": {
       "number": 20,
       "is_subjective": true,
+      "problem_type": "essay",
+      "label_num": null,
       "difficulty": "하",
       "score": 8.0,
       "problem_text": "사차항의 계수가 [식:1`]인 사차식 [식:P` left(x right)`]가 다음 조건을 만족시킨다. (가) [식:P` left(1 right)=1], [식:P` left(3 right)=27](나) 이차방정식 [식:x^{2}+x+1=0`]의 한 허근 [식:omega`]에 대하여 [식:P` left( omega right)=1], [식:P` left({ bar{ omega }} right)]이다. 다항식 [식:P` left(x right)`]를 [식:x-4`]로 나눈 나머지를 구하시오. 2025_1_1_b_공수1_대동고 ※ 이곳에 검수사항을 기재해주세요",

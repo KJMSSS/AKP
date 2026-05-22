@@ -9,6 +9,8 @@
   },
   "obj_count": 15,
   "subj_count": 1,
+  "short_answer_count": 0,
+  "essay_count": 1,
   "obj_numbers": [
     1,
     2,
@@ -27,6 +29,10 @@
     15
   ],
   "subj_numbers": [
+    16
+  ],
+  "short_answer_numbers": [],
+  "essay_numbers": [
     16
   ],
   "score_list": {
@@ -60,6 +66,8 @@
     "1": {
       "number": 1,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "하",
       "score": 5.1,
       "problem_text": "다음 부등식 [식:left|` x-2`right| < 5`]의 해가 [식:alpha < x < beta`]일 때, [식:alpha + beta`]값은?",
@@ -88,6 +96,8 @@
     "2": {
       "number": 2,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "하",
       "score": 5.1,
       "problem_text": "다음 [식:cases {``x-y=`-4 #`` x^{2}+xy+]이 성립방정식을 풀면 그 해가 [식:cases {``x= alpha #`` y= beta}] 또는 [식:cases {``x= gamma #`` y= delta]이다. [식:alpha times beta times gamma t]의 값은?",
@@ -117,6 +127,8 @@
     "3": {
       "number": 3,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "하",
       "score": 5.1,
       "problem_text": "연립부등식 [식:2 left(5-2x right) le 3x-4 <`-]을 만족시키는 정수 [식:x`]의 값의 합은?",
@@ -144,6 +156,8 @@
     "4": {
       "number": 4,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 5.15,
       "problem_text": "두 행렬 [식:A`= left( rpile{ -2 && 4 # 6 &]과 [식:B`= left( rpile{ 1 && -5 # 2 &]에 대하여 [식:2A`+5B``]를 계산하면?",
@@ -172,6 +186,8 @@
     "5": {
       "number": 5,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 5.3,
       "problem_text": "연립부등식 [식:cases {`` left|` x-1`right| le]의 해가 [식:a le x < b`]일 때, [식:a+b`]의 값은?",
@@ -200,6 +216,8 @@
     "6": {
       "number": 6,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 5.3,
       "problem_text": "음이 아닌 정수 [식:x`]와 [식:y`]에 대하여 [식:x+y le 4`]를 만족시키는 순서쌍 [식:left(x,``y right)`]의 개수를 구하면?",
@@ -229,6 +247,8 @@
     "7": {
       "number": 7,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "하",
       "score": 5.3,
       "problem_text": "[식:2 times 2`]행렬 [식:A``]의 [식:left(i,``j right)`]성분 [식:a_{ij}`]가 [식:a_{28}=2i-j+3`]일 때, 행렬 [식:A``]의 모든 성분의 합은?",
@@ -260,6 +280,8 @@
     "8": {
       "number": 8,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 6.0,
       "problem_text": "행렬 [식:A`= left( rpile{ -2 && 5 && 7 ]에 대하여 옳은 것을 <보기>에서 모두 고르면? | 보 기 |ㄱ. 제[식:1 `]행은 [식:left(4-1 right)`]이다.ㄴ. 행렬 [식:4`]의 [식:left(4,``3 right)`]성분은 없다.ㄷ. 제[식:3`]행의 성분의 합은 [식:19`]이다.",
@@ -287,6 +309,8 @@
     "9": {
       "number": 9,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 6.7,
       "problem_text": "이차부등식 [식:x^{2}+2kx+4k-3 > 0`]이 모든 실수 [식:x`]에 대하여 성립하도록 하는 실수 [식:k`]의 값의 범위를 구하면?",
@@ -315,6 +339,8 @@
     "10": {
       "number": 10,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 6.7,
       "problem_text": "두 행렬 [식:A`= left( rpile{ 4 && 3 # 5 &&]과 [식:B`= left( rpile{ 0 && 1 # a &&]에 대하여 [식:A`B`=B`A``]일 때, [식:a times b`]의 값은?",
@@ -344,6 +370,8 @@
     "11": {
       "number": 11,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 6.7,
       "problem_text": "사과, 배, 바나나를 포함한 과일 [식:9`]종류 중에서 [식:4`]종류를 택할 때, 바나나는 포함하지 않고 사과와 배는 모두 포함하는 경우의 수를 구하면?",
@@ -371,6 +399,8 @@
     "12": {
       "number": 12,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 6.85,
       "problem_text": "봅슬레이 [식:4`]인승 경기에 네 명의 선수 [식:{rm{A}it}], [식:{rm{B}it}], [식:{rm{C}it}], [식:{rm{D}it}`]가 한 팀을 이루어 출전할 때, [식:{rm{A}it}`]와 [식:{rm{B}it}`]가 서로 이웃하지 않게 썰매에 앉는 경우의 수는?",
@@ -403,6 +433,8 @@
     "13": {
       "number": 13,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 6.9,
       "problem_text": "다음 그림에서 찾을 수 있는 크고 작은 직사각형의 개수를 구하면?",
@@ -428,6 +460,8 @@
     "14": {
       "number": 14,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 6.9,
       "problem_text": "어느 고등학교의 두 학생회장 후보 [식:{rm{A}it}`]와 [식:{rm{B}it}`]에 대하여 투표를 실시한 결과, [식:{rm{A}it}`]후보는 남학생의 [식:60 ``% `]와 여학생의 [식:40 ``% `]가 지지하였고, [식:{rm{B}it}`]후보는 남학생의 [식:40 ``% `]와 여학생의 [식:55 ``% `]가 지지하였다. 남학생이 [식:150`]명이고 여학생이 [식:100`]명일 때, 다음 [식:box{~~}`] 안에 알맞은 수를 찾아 [식:left(a times b times c right)+]값을 구하고, 당선자가 누구인지 말해 보면? [식:left( rpile{ 0.6 && BOX{~~b~~}][식:left( pile{ 150 # box{~~c~~}} ]",
@@ -472,6 +506,8 @@
     "15": {
       "number": 15,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 6.9,
       "problem_text": "삼차방정식 [식:x^{3}+ax^{2}+bx-5=0`]의 한 근이 [식:2-i`]일 때, 실수 [식:a`]와 [식:b`]의 값과 나머지 두 근을 [식:alpha], [식:beta`]라 할 때, [식:a+b+ alpha + beta`]값은?",
@@ -504,6 +540,8 @@
     "서술형16": {
       "number": 16,
       "is_subjective": true,
+      "problem_type": "essay",
+      "label_num": null,
       "difficulty": "",
       "score": 10.0,
       "problem_text": "삼차방정식 [식:x^{3}-1=0`]의 한 허근을 [식:omega`]라 할 때, 다음 식의 값을 구하여라. 2025_1_1_b_공수1_동명고 ※ 이곳에 검수사항을 기재해주세요",

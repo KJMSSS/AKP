@@ -9,6 +9,8 @@
   },
   "obj_count": 20,
   "subj_count": 3,
+  "short_answer_count": 0,
+  "essay_count": 3,
   "obj_numbers": [
     1,
     2,
@@ -32,6 +34,12 @@
     20
   ],
   "subj_numbers": [
+    21,
+    22,
+    23
+  ],
+  "short_answer_numbers": [],
+  "essay_numbers": [
     21,
     22,
     23
@@ -74,6 +82,8 @@
     "1": {
       "number": 1,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "하",
       "score": 3.0,
       "problem_text": "삼차방정식 [식:x^{3}-x^{2}-5x-3=0`]의 세 근의 합을 [식:a], 세 근의 곱을 [식:b`]라 하자. 이때, [식:a+b`]의 값을 구하면?",
@@ -103,6 +113,8 @@
     "2": {
       "number": 2,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "하",
       "score": 3.0,
       "problem_text": "연립부등식 [식:cases {``x^{2}+3 ge 4x #`` 4x^]을 만족하는 모든 정수의 합을 구하면?",
@@ -129,6 +141,8 @@
     "3": {
       "number": 3,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "하",
       "score": 3.1,
       "problem_text": "[식:it_{7}{ rm{C}}it_{4}`]의 값을 구하면?",
@@ -155,6 +169,8 @@
     "4": {
       "number": 4,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 3.2,
       "problem_text": "주사위 한 개를 두 번 던질 때, 첫 번째는 소수의 눈이 나오고 두 번째는 [식:5`]의 약수의 눈이 나오는 경우의 수는?",
@@ -181,6 +197,8 @@
     "5": {
       "number": 5,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 3.3,
       "problem_text": "등식 [식:left( pile{ 1-a && 2b-1 # 3 &&]이 성립하도록 하는 [식:a], [식:b], [식:c`]에 대하여 [식:a+b+c`]의 값을 구하면?",
@@ -211,6 +229,8 @@
     "6": {
       "number": 6,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 3.3,
       "problem_text": "다항식 [식:f left(x right)=x^{2}-x+1`]에 대하여 [식:f left(x^{12} right)`]을 [식:f left(x right)`]로 나누었을 때의 나머지를 구하면?",
@@ -239,6 +259,8 @@
     "7": {
       "number": 7,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "하",
       "score": 3.6,
       "problem_text": "이차다항식 [식:P` left(x right)`]가 다음 조건을 모두 만족시킬 때, [식:P` left(-2 right)`]의 값을 구하면? <보 기>(가) 부등식 [식:P` left(x right) geq`-2x-3`]의 해는 [식:0 le x le 1`]이다.(나) 방정식 [식:P` left(x right)=`-3x-2`]는 중근을 갖는다.",
@@ -269,6 +291,8 @@
     "8": {
       "number": 8,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 3.8,
       "problem_text": "어떤 동아리의 학생들이 밤 식빵 몇 봉지를 나누어 먹으려고 한다. 각 봉지에는 한 덩어리의 밤 식빵이 들어있고, 각 봉지의 모든 밤 식빵을 똑같이 [식:9`]조각으로 각각 자른 후 한 명이 [식:5`]조각씩 먹으면 [식:3`]명이 밤 식빵을 한 조각도 먹을 수 없고, 한 명이 [식:4`]조각씩 먹으면 밤 식빵이 한 봉지 이하로 남는다고 한다. 이때 이 동아리의 최대 학생 수를 구하면?",
@@ -298,6 +322,8 @@
     "9": {
       "number": 9,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 4.1,
       "problem_text": "[식:5`]층짜리 건물의 [식:1`]충에서 [식:6`]명이 승강기를 함께 탄 후 [식:5`]층까지 올라 오는 동안 [식:3`]개 중에서 모두 내리는 경우의 수는? (단 승강기를 새로 탄 사람은 없으며 [식:3`]개의 각 층에서는 적어도 [식:1`]명이 내린다.)",
@@ -330,6 +356,8 @@
     "10": {
       "number": 10,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 4.2,
       "problem_text": "[식:A`={1} over {2} left( rpile{ 1]에 대하여 [식:A`+A`^{2}+A`^{3}+`cdots` +A`^{]의 모든 성분의 합을 구하면?",
@@ -357,6 +385,8 @@
     "11": {
       "number": 11,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 4.2,
       "problem_text": "[식:x`]에 대한 사차방정식 [식:x^{4}-2 left(a+2 right)x^{2}+a]의 서로 다른 네 실근을 [식:alpha], [식:beta], [식:gamma], [식:delta ~ left( alpha < beta < g]라 하면, [식:{ delta - alpha } over { gamma]이 성립한다. 이때, [식:alpha^{2}+ beta`^{2}+ gamma^{4]의 값을 구하면? (단, [식:a`]는 정수)",
@@ -391,6 +421,8 @@
     "12": {
       "number": 12,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 4.2,
       "problem_text": "숫자 [식:0], [식:1], [식:2], [식:3], [식:4] 중에서 서로 다른 숫자 일부 또는 전체를 사용하여 만들 수 있는 자연수를 크기순으로 배열하면 다음과 같다. [식:1], [식:2], [식:3], [식:4], [식:10], [식:12], [식:13], [식:14], [식:cdots], [식:43120], [식:43201], [식:43210] 이때, [식:3421`]보다 작은 자연수의 개수는?",
@@ -434,6 +466,8 @@
     "13": {
       "number": 13,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": null,
       "problem_text": "이차방정식 [식:x^{2}-ax+4=0`]의 두 근이 부등식 [식:left|` 2-3x`right| + left|` x-]의 해의 범위를 만족하도록 하는 모든 정수 [식:a`]의 개수를 구하면?",
@@ -462,6 +496,8 @@
     "14": {
       "number": 14,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 4.4,
       "problem_text": "두 이차함수 [식:f left(x right)], [식:g left(x right)`]가 다음 조건을 만족시킨다. (가) 함수 [식:y=f left(x right)`]의 그래프는 [식:x`]축과 한 점 [식:left(0,``0 right)`]에서만 만난다.(나) 부등식 [식:f left(x right)+g left(x right]의 해는 [식:x ge 2`]이다.(다) 모든 실수 [식:x`]에 대하여 [식:f left(x right)-g left(x right]이다. [식:x`]에 대한 방정식 [식:left {f left(x right)-k right ]이 실근을 갖지 않도록 하는 정수 [식:k`]의 개수가 [식:5`]개일 때, [식:f left(7 right)+g left(7 right]의 최댓값을 구하면?",
@@ -501,6 +537,8 @@
     "15": {
       "number": 15,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 4.5,
       "problem_text": "두 마트 [식:M`_{1}], [식:M`_{2}`]에서 두 종류의 물건 [식:n_{1}], [식:n_{2}`]의 판매 여부를 조사하여 [식:n_{i}`]가 [식:M`_{j}`]마트에서 판매되고 있으면 [식:a_{ij}=1], [식:n_{i}`]가 [식:M`_{j}`]마트에서 판매되지 않고 있으면 [식:a_{ij}=0~ left(i,``j=1,``2 rig]인 행렬 [식:A`= left( rpile{ a_{11} && a_{]를 만들었다. [식:A`^{2}= left( rpile{ 1 && 2 # ]일 때, <보기>에서 옳은 것만을 있는 대로 고른 것은? | 보 기 |ㄱ. [식:n_{1}`]은 [식:M`_{1}], [식:M`_{2}] 중 어느 한 마트에서만 판매한다.ㄴ. [식:M`_{1}`]마트에서는 [식:n_{1}], [식:n_{2}] 중 어느 한 물건만 판매한다.ㄷ. [식:M`_{2}`]마트에서는 [식:n_{1}], [식:n_{2}] 모두 판매한다.",
@@ -542,6 +580,8 @@
     "16": {
       "number": 16,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 4.6,
       "problem_text": "두 함수 [식:f left(x right)=x^{2}-mx+4m], [식:g left(x right)=`-x^{2}+3x+3m-]에 대하여 모든 실수 [식:x_{1}], [식:x_{2}`]에 대하여 부등식 [식:f left(x_{1} right) ge g left(]가 성립하도록 하는 실수 [식:m`]의 값의 범위는 [식:alpha le m le beta`]이다. 또, 모든 실수 [식:a`]에 대하여 [식:f left(a right) ge g left(a ri]가 성립하도록 하는 실수 [식:m`]의 값의 범위는 [식:gamma le m le delta`]일 때, [식:alpha + beta + gamma + delta`]의 값을 구하면?",
@@ -579,6 +619,8 @@
     "17": {
       "number": 17,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "하",
       "score": 4.8,
       "problem_text": "모든 실수 [식:x`]에 대하여 연립부등식 [식:cases {``x^{2}+ left(a-1 right] 을 만족시키는 두 실수 [식:a], [식:b`]가 유일하게 존재할 때, [식:ab`]의 값을 구하면? (단, [식:p ne 0])",
@@ -610,6 +652,8 @@
     "18": {
       "number": 18,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "하",
       "score": 4.8,
       "problem_text": "[식:1`]부터 [식:9`]까지 [식:9`]개의 정수 중에서 서로 다른 [식:4`]개의 숫자를 사용하여 네 자리 자연수를 만들 때 [식:3`]의 배수의 개수는?",
@@ -640,6 +684,8 @@
     "19": {
       "number": 19,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "하",
       "score": 4.8,
       "problem_text": "삼차방정식 [식:x^{3}-1=0`]의 한 허근을 [식:omega`]라 할 때, 행렬 [식:I`= left( rpile{ 1 && omega # ]에 대하여 [식:I`+I`^{2}+I`^{3}+`cdots` +I`^{]가 되는 자연수 [식:n`]의 최댓값을 [식:M`], 최솟값을 [식:m`]이라 하자. [식:M`-m`]의 값을 구하면? (단, [식:99 < n < 999`]이고, [식:{rm{O}}it`]는 영행렬이다.)",
@@ -675,6 +721,8 @@
     "20": {
       "number": 20,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "하",
       "score": 4.8,
       "problem_text": "두 방정식 [식:p`:`x^{2}+2ax+1=0], [식:q`:`x^{2}+2x+a=0`]은 각각 서로 다른 두 실근을 갖는다. 방정식 [식:p`]의 두 근이 방정식 [식:q`]의 두 근보다 항상 크기 위한 실수 [식:a`]의 값의 범위는 [식:alpha < a < beta`]일 때, [식:12 alpha beta`]의 값을 구하면?",
@@ -707,6 +755,8 @@
     "서술형21": {
       "number": 21,
       "is_subjective": true,
+      "problem_type": "essay",
+      "label_num": null,
       "difficulty": "하",
       "score": 5.0,
       "problem_text": "",
@@ -720,6 +770,8 @@
     "서술형22": {
       "number": 22,
       "is_subjective": true,
+      "problem_type": "essay",
+      "label_num": null,
       "difficulty": "하",
       "score": 7.0,
       "problem_text": "삼차방정식 [식:x^{3}+ax^{2}+bx-18=0`]은 다음 조건을 만족시키는 [식:alpha], [식:beta`]를 허근으로 갖는다. (가) [식:3 left( alpha + beta right)= a](나) [식:left({ alpha } over { beta } r] 이때, [식:a+b`]의 값을 구하고, 그 과정을 명확히 서술하시오.",
@@ -740,6 +792,8 @@
     "서술형23": {
       "number": 23,
       "is_subjective": true,
+      "problem_type": "essay",
+      "label_num": null,
       "difficulty": "하",
       "score": 8.0,
       "problem_text": "두 이차정사각행렬 [식:A`], [식:B``]가 [식:A`B`+B`-A`=O`], [식:A`B`A`-A`^{2}-E`=O``]를 만족시킬 때, 다음 물음에 답하시오. (단, [식:E``]는 단위행렬, [식:O``]는 영행렬) (1) [식:A`B`=B`A``]가 성립함을 보이시오. (2) [식:left(B`-2E` right)^{30}`]의 값을 구하고 그 과정을 서술하시오. 2025_1_1_b_공수1_대성여고 ※ 이곳에 검수사항을 기재해주세요",

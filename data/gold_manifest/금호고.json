@@ -9,6 +9,8 @@
   },
   "obj_count": 13,
   "subj_count": 3,
+  "short_answer_count": 0,
+  "essay_count": 3,
   "obj_numbers": [
     3,
     5,
@@ -25,6 +27,12 @@
     16
   ],
   "subj_numbers": [
+    4,
+    21,
+    22
+  ],
+  "short_answer_numbers": [],
+  "essay_numbers": [
     4,
     21,
     22
@@ -60,6 +68,8 @@
     "16": {
       "number": 16,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 5.1,
       "problem_text": "최고차항의 계수가 [식:-1`]인 이차함수 [식:f left(x right)`]와 최고차항의 계수가 [식:2`]인 이차함수 [식:g left(x right)`]가 다음 조건을 만족시킨다. (가) 함수 [식:y=f left(x right)`]의 그래프가 직선 [식:y=`-x`]와 원점이 아닌 서로 다른 두 점 [식:{rm{P}it}], [식:{rm{Q}it}`]에서 만난다.(나) 함수 [식:y=g left(x right)`]의 그래프가 직선 [식:y=`-x`]와 한 점 [식:{rm{P}it}`]에서만 만난다.(다) 점 [식:{rm{P}it}`]의 [식:x`]좌표는 점 [식:{rm{Q}it}`]의 [식:x`]좌표보다 작고, [식:{ bar{rm{PQ}it}}=2{ bar{rm{OQ}]이다. 부등식 [식:f left(x right)+g left(x right]의 해가 모든 실수일 때, 점 [식:{rm{P}it}`]의 [식:x`]좌표와 점 [식:{rm{Q}it}`]의 [식:x`]좌표의 합의 최솟값은? (단, [식:{rm{O}it}`]는 원점이다.)",
@@ -107,6 +117,8 @@
     "3": {
       "number": 3,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "하",
       "score": 3.3,
       "problem_text": "두 행렬 [식:A`= left( rpile{ a && 3 # 6 &&], [식:B`= left( rpile{ 2 && 3 # 6 &&]에 대하여 [식:A`=B``]를 만족시키는 상수 [식:a+b`]의 값은?",
@@ -136,6 +148,8 @@
     "5": {
       "number": 5,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 3.6,
       "problem_text": "남학생 [식:7`]명, 여학생 [식:5`]명 중에서 [식:4`]명을 뽑을 때, 남학생과 여학생을 각각 적어도 [식:1`]명씩 뽑는 경우의 수는?",
@@ -165,6 +179,8 @@
     "6": {
       "number": 6,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 3.6,
       "problem_text": "이차정사각행렬 [식:A`= left( rpile{ -1 && 0 # 0 &]일 때, 행렬 [식:A`+A`^{2}+A`^{3}+A`^{4}+`cdots]의 [식:left(2,``2 right)`]성분은?",
@@ -193,6 +209,8 @@
     "7": {
       "number": 7,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "하",
       "score": 3.9,
       "problem_text": "두 이차함수 [식:y=f left(x right)], [식:y=g left(x right)`]의 그래프가 다음 그림과 같을 때, [식:left {f left(x right) right }^]를 만족하는 [식:9] 이하의 자연수 [식:x`]의 개수는?",
@@ -223,6 +241,8 @@
     "8": {
       "number": 8,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 3.9,
       "problem_text": "행렬 [식:A`= left( rpile{ 0 && -1 # 1 &]에 대하여 [식:A`^{m}=A`^{n}`]을 만족시키는 [식:60] 이하의 두 자연수 [식:m], [식:n`]의 순서쌍 [식:left(m,``n right)`]의 개수는? (단, [식:m < n`]이다.)",
@@ -255,6 +275,8 @@
     "9": {
       "number": 9,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 4.1,
       "problem_text": "서로 같은 공 [식:21`]개와 비어 있는 세 상자 [식:{rm{A}it}], [식:{rm{B}it}], [식:{rm{C}it}`]가 있다. 한 개의 동전을 사용하여 다음 규칙에 따라 세 상자 [식:{rm{A}it}], [식:{rm{B}it}], [식:{rm{C}it}`]에 공을 넣는 시행을 한다. 동전을 한번 던져 나온 면이 앞면이면 세 상자 [식:{rm{A}it}], [식:{rm{B}it}], [식:{rm{C}it}`]에 넣는 공의 개수가 각각 [식:1], [식:1], [식:1`]이고, 나온 면이 뒷면이면 세 상자 [식:{rm{A}it}], [식:{rm{B}it}], [식:{rm{C}it}`]에 넣는 공의 개수가 각각 [식:3], [식:0], [식:0`]이다. 이 시행을 [식:7`]번 반복한 후 상자 [식:{rm{B}it}`]에 들어 있는 공의 개수가 홀수일 때, 상자 [식:{rm{C}it}`]에 들어 있는 공의 개수가 [식:4`]개 이하인 경우의 수는?",
@@ -303,6 +325,8 @@
     "10": {
       "number": 10,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 4.1,
       "problem_text": "방정식 [식:x^{3}=`-1`]의 한 허근을 [식:omega`]라고 할 때, 자연수 [식:n`]에 대하여 함수 [식:f left(n right)`]을 다음과 같이 정의한다. [식:f left(n right)={n} over { ome] 이때, [식:f left(1 right)+f left(2 right]를 만족시키는 실수 [식:a], [식:b`]에 대하여 [식:a+b`]의 값은?",
@@ -337,6 +361,8 @@
     "11": {
       "number": 11,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 4.4,
       "problem_text": "다음 조건을 만족시키는 [식:8] 이하의 자연수 [식:a], [식:b], [식:c], [식:d], [식:e], [식:f`]의 모든 순서쌍 [식:left(a,``b,``c,``d,``e,``f rig]의 개수는? (가) [식:a times f`]의 값이 [식:3`]의 배수이다.(나) [식:2a < b < c < d < e < 2f]",
@@ -373,6 +399,8 @@
     "12": {
       "number": 12,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 4.4,
       "problem_text": "다음 그림과 같이 삼각형 [식:{rm{ABC}it}`]에서 [식:angle{rm{BAC}it}`]의 이등분선과 변 [식:{rm{BC}it}`]의 교점을 [식:{rm{D}it}`]라 하자. [식:2 angle{rm{ACB}it}= angle{rm{B]이고, [식:{ bar{rm{AB}it}}=6], [식:{ bar{rm{AC}it}}={15} over {2}]일 때, 삼각형 [식:{rm{ABC}it}`]의 둘레의 길이는?",
@@ -406,6 +434,8 @@
     "13": {
       "number": 13,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 4.8,
       "problem_text": "어느 관광지에서 [식:8`]명의 관광객 [식:{rm{A}it}], [식:{rm{B}it}], [식:{rm{C}it}], [식:{rm{D}it}], [식:{rm{E}it}], [식:{rm{F}it}], [식:{rm{G}it}], [식:{rm{H}it}`]가 마차를 타려고 한다. 그림과 같이 이 마차에는 [식:1`]개의 [식:3`]인용 의자와 [식:2`]개의 [식:4`]인용 의자가 있고, 마부는 가장 앞에 있는 [식:3`]인용 의자의 가장 오른쪽 좌석에 앉는다. [식:8`]명의 관광객이 다음 조건을 만족시키도록 비어 있는 [식:10`]개의 좌석에 앉는 경우의 수는? (단, 앞뒤로 앉는 경우는 이웃하는 경우로 보지 않는다.) (가) [식:{rm{A}it}], [식:{rm{B}it}], [식:{rm{C}it}], [식:{rm{D}it}`]는 의자에 이웃하여 앉는다.(나) [식:{rm{E}it}], [식:{rm{F}it}`]는 의자에 이웃하여 앉는다.(다) [식:{rm{G}it}], [식:{rm{H}it}`]는 의자에 이웃하여 앉는다.",
@@ -455,6 +485,8 @@
     "14": {
       "number": 14,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 4.8,
       "problem_text": "연립부등식 [식:cases {`` left|` x-a`right| < ]를 만족시키는 정수 [식:x`]의 값의 합이 [식:-3`]이 되도록 하는 정수 [식:a`]의 값과 상수 [식:b`]의 값의 범위를 올바르게 나열한 것은? (단, [식:b > 1])",
@@ -491,6 +523,8 @@
     "15": {
       "number": 15,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 5.1,
       "problem_text": "모든 실수 [식:x`]에 대하여 부등식 [식:-2x^{2}-4x+1 le mx+n le 2x^{2}] 가 성립할 때, [식:m^{2}+4n^{2}`]의 값은? (단, [식:m], [식:n`]은 상수)",
@@ -521,6 +555,8 @@
     "서술형4": {
       "number": 4,
       "is_subjective": true,
+      "problem_type": "essay",
+      "label_num": null,
       "difficulty": "하",
       "score": 6.0,
       "problem_text": "두 이차정사각행렬 [식:A`], [식:B``]에 대하여 [식:A` left(A`-B` right)= left(A`-], [식:A`^{2}B`-B`^{2}A`=A`+B``]를 만족시킬 때, 다음을 보이시오. [식:LEFT ( pile{ `# `}]단, [식:E`= left( rpile{ 1 && 0 # 0 &&]이다.[식:pile{ `#` } RIGHT )] (1) [식:A`B`=B`A`] (2) [식:left(A`+2B` right)^{2}=24E`]",
@@ -544,6 +580,8 @@
     "서술형21": {
       "number": 21,
       "is_subjective": true,
+      "problem_type": "essay",
+      "label_num": null,
       "difficulty": "하",
       "score": 6.0,
       "problem_text": "그림과 같이 크기가 같은 [식:8`]개의 정사각형에 [식:1`]에서 [식:8`]까지의 자연수가 하나씩 적혀있다. [식:1][식:2][식:3][식:4][식:5][식:6][식:7][식:8] 서로 다른 [식:5`]가지 색의 일부 또는 전부를 사용하여 다음 조건을 만족시키도록 [식:8`]개의 정사각형에 색을 칠하는 경우의 수를 구하시오. (단, 한 정사각형에 한 가지 색만을 칠한다.) (가) [식:1`]이 적힌 정사각형과 [식:8`]이 적힌 정사각형에는 같은 색을 칠한다.(나) [식:3`]이 적힌 정사각형과 [식:6`]이 적힌 정사각형에는 같은 색을 칠한다.(다) 변을 공유하는 두 정사각형에는 서로 다른 색을 칠한다.",
@@ -575,6 +613,8 @@
     "서술형22": {
       "number": 22,
       "is_subjective": true,
+      "problem_type": "essay",
+      "label_num": null,
       "difficulty": "하",
       "score": 7.0,
       "problem_text": "2025_1_1_b_공수1_금호고 ※ 이곳에 검수사항을 기재해주세요",

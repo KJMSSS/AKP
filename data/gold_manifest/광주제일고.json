@@ -9,6 +9,8 @@
   },
   "obj_count": 16,
   "subj_count": 4,
+  "short_answer_count": 0,
+  "essay_count": 4,
   "obj_numbers": [
     3,
     4,
@@ -28,6 +30,13 @@
     22
   ],
   "subj_numbers": [
+    23,
+    24,
+    25,
+    26
+  ],
+  "short_answer_numbers": [],
+  "essay_numbers": [
     23,
     24,
     25,
@@ -68,6 +77,8 @@
     "16": {
       "number": 16,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 4.0,
       "problem_text": "남학생과 여학생을 합하여 모두 [식:6`]명이 일렬로 줄을 서려고 한다. 적어도 한쪽 끝에 남학생이 오는 경우의 수가 [식:576`]일 때, 남학생의 수는? (단, 남학생과 여학생은 각각 한 명 이상 있다.)",
@@ -95,6 +106,8 @@
     "3": {
       "number": 3,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "하",
       "score": 3.0,
       "problem_text": "[식:it_{4}{ rm{P}}it_{2} `]의 값은?",
@@ -121,6 +134,8 @@
     "4": {
       "number": 4,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "하",
       "score": 4.5,
       "problem_text": "연립방정식 [식:cases {`` left(y-x right) left]가 서로 다른 세 쌍의 실수해만을 갖도록 하는 모든 실수 [식:a`]의 개수는?",
@@ -148,6 +163,8 @@
     "5": {
       "number": 5,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 3.0,
       "problem_text": "행렬 [식:A`= left( rpile{ 1 && 2 # 3 &&], [식:B`= left( rpile{ 5 && 6 # 7 &&]에 대하여 [식:A`B`= left( pile{ a && 1times6] 일 때, [식:a`]의 값은?",
@@ -177,6 +194,8 @@
     "6": {
       "number": 6,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 3.0,
       "problem_text": "두 행렬 [식:A`], [식:B``]에 대하여 [식:A`= left( rpile{ 5 && -1 # -4 ], [식:B`= left( rpile{ -3 && 3 # 8 &] 일 때, 행렬 [식:2A`+B``]의 모든 성분의 합은?",
@@ -207,6 +226,8 @@
     "7": {
       "number": 7,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "하",
       "score": 3.1,
       "problem_text": "삼차방정식 [식:x^{3}+ax^{2}+bx+6=0`]의 세 근을 [식:1], [식:alpha], [식:beta`]라고 하자. [식:alpha^{2}+ beta`^{2}=12`]일 때, [식:ab`]의 값은?",
@@ -238,6 +259,8 @@
     "8": {
       "number": 8,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 3.2,
       "problem_text": "연립방정식 [식:cases {``2x^{2}-xy-y^{2}=0 #``]의 해가 [식:x= alpha], [식:y= beta`]일 때, [식:alpha + beta`]의 최댓값은?",
@@ -267,6 +290,8 @@
     "9": {
       "number": 9,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 3.3,
       "problem_text": "세 행렬 [식:A`= left( rpile{ a && b # -2 &], [식:B`= left( rpile{ 1 && 2 # 1 &&], [식:C`= left( rpile{ 1 && a # 0 &&]에 대하여 [식:A` left(B`+C` right)=O`] 가 성립하도록 하는 두 상수 [식:a], [식:b`]에 대하여 [식:a+b`]의 값은? (단, [식:{O}}it``]는 영행렬이다.)",
@@ -300,6 +325,8 @@
     "10": {
       "number": 10,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 3.4,
       "problem_text": "두 실수 [식:a], [식:b`]에 대하여 두 행렬 [식:A`= left( pile{ a && 2 # a-1 &], [식:B`= left( pile{ 2 && b+2 # 3 &]가 [식:A`B`=B`A``]를 만족시킬 때, [식:a-3b`]의 값은?",
@@ -331,6 +358,8 @@
     "11": {
       "number": 11,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 3.5,
       "problem_text": "부등식 [식:15 le x+3y+7z le 19`]를 만족시키는 자연수 [식:x], [식:y], [식:z`]의 순서쌍 [식:left(x,``y,``z right)`]의 개수는?",
@@ -361,6 +390,8 @@
     "12": {
       "number": 12,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 3.6,
       "problem_text": "[식:x`]에 대한 연립부등식 [식:cases {``4x-3 < 5 #`` x-7 geq`] 를 만족시키는 정수 [식:x`]의 개수가 [식:6`]이 되도록 하는 모든 정수 [식:a`]의 값의 합은?",
@@ -391,6 +422,8 @@
     "13": {
       "number": 13,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 3.7,
       "problem_text": "세 실수 [식:a], [식:b], [식:c`]에 대하여 이차부등식 [식:ax^{2}+bx+c ge 0`]의 해가 [식:-2 le x le 2`]이고 이차부등식 [식:cx^{2}+bx-4 le 0`]의 해가 [식:-1 le x le 1`]일 때, [식:a+b+c`]의 값은?",
@@ -424,6 +457,8 @@
     "14": {
       "number": 14,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 3.8,
       "problem_text": "행렬 [식:A`= left( rpile{ 0 && 1 # -1 &]와 자연수 [식:n`]에 대하여 [식:A`^{n}= left( rpile{ a && b # ]이고 [식:a^{2}+b^{2}+c^{2}+d^{2}=486`]일 때, [식:n`]의 값은?",
@@ -454,6 +489,8 @@
     "15": {
       "number": 15,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "",
       "score": 3.9,
       "problem_text": "연립부등식 [식:cases {``2x+11 > 1 #`` 3x+4 < ]을 만족시키는 모든 정수 [식:x`]의 값의 합을 [식:S``]라 하자. [식:S` le 0`]이 되도록 하는 모든 정수 [식:n`]의 개수는? (단, 연립부등식의 해 중 적어도 하나의 정수가 존재한다.)",
@@ -484,6 +521,8 @@
     "21": {
       "number": 21,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "하",
       "score": 4.7,
       "problem_text": "[식:1`]학년 학생 [식:3`]명과 [식:2`]학년 학생 [식:3`]명이 모두 일렬로 배치된 [식:7`]개의 의자에 앉을 때, 다음 조건을 만족시키는 경우의 수는? (가) 빈 의자 옆에는 [식:2`]학년 학생이 앉는다.(나) [식:2`]학년 학생끼리는 이웃하지 않는다.",
@@ -516,6 +555,8 @@
     "22": {
       "number": 22,
       "is_subjective": false,
+      "problem_type": "multiple_choice",
+      "label_num": null,
       "difficulty": "하",
       "score": 4.7,
       "problem_text": "(가) [식:alpha], [식:beta], [식:gamma] 중 적어도 하나는 정수이다.(나) [식:left( alpha -3 beta +3 gamma r]",
@@ -545,6 +586,8 @@
     "서술형23": {
       "number": 23,
       "is_subjective": true,
+      "problem_type": "essay",
+      "label_num": null,
       "difficulty": "하",
       "score": 3.0,
       "problem_text": "행렬 [식:A`= left( rpile{ 3 && 4 # -1 &]의 [식:left(i,``j right)`]의 성분을 [식:a_{ij}`]라 할 때, [식:2 times 2`]행렬 [식:B``]의 [식:left(i,``j right)`]성분 [식:b_{ij}`]는 [식:b _{ij} =a _{ij} -ij  ~ LEFT (] 이다. 행렬 [식:B``]를 구하시오.",
@@ -568,6 +611,8 @@
     "서술형24": {
       "number": 24,
       "is_subjective": true,
+      "problem_type": "essay",
+      "label_num": null,
       "difficulty": "하",
       "score": 5.0,
       "problem_text": "[식:x`]에 대한 삼차방정식 [식:x^{3}- left(a+1 right)x^{2}+ l] 의 서로 다른 실근의 개수가 [식:2`]가 되도록 하는 모든 실수 [식:a`]의 값의 합을 구하시오.",
@@ -586,6 +631,8 @@
     "서술형25": {
       "number": 25,
       "is_subjective": true,
+      "problem_type": "essay",
+      "label_num": null,
       "difficulty": "하",
       "score": 5.5,
       "problem_text": "연립부등식 [식:cases {``2x+4 >`-x-2 #`` x^{2}] 의 해가 [식:alpha < x < beta`]일 때, 부등식 [식:left|` x- alpha`right| + left|] 을 만족시키는 정수 [식:x`]의 개수를 구하시오.",
@@ -604,6 +651,8 @@
     "서술형26": {
       "number": 26,
       "is_subjective": true,
+      "problem_type": "essay",
+      "label_num": null,
       "difficulty": "하",
       "score": 6.5,
       "problem_text": "[식:0] 이상 [식:9] 이하의 서로 다른 네 정수 [식:a], [식:b], [식:c], [식:d`]에 대하여 네 자리 자연수 [식:a times 10^{3}+b times 10^{2}+] 를 만들 때, [식:b > c > d`]를 만족시키는 짝수의 개수를 구하시오. 2025_1_1_b_공수1_광주제일고 ※ 이곳에 검수사항을 기재해주세요",
