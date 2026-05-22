@@ -325,16 +325,20 @@ def build_one_crop(
     # Step 3: OCR 분리·병합
     ocr_results = _split_and_merge_ocr(ocr_results)
 
-    # Step 4: raw.md 조합
+    # Step 4: raw.md 조합 (수동 편집 보존: 이미 있으면 재생성 안 함)
     print("\n=== raw.md 조합 ===")
-    md_raw = _build_raw_md(ocr_results)
-    # 공통 점수 형식 통일
-    md_raw = re.sub(r'[【（(]([\d.]+)점[）)】]', r'[\1점]', md_raw)
-    if preprocess_fn:
-        md_raw = preprocess_fn(md_raw)
     raw_cache = crop_dir / "raw.md"
-    raw_cache.write_text(md_raw, encoding="utf-8")
-    print(f"  raw.md: {len(md_raw)}자 → {raw_cache}")
+    if raw_cache.exists():
+        md_raw = raw_cache.read_text(encoding="utf-8")
+        print(f"  raw.md 캐시 사용: {len(md_raw)}자")
+    else:
+        md_raw = _build_raw_md(ocr_results)
+        # 공통 점수 형식 통일
+        md_raw = re.sub(r'[【（(]([\d.]+)점[）)】]', r'[\1점]', md_raw)
+        if preprocess_fn:
+            md_raw = preprocess_fn(md_raw)
+        raw_cache.write_text(md_raw, encoding="utf-8")
+        print(f"  raw.md 생성: {len(md_raw)}자 → {raw_cache}")
 
     # Step 5: 파싱
     print("\n=== 파싱 ===")
