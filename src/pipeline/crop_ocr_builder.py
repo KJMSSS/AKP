@@ -24,6 +24,8 @@ from src.text_only.ocr_fallback import apply_fallback
 from src.text_only.text_builder import build_from_markdown
 from src.ocr.llm_postprocess import postprocess_markdown
 from src.common.hwpx_table_inserter import replace_condition_tables, replace_boilerplate_tables
+from src.common.hwpx_namespace_fixer import fix_hwpx_namespaces
+from src.common.hwpx_validator import validate_hwpx as _hwpx_struct_validate
 from src.common.ocr.mathpix_client import MathpixClient
 
 CROP_DPI   = 300
@@ -189,9 +191,22 @@ def _build_raw_md(ocr_results: dict[int, str]) -> str:
 
 # ── 자동 검증 ─────────────────────────────────────────────────────────────────
 
-def _verify(segments, out_hwpx: Path) -> dict:
+def _load_gold_expected(gold_path: Path | None) -> int | None:
+    """골드 manifest에서 객관식 선택지 마커 총 수 반환. 없으면 None."""
+    if gold_path is None or not gold_path.exists():
+        return None
+    import json
+    g = json.loads(gold_path.read_text(encoding="utf-8"))
+    return sum(
+        len(v.get("choices", {}))
+        for v in g.get("problems", {}).values()
+    )
+
+
+def _verify(segments, out_hwpx: Path, gold_path: Path | None = None) -> dict:
     """
     빌드 결과를 자동 검증.
+    gold_path가 있으면 골드 manifest 기준 마커 수로 기대값 설정.
     Returns: {
         "missing_numbers": [...],   # 누락 번호
         "bad_choices": {...},       # 선택지 부족 {번호: count}
@@ -228,7 +243,10 @@ def _verify(segments, out_hwpx: Path) -> dict:
     except Exception:
         pass
 
-    expected_choices = max_obj * 5
+    # 기대값: 골드 manifest 우선, 없으면 max_obj * 5 (fallback)
+    gold_expected = _load_gold_expected(gold_path)
+    expected_choices = gold_expected if gold_expected is not None else max_obj * 5
+
     ok = (
         not missing
         and not dups
@@ -244,6 +262,7 @@ def _verify(segments, out_hwpx: Path) -> dict:
         "subj_count": len(subj_segs),
         "hwpx_choice_count": choice_count,
         "expected_choice_count": expected_choices,
+        "gold_based": gold_expected is not None,
         "pass": ok,
     }
 
@@ -251,9 +270,10 @@ def _verify(segments, out_hwpx: Path) -> dict:
 def _print_verify(v: dict):
     print("\n=== 자동 검증 ===")
     status = "PASS ✓" if v["pass"] else "FAIL ✗"
+    gold_tag = " (골드 기준)" if v.get("gold_based") else " (max_obj×5 fallback)"
     print(f"  결과: {status}")
     print(f"  객관식 {v['obj_count']}개 | 서술형 {v['subj_count']}개")
-    print(f"  hwpx 선택지 마커: {v['hwpx_choice_count']} / 기대: {v['expected_choice_count']}")
+    print(f"  hwpx 선택지 마커: {v['hwpx_choice_count']} / 기대: {v['expected_choice_count']}{gold_tag}")
     if v["missing_numbers"]:
         print(f"  [경고] 누락 번호: {v['missing_numbers']}")
     if v["duplicate_numbers"]:
@@ -381,8 +401,22 @@ def build_one_crop(
     kb = out_hwpx.stat().st_size // 1024
     print(f"\n완료: {out_hwpx.name}  ({kb}KB)")
 
-    # Step 10: 자동 검증
-    verify = _verify(segments, out_hwpx)
+    # Step 9.5: HWPX 구조 검증 (네임스페이스 정규화 → 구조 점검)
+    # 역할 분리: crop_ocr_builder._verify = 골드 manifest 정합(의미)
+    #            hwpx_validator           = XML 구조/네임스페이스(구조)
+    fix_hwpx_namespaces(str(out_hwpx))   # ns0: → hp: 정규화 (AKP는 대부분 no-op)
+    print("\n=== HWPX 구조 검증 ===")
+    _struct_errs = _hwpx_struct_validate(str(out_hwpx))
+    if _struct_errs:
+        for e in _struct_errs:
+            print(f"  ✗ {e}")
+    else:
+        print("  ✓ PASS")
+
+    # Step 10: 자동 검증 (골드 manifest 자동 탐색)
+    school_name = log_stem or source.replace("2025_1_1_b_공수1_", "")
+    gold_path = Path(__file__).resolve().parents[2] / "data" / "gold_manifest" / f"{school_name}.json"
+    verify = _verify(segments, out_hwpx, gold_path=gold_path)
     _print_verify(verify)
 
     return out_hwpx, verify
