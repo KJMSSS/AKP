@@ -28,6 +28,10 @@ import sys
 import zipfile
 
 
+class HWPXValidationError(Exception):
+    """HWPX 구조 검증 실패 — 학원장 보고 필요."""
+
+
 def validate_hwpx(hwpx_path: str) -> list[str]:
     """HWPX 파일 구조 검증. 오류 메시지 리스트 반환 (빈 리스트 = PASS)."""
     errors = []

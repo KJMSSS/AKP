@@ -19,6 +19,8 @@ from src.common.ocr.mathpix_client import MathpixClient
 from src.text_only.text_builder import build_from_markdown
 from src.text_only.handwriting_filter import filter_handwriting
 from src.text_only.ocr_fallback import apply_fallback, reinforce_placeholders
+from src.common.hwpx_namespace_fixer import fix_hwpx_namespaces
+from src.common.hwpx_validator import validate_hwpx, HWPXValidationError
 
 # ── 설정 ──────────────────────────────────────────────────────────────
 ROOT        = Path(__file__).resolve().parent.parent.parent
@@ -107,6 +109,22 @@ def convert(pdf_path: Path, filter_hw: bool = False) -> Path:
     print(f"  문단: {result['paragraphs']}개  수식: {result['equations']}개")
     print(f"  생성 시간: {build_time:.1f}s")
     print(f"  파일 크기: {out_hwpx.stat().st_size:,} bytes")
+
+    print()
+    print("─" * 62)
+    print("[ 2.5단계 ] HWPX 구조 검증")
+    print("─" * 62)
+    fix_hwpx_namespaces(str(out_hwpx))
+    struct_errs = validate_hwpx(str(out_hwpx))
+    if struct_errs:
+        print(f"  ✗ FAIL ({len(struct_errs)}건):")
+        for e in struct_errs:
+            print(f"    - {e}")
+        raise HWPXValidationError(
+            f"HWPX 구조 검증 실패 ({len(struct_errs)}건): {out_hwpx.name}\n"
+            "학원장 보고 필요 — src/common/hwpx_validator.py fix_hwpx() 참조"
+        )
+    print("  ✓ PASS")
 
     print()
     print("─" * 62)
