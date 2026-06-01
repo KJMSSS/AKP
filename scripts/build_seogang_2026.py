@@ -64,6 +64,11 @@ def insert_condition_markers(md: str) -> tuple[str, int]:
     return "\n".join(out), n
 
 
+for label, path in (("raw", RAW), ("template", TEMPLATE)):
+    if not path.exists():
+        print(f"[오류] {label} 없음: {path}")
+        sys.exit(1)
+
 md = RAW.read_text(encoding="utf-8")
 
 # 학원장용 주석(blockquote `>`)은 학생 문서에서 제외
