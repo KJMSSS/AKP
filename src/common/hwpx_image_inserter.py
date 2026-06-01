@@ -162,6 +162,87 @@ def replace_placeholder_with_image(
     return out_path
 
 
+def insert_figure_placeholder(
+    hwpx_path: Path,
+    item_no: str,
+    image_path: Path,
+    max_width_hpc: int = 45000,
+    ppr: int = 8,
+    cpr: int = 0,
+    out_path: Path | None = None,
+) -> Path:
+    """
+    【★ 그림:N번】 플레이스홀더 단락을 이미지 단락으로 교체.
+
+    max_width_hpc: 최대 폭 (HWP 단위). 이미지가 크면 이 폭으로 비율 유지 축소.
+    """
+    from PIL import Image as PILImage
+
+    img = PILImage.open(image_path)
+    px_w, px_h = img.size
+    # 150dpi 기준: 1pt = 150/72 px → HWP = pt * 100
+    dpi = 150
+    w_hpc = int(px_w * 72 / dpi * 100)
+    h_hpc = int(px_h * 72 / dpi * 100)
+    # 폭 초과 시 비율 축소
+    if w_hpc > max_width_hpc:
+        ratio = max_width_hpc / w_hpc
+        w_hpc = max_width_hpc
+        h_hpc = int(h_hpc * ratio)
+
+    out_path = out_path or hwpx_path
+    tmp_path = hwpx_path.with_suffix(".fig_tmp.hwpx")
+
+    with zipfile.ZipFile(hwpx_path, "r") as src_zf:
+        bin_num, bin_stem = _next_bin_id(src_zf)
+        bin_name = f"{bin_stem}{image_path.suffix.lower()}"
+        xml = src_zf.read("Contents/section0.xml").decode("utf-8")
+        hpf_xml = src_zf.read("Contents/content.hpf").decode("utf-8")
+
+        existing_ids = [int(m) for m in re.findall(r'<hp:p id="(\d+)"', xml)]
+        new_pid = (max(existing_ids) + 1) if existing_ids else 300
+        existing_zo = [int(m) for m in re.findall(r'zOrder="(\d+)"', xml)]
+        new_zo = (max(existing_zo) + 1) if existing_zo else 300
+
+        pic_xml = _make_pic_xml(bin_stem, w_hpc, h_hpc, oid=new_pid + 1000000, zo=new_zo)
+        bl = round(h_hpc * 0.85)
+        pic_para = _PIC_PARA.format(
+            pid=new_pid, ppr=ppr, cpr=cpr,
+            pic_xml=pic_xml, h=h_hpc, bl=bl, tw=w_hpc,
+        )
+
+        # 【★ 그림:N번】 플레이스홀더 단락 찾아 교체
+        placeholder_text = f"【★ 그림:{item_no}번】"
+        # 한글 t 태그 내에서 찾음
+        pattern = re.compile(
+            r'<hp:p\b[^>]*>(?:(?!</hp:p>)[\s\S])*'
+            + re.escape(placeholder_text)
+            + r'(?:(?!</hp:p>)[\s\S])*</hp:p>',
+        )
+        xml_new, n = pattern.subn(pic_para, xml, count=1)
+        if n == 0:
+            print(f"  [그림] 경고: {item_no}번 플레이스홀더 미발견 — 삽입 건너뜀")
+        else:
+            print(f"  [그림] {item_no}번 → {bin_name} ({w_hpc//100:.0f}×{h_hpc//100:.0f}pt)")
+
+        ext = image_path.suffix.lower().lstrip(".")
+        mime = {"png": "image/png", "jpg": "image/jpg", "jpeg": "image/jpg"}.get(ext, "image/png")
+        new_item = f'<opf:item id="{bin_stem}" href="BinData/{bin_name}" media-type="{mime}" isEmbeded="1"/>'
+        hpf_new = hpf_xml.replace("</opf:manifest>", f"{new_item}</opf:manifest>")
+
+        _OVERWRITE = {"Contents/section0.xml", "Contents/content.hpf"}
+        with zipfile.ZipFile(tmp_path, "w", zipfile.ZIP_DEFLATED) as dst_zf:
+            for item in src_zf.infolist():
+                if item.filename not in _OVERWRITE:
+                    dst_zf.writestr(item, src_zf.read(item.filename))
+            dst_zf.writestr(f"BinData/{bin_name}", image_path.read_bytes())
+            dst_zf.writestr("Contents/section0.xml", xml_new.encode("utf-8"))
+            dst_zf.writestr("Contents/content.hpf", hpf_new.encode("utf-8"))
+
+    shutil.move(str(tmp_path), str(out_path))
+    return out_path
+
+
 def crop_figure_from_pdf(
     pdf_path: Path,
     page_1idx: int,

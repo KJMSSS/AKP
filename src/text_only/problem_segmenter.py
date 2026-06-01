@@ -57,9 +57,10 @@ def parse_problems(md: str) -> tuple[str, list[ProblemSegment]]:
         s = line.strip()
         m = _PROB_RE.match(s)
         if m:
-            boundaries.append((i, int(m.group(1)), False))
-            continue
-        m = _SUBJ_RE.match(s)
+            if not _SUBJ_RE.search(s):  # "20. 서술형 1." 같은 경우 서술형으로 처리
+                boundaries.append((i, int(m.group(1)), False))
+                continue
+        m = _SUBJ_RE.search(s)  # "N. 서술형 M." 형식 허용
         if m:
             boundaries.append((i, 100 + int(m.group(1)), True))
 
@@ -105,12 +106,20 @@ def _split_block(
     · 보기 ㄱ./ㄴ./ㄷ. → boilerplate (→ 보기 표)
     · 서술형은 score 이후 전부 제거
     """
-    # score bracket 첫 번째 위치
+    # score bracket 위치 탐색
+    # 서술형: 마지막 [N점]을 기준으로 (소문제 개별 점수 [1점][2점] 무시)
+    # 객관식: 첫 번째 [N점]
     score_idx = -1
-    for j, bline in enumerate(block_lines):
-        if _SCORE_RE.search(bline):
-            score_idx = j
-            break
+    if is_subj:
+        for j in range(len(block_lines) - 1, -1, -1):
+            if _SCORE_RE.search(block_lines[j]):
+                score_idx = j
+                break
+    else:
+        for j, bline in enumerate(block_lines):
+            if _SCORE_RE.search(bline):
+                score_idx = j
+                break
 
     if score_idx == -1:
         if is_subj:
@@ -121,10 +130,14 @@ def _split_block(
 
     # 선택지가 score bracket 이전에 등장하는 경우 (2컬럼 OCR 역전)
     # 예: 17번 — 선택지 → 이미지 → [점수] → 그림 순서로 OCR됨
-    first_choice_before = next(
-        (j for j, l in enumerate(block_lines[:score_idx]) if _CHOICE_RE.match(l.strip())),
-        -1,
-    )
+    # 서술형에서는 (1)(2)(3)이 소문제이므로 선택지로 분리하지 않음
+    if is_subj:
+        first_choice_before = -1
+    else:
+        first_choice_before = next(
+            (j for j, l in enumerate(block_lines[:score_idx]) if _CHOICE_RE.match(l.strip())),
+            -1,
+        )
     if first_choice_before > 0:
         # 첫 번째 선택지 직전까지 문제 텍스트 (단, 첫 선택지 앞 1~2줄이 $(1)$ 같은 선택지
         # 후보면 그것도 포함: 선택지 시작은 first_choice_before-1이 아닌 최대 1줄 앞까지 허용)
@@ -248,12 +261,15 @@ def _looks_like_unlabeled_choice(s: str) -> bool:
 
 
 def _normalize_score_to_end(text: str) -> str:
-    """score bracket을 항상 problem_text 마지막 줄 끝으로 이동."""
-    m = _SCORE_RE.search(text)
+    """score bracket을 항상 problem_text 마지막 줄 끝으로 이동.
+    마지막 [N점]을 기준으로 처리 (서술형 소문제 개별 점수 [1점][2점] 무시)."""
+    m = None
+    for m_ in _SCORE_RE.finditer(text):
+        m = m_
     if not m:
         return text
     bracket = m.group(0)
-    cleaned = _SCORE_RE.sub('', text, count=1).rstrip()
+    cleaned = (text[:m.start()] + text[m.end():]).rstrip()
     return cleaned + ' ' + bracket
 
 
@@ -262,27 +278,36 @@ def rebuild_markdown(
     segments: list[ProblemSegment],
     data_table_items: AbstractSet[str] | None = None,
     textbox_items: AbstractSet[str] | None = None,
+    figure_items: AbstractSet[str] | None = None,
 ) -> str:
     """
     정제된 문제 목록을 마크다운으로 재조립.
 
-    구조 플레이스홀더 (삽입 후 hwpx_table_inserter가 교체):
+    구조 플레이스홀더 (삽입 후 hwpx_table_inserter / hwpx_image_inserter가 교체):
       【★ 조건시작:N번】/【★ 조건끝:N번】 → conditions  → 1×1 hp:tbl 박스
       【★ 보기시작:N번】/【★ 보기끝:N번】 → boilerplate → 1×1 hp:tbl 박스
       【★ 데이터표:N번】                  → (빌드 스크립트 지정) → N×M hp:tbl
       【★ 글상자:N번】                    → (빌드 스크립트 지정) → hp:rect 글상자
+      【★ 그림:N번】                      → hwpx_image_inserter → BinData 이미지
 
     data_table_items: 데이터 표 플레이스홀더 삽입 문제 번호 집합 {"19"}
     textbox_items:    글상자 플레이스홀더 삽입 문제 번호 집합 {"5"}
+    figure_items:     그림 플레이스홀더 삽입 문제 번호 집합 {"12", "15"}
     """
     parts: list[str] = []
     if header.strip():
         parts.append(header)
 
+    _subprob_re = re.compile(r'(?m)^( *)(\([1-9]\))( +)')
+
     for seg in segments:
         num_str = str(seg.number if seg.number < 100 else seg.number - 100)
 
-        parts.append(_normalize_score_to_end(seg.problem_text))
+        pt = seg.problem_text
+        if seg.is_subjective:
+            # 서술형 소문제 (N) 형식을 수식으로 감싸서 ①②③ 변환 방지
+            pt = _subprob_re.sub(r'\1$\2$\3', pt)
+        parts.append(_normalize_score_to_end(pt))
 
         # 조건문 — text_builder가 수식 처리, table_inserter가 박스로 감쌈
         if seg.conditions:
@@ -310,6 +335,10 @@ def rebuild_markdown(
         # 글상자 플레이스홀더 (빌드 스크립트 지정)
         if textbox_items and num_str in textbox_items:
             parts.append(f"【★ 글상자:{num_str}번】")
+
+        # 그림 플레이스홀더 (image_extractor 감지 결과 또는 빌드 스크립트 지정)
+        if figure_items and num_str in figure_items:
+            parts.append(f"【★ 그림:{num_str}번】")
 
         parts.append("")  # 문제 사이 빈 줄
 

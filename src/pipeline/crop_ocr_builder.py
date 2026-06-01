@@ -26,6 +26,8 @@ from src.ocr.llm_postprocess import postprocess_markdown
 from src.common.hwpx_table_inserter import replace_condition_tables, replace_boilerplate_tables
 from src.common.hwpx_namespace_fixer import fix_hwpx_namespaces
 from src.common.hwpx_validator import validate_hwpx as _hwpx_struct_validate
+from src.common.image_extractor import extract_images
+from src.common.hwpx_image_inserter import insert_figure_placeholder
 from src.common.ocr.mathpix_client import MathpixClient
 
 CROP_DPI   = 300
@@ -360,6 +362,21 @@ def build_one_crop(
         raw_cache.write_text(md_raw, encoding="utf-8")
         print(f"  raw.md 생성: {len(md_raw)}자 → {raw_cache}")
 
+    # Step 4.5: PDF 그림 감지 (텍스트 기반 PDF만 — 이미지 PDF는 skip)
+    fig_dir = crop_dir / "figures"
+    figure_map: dict[str, object] = {}   # item_no → ExtractedImage
+    try:
+        figures = extract_images(pdf, fig_dir, dpi=150)
+        for fig in figures:
+            if fig.item_no:
+                figure_map[fig.item_no] = fig
+        if figure_map:
+            print(f"\n=== 그림 감지 ===")
+            for no, fig in sorted(figure_map.items(), key=lambda x: int(x[0]) if x[0].isdigit() else 999):
+                print(f"  {no}번: {fig.image_path.name} ({fig.bbox.width:.0f}×{fig.bbox.height:.0f}pt)")
+    except Exception as e:
+        print(f"\n  [그림 감지 스킵] {e}")
+
     # Step 5: 파싱
     print("\n=== 파싱 ===")
     header, segments = parse_problems(md_raw)
@@ -374,8 +391,8 @@ def build_one_crop(
     print("\n=== 선택지 정규화 ===")
     segments = normalize_choices(segments, log_stem=log_stem)
 
-    # Step 7: rebuild + LLM 후처리
-    md_rebuilt = rebuild_markdown(header, segments)
+    # Step 7: rebuild + LLM 후처리 (그림 있는 문제에 플레이스홀더 삽입)
+    md_rebuilt = rebuild_markdown(header, segments, figure_items=set(figure_map.keys()) or None)
     print("\n=== LLM 후처리 ===")
     md_llm, llm_meta = postprocess_markdown(md_rebuilt, log_stem=log_stem)
     if llm_meta.get("skipped"):
@@ -401,7 +418,19 @@ def build_one_crop(
     kb = out_hwpx.stat().st_size // 1024
     print(f"\n완료: {out_hwpx.name}  ({kb}KB)")
 
-    # Step 9.5: HWPX 구조 검증 (네임스페이스 정규화 → 구조 점검)
+    # Step 9.5: 그림 삽입 (플레이스홀더 → BinData 이미지)
+    if figure_map:
+        print("\n=== 그림 삽입 ===")
+        n_fig = 0
+        for item_no, fig in sorted(figure_map.items(), key=lambda x: int(x[0]) if x[0].isdigit() else 999):
+            try:
+                insert_figure_placeholder(out_hwpx, item_no, fig.image_path)
+                n_fig += 1
+            except Exception as e:
+                print(f"  [그림] {item_no}번 삽입 실패: {e}")
+        print(f"  그림 {n_fig}개 삽입 완료")
+
+    # Step 9.6: HWPX 구조 검증 (네임스페이스 정규화 → 구조 점검)
     # 역할 분리: crop_ocr_builder._verify = 골드 manifest 정합(의미)
     #            hwpx_validator           = XML 구조/네임스페이스(구조)
     fix_hwpx_namespaces(str(out_hwpx))   # ns0: → hp: 정규화 (AKP는 대부분 no-op)

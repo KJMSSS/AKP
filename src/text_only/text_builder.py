@@ -185,6 +185,9 @@ def _preprocess_md(md: str) -> list[str]:
     """
     # 이미지 제거
     md = re.sub(r'!\[.*?\]\(.*?\)', '', md, flags=re.DOTALL)
+    # Mathpix 형식 → 표준 형식 변환 (\[...\] → $$...$$, \(...\) → $...$)
+    md = re.sub(r'\\\[\s*([\s\S]+?)\s*\\\]', lambda m: '$$' + ' '.join(m.group(1).split()) + '$$', md)
+    md = re.sub(r'\\\(\s*(.+?)\s*\\\)', lambda m: '$' + m.group(1).strip() + '$', md)
     # 멀티라인 $$...$$ → 한 줄
     md = re.sub(
         r'\$\$(.*?)\$\$',
@@ -552,8 +555,10 @@ def build_from_markdown(md: str, output_path: Path, base_template: Path) -> dict
     )
 
     # ZIP 조합 (mimetype 은 반드시 첫 항목, ZIP_STORED)
+    # 임시 파일에 먼저 쓰고 교체 — 원본이 열려있어도 우회
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    with zipfile.ZipFile(output_path, 'w', zipfile.ZIP_DEFLATED) as zout:
+    tmp_path = output_path.with_suffix('.tmp.hwpx')
+    with zipfile.ZipFile(tmp_path, 'w', zipfile.ZIP_DEFLATED) as zout:
         # mimetype 은 압축 없이 첫 번째로
         zout.writestr(
             zipfile.ZipInfo('mimetype'),
@@ -569,6 +574,10 @@ def build_from_markdown(md: str, output_path: Path, base_template: Path) -> dict
         zout.writestr('META-INF/manifest.xml',      _MANIFEST_XML)
         zout.writestr('settings.xml',               _SETTINGS_XML)
         zout.writestr('Preview/PrvText.txt',        'PDF 변환 문서'.encode('utf-8'))
+
+    # 임시 파일 → 최종 경로로 교체
+    import shutil
+    shutil.move(str(tmp_path), str(output_path))
 
     return {
         'paragraphs':   para_count,

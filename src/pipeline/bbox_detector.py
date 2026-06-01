@@ -110,32 +110,41 @@ class BBoxDetector:
             already_note = ""
 
         b64 = _encode_image(thumb_path)
-        msg = self._client.messages.create(
-            model=self._model,
-            max_tokens=1024,
-            messages=[
+        payload = {
+            "role": "user",
+            "content": [
                 {
-                    "role": "user",
-                    "content": [
-                        {
-                            "type": "image",
-                            "source": {
-                                "type": "base64",
-                                "media_type": "image/png",
-                                "data": b64,
-                            },
-                        },
-                        {
-                            "type": "text",
-                            "text": _DETECT_PROMPT.format(
-                                page_label=label, w=w, h=h,
-                                already_note=already_note,
-                            ),
-                        },
-                    ],
-                }
+                    "type": "image",
+                    "source": {
+                        "type": "base64",
+                        "media_type": "image/png",
+                        "data": b64,
+                    },
+                },
+                {
+                    "type": "text",
+                    "text": _DETECT_PROMPT.format(
+                        page_label=label, w=w, h=h,
+                        already_note=already_note,
+                    ),
+                },
             ],
-        )
+        }
+        import time
+        for attempt in range(3):
+            try:
+                msg = self._client.messages.create(
+                    model=self._model,
+                    max_tokens=1024,
+                    messages=[payload],
+                )
+                break
+            except Exception as e:
+                if attempt < 2 and ("500" in str(e) or "529" in str(e)):
+                    print(f"    [retry {attempt+1}] API 오류: {e}")
+                    time.sleep(5 * (attempt + 1))
+                else:
+                    raise
         raw = msg.content[0].text.strip()
         return _parse_response(raw)
 
