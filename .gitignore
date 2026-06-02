@@ -17,9 +17,10 @@ credentials/
 *.p12
 *.pfx
 
-# ─── 웹 서버 임시/로그 ────────────────────────────────────────
+# ─── 웹 서버 임시/로그/데이터 ────────────────────────────────
 scripts/web/tmp/
 scripts/web/logs/
+scripts/web/tokens.json
 
 # ─── Python ───────────────────────────────────────────────────
 __pycache__/
@@ -45,6 +46,7 @@ _unpacked/
 _temp/
 output/
 samples/
+!samples/template.hwpx
 
 # ─── 백업·임시 파일 ────────────────────────────────────────────
 *.hwpx.bak
