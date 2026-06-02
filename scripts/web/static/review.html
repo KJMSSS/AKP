@@ -347,6 +347,72 @@
     }
     .btn-cancel:hover { background: #f1f5f9; }
 
+    /* ── 직접 편집 버튼 ── */
+    .btn-edit {
+      padding: 5px 14px;
+      border-radius: 6px;
+      border: 1.5px solid #94a3b8;
+      background: #fff;
+      color: #475569;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all .15s;
+    }
+    .btn-edit:hover { background: #f1f5f9; }
+    .btn-edit.active { background: #f59e0b; color: #fff; border-color: #f59e0b; }
+
+    /* ── 직접 편집 폼 ── */
+    .text-edit-wrap {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height .35s ease, opacity .25s;
+      opacity: 0;
+    }
+    .text-edit-wrap.open { max-height: 600px; opacity: 1; }
+    .text-edit-form {
+      padding: 10px 14px 14px;
+      border-top: 1px solid #e2e8f0;
+      background: #f0f9ff;
+    }
+    .text-edit-form label {
+      display: block;
+      font-size: 12px;
+      color: #64748b;
+      font-weight: 600;
+      margin-bottom: 5px;
+    }
+    .text-edit-form textarea {
+      width: 100%;
+      font-family: 'Consolas', 'Courier New', monospace;
+      font-size: 0.82rem;
+      line-height: 1.65;
+      border: 1px solid #7dd3fc;
+      border-radius: 6px;
+      padding: 8px 10px;
+      resize: vertical;
+      color: #1e293b;
+      background: #fff;
+      outline: none;
+      min-height: 130px;
+      transition: border-color .15s;
+    }
+    .text-edit-form textarea:focus { border-color: #2563eb; }
+    .btn-apply {
+      padding: 5px 18px;
+      border-radius: 6px;
+      border: none;
+      background: #2563eb;
+      color: #fff;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .15s;
+    }
+    .btn-apply:hover { background: #1d4ed8; }
+    .problem-card.status-edited { border-left-color: #f59e0b; }
+    .problem-card.status-edited .card-badge { background: #fef3c7; color: #92400e; }
+
     /* ── 하단 바 ── */
     #bottombar {
       position: sticky;
@@ -541,7 +607,7 @@
 <!-- 하단 바 -->
 <div id="bottombar">
   <span id="submit-note"></span>
-  <button id="btn-submit" disabled>검수 완료 제출</button>
+  <button id="btn-submit" class="active">검수 완료 → HWPX 재생성</button>
 </div>
 
 <script>
@@ -710,15 +776,24 @@
       </div>
       <div class="card-actions">
         <button class="btn-ok">✓ 정확</button>
-        <button class="btn-err">✗ 오류</button>
+        <button class="btn-edit">✎ 수정</button>
+        <button class="btn-err">✗ 오류메모</button>
         <span class="error-note-display"></span>
+      </div>
+      <div class="text-edit-wrap">
+        <div class="text-edit-form">
+          <label>텍스트 직접 수정 (LaTeX $...$ 그대로 입력 가능)</label>
+          <textarea class="ta-edit"></textarea>
+          <div class="form-btns" style="margin-top:8px">
+            <button class="btn-apply">반영</button>
+            <button class="btn-edit-cancel">취소</button>
+          </div>
+        </div>
       </div>
       <div class="error-form-wrap">
         <div class="error-form">
-          <label>어떤 오류인가요? (간단히 메모)</label>
+          <label>오류 메모 (간단히)</label>
           <textarea class="ta-note" rows="2" placeholder="예: 분수가 7/27이 맞음, 글자 누락 등"></textarea>
-          <label>수정된 내용 (선택사항, LaTeX 가능)</label>
-          <textarea class="ta-corrected" rows="2" placeholder="빈칸도 가능"></textarea>
           <div class="form-btns">
             <button class="btn-save">저장</button>
             <button class="btn-cancel">취소</button>
@@ -739,35 +814,69 @@
       });
     }
 
-    const btnOk      = card.querySelector('.btn-ok');
-    const btnErr     = card.querySelector('.btn-err');
-    const errFormWrap= card.querySelector('.error-form-wrap');
-    const taNoteEl   = card.querySelector('.ta-note');
-    const taCorrEl   = card.querySelector('.ta-corrected');
-    const btnSave    = card.querySelector('.btn-save');
-    const btnCancel  = card.querySelector('.btn-cancel');
-    const noteDisplay= card.querySelector('.error-note-display');
+    const btnOk         = card.querySelector('.btn-ok');
+    const btnEdit       = card.querySelector('.btn-edit');
+    const btnErr        = card.querySelector('.btn-err');
+    const textEditWrap  = card.querySelector('.text-edit-wrap');
+    const taEditEl      = card.querySelector('.ta-edit');
+    const btnApply      = card.querySelector('.btn-apply');
+    const btnEditCancel = card.querySelector('.btn-edit-cancel');
+    const errFormWrap   = card.querySelector('.error-form-wrap');
+    const taNoteEl      = card.querySelector('.ta-note');
+    const btnSave       = card.querySelector('.btn-save');
+    const btnCancel     = card.querySelector('.btn-cancel');
+    const noteDisplay   = card.querySelector('.error-note-display');
 
     // ✓ 정확
     btnOk.addEventListener('click', () => {
-      // 오류 폼이 열려 있으면 닫기
+      textEditWrap.classList.remove('open');
       errFormWrap.classList.remove('open');
       prob.status = 'ok';
       prob.note = '';
-      prob.corrected_text = '';
       refreshCard(card, prob);
       updateCounter();
     });
 
-    // ✗ 오류 → 폼 슬라이드다운
+    // ✎ 수정 → 텍스트 편집 폼
+    btnEdit.addEventListener('click', () => {
+      const isOpen = textEditWrap.classList.contains('open');
+      errFormWrap.classList.remove('open');
+      if (isOpen) {
+        textEditWrap.classList.remove('open');
+      } else {
+        taEditEl.value = prob.full_text;
+        textEditWrap.classList.add('open');
+        setTimeout(() => taEditEl.focus(), 50);
+      }
+    });
+
+    // 반영 — 편집된 텍스트를 prob에 저장하고 화면 갱신
+    btnApply.addEventListener('click', () => {
+      const newText = taEditEl.value;
+      prob.full_text = newText;
+      prob.status = 'edited';
+      textEditWrap.classList.remove('open');
+      const textDiv = card.querySelector('.card-text');
+      textDiv.innerHTML = renderLatex(newText);
+      textDiv.classList.remove('card-text-collapsed');
+      const expandBtn = card.querySelector('.btn-expand');
+      if (expandBtn) expandBtn.style.display = 'none';
+      refreshCard(card, prob);
+      updateCounter();
+    });
+
+    btnEditCancel.addEventListener('click', () => {
+      textEditWrap.classList.remove('open');
+    });
+
+    // ✗ 오류 메모 → 폼 슬라이드다운
     btnErr.addEventListener('click', () => {
       const isOpen = errFormWrap.classList.contains('open');
+      textEditWrap.classList.remove('open');
       if (isOpen) {
         errFormWrap.classList.remove('open');
       } else {
-        // 기존 note 값 복원
         taNoteEl.value = prob.note || '';
-        taCorrEl.value = prob.corrected_text || '';
         errFormWrap.classList.add('open');
         setTimeout(() => taNoteEl.focus(), 50);
       }
@@ -776,7 +885,6 @@
     // 저장
     btnSave.addEventListener('click', () => {
       prob.note = taNoteEl.value.trim();
-      prob.corrected_text = taCorrEl.value.trim();
       prob.status = 'error';
       errFormWrap.classList.remove('open');
       refreshCard(card, prob);
@@ -798,25 +906,37 @@
     const btnErr    = card.querySelector('.btn-err');
     const noteDisp  = card.querySelector('.error-note-display');
 
-    card.classList.remove('status-ok', 'status-error');
+    const btnEditEl = card.querySelector('.btn-edit');
+    card.classList.remove('status-ok', 'status-error', 'status-edited');
 
     if (prob.status === 'ok') {
       card.classList.add('status-ok');
       badge.textContent = '정확';
       btnOk.classList.add('active');
+      if (btnEditEl) btnEditEl.classList.remove('active');
+      btnErr.classList.remove('active');
+      noteDisp.textContent = '';
+      noteDisp.classList.remove('visible');
+    } else if (prob.status === 'edited') {
+      card.classList.add('status-edited');
+      badge.textContent = '수정됨';
+      if (btnEditEl) btnEditEl.classList.add('active');
+      btnOk.classList.remove('active');
       btnErr.classList.remove('active');
       noteDisp.textContent = '';
       noteDisp.classList.remove('visible');
     } else if (prob.status === 'error') {
       card.classList.add('status-error');
-      badge.textContent = '오류';
+      badge.textContent = '오류메모';
       btnErr.classList.add('active');
       btnOk.classList.remove('active');
+      if (btnEditEl) btnEditEl.classList.remove('active');
       noteDisp.textContent = prob.note || '오류 표시됨';
       noteDisp.classList.add('visible');
     } else {
       badge.textContent = '미확인';
       btnOk.classList.remove('active');
+      if (btnEditEl) btnEditEl.classList.remove('active');
       btnErr.classList.remove('active');
       noteDisp.textContent = '';
       noteDisp.classList.remove('visible');
@@ -825,26 +945,27 @@
 
   /* ─── 상단 카운터 갱신 ─── */
   function updateCounter() {
-    const total  = state.problems.length;
-    const okCnt  = state.problems.filter(p => p.status === 'ok').length;
-    const errCnt = state.problems.filter(p => p.status === 'error').length;
-    const done   = okCnt + errCnt;
+    const total     = state.problems.length;
+    const okCnt     = state.problems.filter(p => p.status === 'ok').length;
+    const errCnt    = state.problems.filter(p => p.status === 'error').length;
+    const editedCnt = state.problems.filter(p => p.status === 'edited').length;
+    const done      = okCnt + errCnt + editedCnt;
 
     cntOk.textContent    = done;
     cntTotal.textContent = total;
-    cntErr.textContent   = errCnt;
-    cntErrWrap.style.display = errCnt > 0 ? 'inline' : 'none';
+    cntErr.textContent   = errCnt + editedCnt;
+    cntErrWrap.style.display = (errCnt + editedCnt) > 0 ? 'inline' : 'none';
 
-    // 제출 버튼: 1개 이상 OK 또는 오류 표시가 있을 때 활성
-    const canSubmit = done >= 1;
-    btnSubmit.disabled = !canSubmit;
-    btnSubmit.classList.toggle('active', canSubmit);
+    btnSubmit.disabled = false;
+    btnSubmit.classList.add('active');
 
-    if (!canSubmit) {
-      submitNote.textContent = '한 문제 이상 확인해주세요';
+    const remaining = total - done;
+    if (editedCnt > 0) {
+      submitNote.textContent = `수정 ${editedCnt}개 반영 예정${remaining > 0 ? ` · ${remaining}개 미확인` : ''}`;
+    } else if (remaining > 0) {
+      submitNote.textContent = `${remaining}개 미확인 (제출 가능)`;
     } else {
-      const remaining = total - done;
-      submitNote.textContent = remaining > 0 ? `${remaining}개 미확인` : `전체 ${total}개 확인 완료`;
+      submitNote.textContent = `전체 ${total}개 확인 완료`;
     }
   }
 
@@ -854,40 +975,62 @@
 
     btnSubmit.disabled = true;
     btnSubmit.classList.remove('active');
-    btnSubmit.textContent = '전송 중...';
+    btnSubmit.textContent = 'HWPX 재생성 중...';
     submitNote.textContent = '';
 
-    const token = localStorage.getItem('akp_token') || '';
+    // 오류 메모 저장 (관리자 로그용)
     const corrections = state.problems
       .filter(p => p.status === 'error')
       .map(p => ({
         problem_number:  p.number,
         problem_text:    p.full_text,
         correction_note: p.note,
-        corrected_text:  p.corrected_text,
+        corrected_text:  '',
       }));
-
-    const payload = { token, corrections };
-
-    try {
-      const res = await fetch(`/api/review/${state.jobId}/corrections`, {
+    if (corrections.length > 0) {
+      fetch(`/api/review/${state.jobId}/corrections`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ corrections }),
+      }).catch(() => {});
+    }
+
+    // 수정된 텍스트로 HWPX 재생성
+    const payload = {
+      problems: state.problems.map(p => ({
+        number:    p.number,
+        full_text: p.full_text,
+        status:    p.status,
+      })),
+    };
+
+    try {
+      const res = await fetch(`/api/review/${state.jobId}/submit`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(payload),
       });
       if (!res.ok) {
         const txt = await res.text().catch(() => '');
         throw new Error(`서버 오류 ${res.status}: ${txt}`);
       }
+      const data = await res.json();
 
-      const errCnt = corrections.length;
-      doneMsg.textContent = errCnt > 0
-        ? `오류 ${errCnt}건이 전송되었습니다.`
-        : '이상 없음으로 제출되었습니다.';
+      const editedCnt = state.problems.filter(p => p.status === 'edited').length;
+      doneMsg.textContent = editedCnt > 0
+        ? `${editedCnt}개 문제 수정 반영 완료`
+        : '검수 완료 (수정 없음)';
+
+      // 완료 배너에 다운로드 링크 삽입
+      const doneLink = doneBanner.querySelector('.done-box a');
+      doneLink.href = data.download_url;
+      doneLink.textContent = '수정된 HWPX 다운로드';
+
       doneBanner.classList.add('show');
-
     } catch (e) {
-      btnSubmit.textContent = '검수 완료 제출';
+      btnSubmit.textContent = '검수 완료 → HWPX 재생성';
       btnSubmit.disabled = false;
       btnSubmit.classList.add('active');
       submitNote.textContent = `오류: ${e.message}`;
