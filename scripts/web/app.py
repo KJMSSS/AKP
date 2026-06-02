@@ -278,11 +278,50 @@ async def stream(job_id: str):
 
 @app.get("/download/{job_id}")
 async def download(job_id: str):
+    # 메모리에 있으면 바로 사용
     job = _jobs.get(job_id)
-    if not job or not job.get("hwpx") or not job["hwpx"].exists():
-        raise HTTPException(404)
-    hwpx: Path = job["hwpx"]
+    if job and job.get("hwpx") and job["hwpx"].exists():
+        hwpx = job["hwpx"]
+    else:
+        # 서버 재시작 후에도 파일시스템에서 복원
+        for candidate in [
+            _TMP_DIR / f"{job_id}_reviewed.hwpx",
+            _TMP_DIR / f"{job_id}.hwpx",
+        ]:
+            if candidate.exists():
+                hwpx = candidate
+                break
+        else:
+            raise HTTPException(404)
     return FileResponse(str(hwpx), media_type="application/octet-stream", filename=hwpx.name)
+
+
+@app.get("/api/jobs/{job_id}")
+async def api_job_info(job_id: str, request: Request):
+    """저장된 job의 상태 확인 — 페이지 복귀 시 사용."""
+    _require_login(request)
+    has_hwpx   = (_TMP_DIR / f"{job_id}.hwpx").exists() or \
+                 (_TMP_DIR / f"{job_id}_reviewed.hwpx").exists()
+    has_review = (_TMP_DIR / f"{job_id}_review.json").exists()
+    if not has_hwpx and not has_review:
+        raise HTTPException(404)
+    pdf_name = ""
+    if has_review:
+        try:
+            pdf_name = json.loads(
+                (_TMP_DIR / f"{job_id}_review.json").read_text(encoding="utf-8")
+            ).get("pdf_name", "")
+        except Exception:
+            pass
+    return JSONResponse({
+        "job_id":     job_id,
+        "pdf_name":   pdf_name,
+        "has_hwpx":   has_hwpx,
+        "has_review": has_review,
+        "download_url": f"/download/{job_id}_reviewed" if (_TMP_DIR / f"{job_id}_reviewed.hwpx").exists()
+                        else f"/download/{job_id}",
+        "review_url": f"/review/{job_id}" if has_review else None,
+    })
 
 
 # ══════════════════════════════════════════════════════════════════════
