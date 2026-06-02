@@ -53,6 +53,11 @@
     font-size: 1.15rem;
     font-weight: 700;
     color: #1e293b;
+  }
+
+  .header-card .greeting {
+    font-size: 0.88rem;
+    color: #475569;
     margin-right: auto;
   }
 
@@ -70,7 +75,7 @@
 
   /* ── 입력 공통 ── */
   input[type="text"],
-  input[type="password"],
+  input[type="email"],
   input[type="number"] {
     border: 1px solid #cbd5e1;
     border-radius: 6px;
@@ -108,87 +113,40 @@
   .btn-warning   { background: #f97316; color: #fff; }
   .btn-danger    { background: #ef4444; color: #fff; }
   .btn-secondary { background: #e2e8f0; color: #475569; }
+  .btn-logout    { background: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1; }
+  .btn-logout:hover { background: #fee2e2; color: #dc2626; border-color: #fca5a5; opacity: 1; }
+
   .btn-sm {
     font-size: 0.76rem;
     padding: 4px 10px;
     border-radius: 5px;
   }
 
-  /* ── 로그인 영역 ── */
-  #login-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-wrap: wrap;
-  }
-
-  #login-row label {
-    font-size: 0.85rem;
-    color: #475569;
-    white-space: nowrap;
-  }
-
-  #pw-input { width: 180px; }
-
-  #login-error {
-    font-size: 0.82rem;
-    color: #ef4444;
-    display: none;
-  }
-
-  /* ── 발급 폼 ── */
-  #issue-section { display: none; }
-
-  .issue-form {
+  /* ── 사용자 추가 폼 ── */
+  .add-user-form {
     display: flex;
     align-items: center;
     gap: 10px;
     flex-wrap: wrap;
   }
 
-  .issue-form label {
-    font-size: 0.85rem;
-    color: #475569;
-    white-space: nowrap;
-  }
-
-  .issue-form .field {
+  .add-user-form .field {
     display: flex;
     align-items: center;
     gap: 6px;
   }
 
-  #issue-name   { width: 140px; }
-  #issue-cap    { width: 90px; }
-
-  #issue-result {
-    display: none;
-    margin-top: 12px;
-    background: #f0fdf4;
-    border: 1px solid #bbf7d0;
-    border-radius: 6px;
-    padding: 10px 14px;
+  .add-user-form label {
     font-size: 0.85rem;
-    color: #166534;
+    color: #475569;
+    white-space: nowrap;
   }
 
-  #issue-result .token-badge {
-    display: inline-block;
-    background: #dcfce7;
-    border: 1px solid #86efac;
-    border-radius: 4px;
-    padding: 2px 8px;
-    font-family: 'Consolas', 'Courier New', monospace;
-    font-size: 0.82rem;
-    cursor: pointer;
-    transition: background 0.15s;
-  }
+  #add-name  { width: 120px; }
+  #add-email { width: 210px; }
+  #add-cap   { width: 80px; }
 
-  #issue-result .token-badge:hover { background: #bbf7d0; }
-
-  /* ── 토큰 목록 ── */
-  #list-section { display: none; }
-
+  /* ── 테이블 공통 ── */
   .table-wrap {
     overflow-x: auto;
     border-radius: 6px;
@@ -201,9 +159,7 @@
     font-size: 0.85rem;
   }
 
-  thead tr {
-    background: #f1f5f9;
-  }
+  thead tr { background: #f1f5f9; }
 
   thead th {
     padding: 10px 12px;
@@ -220,7 +176,6 @@
   }
 
   tbody tr:last-child { border-bottom: none; }
-
   tbody tr:nth-child(even) { background: #fafafa; }
   tbody tr:hover { background: #f8faff; }
 
@@ -234,20 +189,23 @@
     vertical-align: middle;
   }
 
-  .token-cell {
-    font-family: 'Consolas', 'Courier New', monospace;
-    font-size: 0.8rem;
+  /* 이메일 셀 — 복사 가능 */
+  .email-cell {
+    font-size: 0.82rem;
     color: #4f46e5;
     cursor: pointer;
-    transition: color 0.15s;
+    font-family: 'Consolas', 'Courier New', monospace;
     white-space: nowrap;
+    transition: color 0.15s;
   }
 
-  .token-cell:hover { color: #6366f1; text-decoration: underline; }
+  .email-cell:hover { color: #6366f1; text-decoration: underline; }
 
+  /* 비용 색상 */
   .cost-warn   { color: #f97316; font-weight: 600; }
   .cost-exceed { color: #ef4444; font-weight: 700; }
 
+  /* 상태 뱃지 */
   .status-badge {
     display: inline-block;
     font-size: 0.72rem;
@@ -275,6 +233,76 @@
     font-size: 0.8rem;
   }
 
+  /* 한도 텍스트 — 클릭 가능 암시 */
+  .cap-clickable {
+    cursor: pointer;
+    border-bottom: 1px dashed #94a3b8;
+    white-space: nowrap;
+  }
+
+  .cap-clickable:hover { color: #6366f1; border-color: #6366f1; }
+
+  /* ── 검수 수정 내역 ── */
+  .corrections-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+  }
+
+  #corrections-summary {
+    font-size: 0.85rem;
+    font-weight: 400;
+    color: #64748b;
+  }
+
+  /* ── 빈 상태 ── */
+  .empty-row td {
+    text-align: center;
+    color: #94a3b8;
+    padding: 28px 0;
+    font-size: 0.85rem;
+  }
+
+  /* ── 로딩 오버레이 ── */
+  #loading-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(248, 249, 250, 0.85);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+  }
+
+  .loading-text {
+    font-size: 0.95rem;
+    color: #475569;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  /* ── 로딩 스피너 ── */
+  .spinner {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(99, 102, 241, 0.25);
+    border-top-color: #6366f1;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+    vertical-align: middle;
+    margin-right: 4px;
+  }
+
+  .spinner-white {
+    border-color: rgba(255,255,255,0.3);
+    border-top-color: #fff;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
   /* ── 토스트 ── */
   #toast {
     position: fixed;
@@ -289,117 +317,63 @@
     pointer-events: none;
     transition: opacity 0.25s;
     z-index: 9999;
+    max-width: 340px;
   }
 
   #toast.show { opacity: 1; }
-
-  /* ── 로딩 스피너 ── */
-  .spinner {
-    display: inline-block;
-    width: 14px;
-    height: 14px;
-    border: 2px solid rgba(255,255,255,0.4);
-    border-top-color: #fff;
-    border-radius: 50%;
-    animation: spin 0.6s linear infinite;
-    vertical-align: middle;
-    margin-right: 4px;
-  }
-
-  @keyframes spin { to { transform: rotate(360deg); } }
-
-  /* ── 빈 상태 ── */
-  .empty-row td {
-    text-align: center;
-    color: #94a3b8;
-    padding: 28px 0;
-    font-size: 0.85rem;
-  }
+  #toast.error { background: #dc2626; }
 </style>
 </head>
 <body>
 
-<div class="container">
+<!-- 로딩 오버레이 -->
+<div id="loading-overlay">
+  <div class="loading-text">
+    <span class="spinner"></span>
+    인증 확인 중...
+  </div>
+</div>
+
+<div class="container" id="main-content" style="display:none;">
 
   <!-- 헤더 -->
   <div class="card header-card">
     <span class="brand">AKP 관리자</span>
-
-    <div id="login-row">
-      <label for="pw-input">비밀번호:</label>
-      <input id="pw-input" type="password" placeholder="관리자 비밀번호" autocomplete="current-password">
-      <button id="login-btn" class="btn-primary" onclick="doLogin()">로그인</button>
-      <span id="login-error">비밀번호가 틀렸습니다</span>
-    </div>
-
+    <span class="greeting" id="greeting">안녕하세요</span>
+    <button class="btn-logout" onclick="doLogout()">로그아웃</button>
     <a class="back-link" href="/">&#8592; 변환기로</a>
   </div>
 
-  <!-- 내 토큰 (관리자 전용) -->
-  <div class="card" id="my-token-section" style="display:none;">
-    <div class="card-title">내 토큰 (관리자)</div>
-    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-      <span id="my-token-badge" style="font-family:monospace;font-size:1rem;background:#f1f5f9;padding:6px 14px;border-radius:6px;cursor:pointer;" title="클릭하면 복사"></span>
-      <span id="my-copy-hint" style="font-size:0.82rem;color:#15803d;"></span>
-      <button class="btn-primary" id="open-converter-btn" style="margin-left:auto;">
-        변환기 열기 →
-      </button>
-    </div>
-  </div>
-
-  <!-- 토큰 발급 -->
-  <div class="card" id="issue-section">
-    <div class="card-title">직원 토큰 발급</div>
-    <div class="issue-form">
+  <!-- 사용자 추가 -->
+  <div class="card">
+    <div class="card-title">사용자 추가</div>
+    <div class="add-user-form">
       <div class="field">
-        <label for="issue-name">이름:</label>
-        <input id="issue-name" type="text" placeholder="선생님 이름">
+        <label for="add-name">이름:</label>
+        <input id="add-name" type="text" placeholder="김선생">
       </div>
       <div class="field">
-        <label for="issue-cap">한도:</label>
-        <input id="issue-cap" type="number" min="0" step="0.5" value="2.0" placeholder="USD">
-        <span style="font-size:0.82rem;color:#64748b;">USD (0 = 무제한)</span>
+        <label for="add-email">이메일:</label>
+        <input id="add-email" type="email" placeholder="teacher@gmail.com">
       </div>
-      <button class="btn-primary" id="issue-btn" onclick="doIssue()">토큰 발급</button>
-    </div>
-
-    <div id="issue-result">
-      토큰 발급 완료:
-      <span class="token-badge" id="new-token-badge" onclick="copyToken(this)"></span>
-      &nbsp;<span id="copy-hint" style="font-size:0.78rem;color:#15803d;"></span>
-    </div>
-  </div>
-
-  <!-- 수정 내역 -->
-  <div class="card" id="corrections-section" style="display:none;">
-    <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
-      <span>직원 검수 수정 내역</span>
-      <span id="corrections-summary" style="font-size:0.85rem;font-weight:400;color:#64748b;"></span>
-    </div>
-    <div class="table-wrap">
-      <table id="corrections-table">
-        <thead>
-          <tr>
-            <th>일시</th><th>직원</th><th>PDF</th><th>문제</th>
-            <th>오류 메모</th><th>수정 내용</th><th>상태</th><th></th>
-          </tr>
-        </thead>
-        <tbody id="corrections-tbody">
-          <tr><td colspan="8" style="text-align:center;color:#9ca3af;padding:24px;">수정 내역 없음</td></tr>
-        </tbody>
-      </table>
+      <div class="field">
+        <label for="add-cap">한도:</label>
+        <input id="add-cap" type="number" min="0" step="0.5" value="2.0" placeholder="USD">
+        <span style="font-size:0.82rem;color:#64748b;">USD &nbsp;(0 = 무제한)</span>
+      </div>
+      <button class="btn-primary" id="add-btn" onclick="doAddUser()">사용자 추가</button>
     </div>
   </div>
 
-  <!-- 토큰 목록 -->
-  <div class="card" id="list-section">
-    <div class="card-title">선생님 토큰 목록</div>
+  <!-- 등록된 사용자 목록 -->
+  <div class="card">
+    <div class="card-title">등록된 사용자</div>
     <div class="table-wrap">
       <table>
         <thead>
           <tr>
-            <th>선생님</th>
-            <th>토큰</th>
+            <th>이름</th>
+            <th>이메일</th>
             <th>한도</th>
             <th>오늘</th>
             <th>누적</th>
@@ -407,8 +381,35 @@
             <th>관리</th>
           </tr>
         </thead>
-        <tbody id="token-tbody">
-          <tr class="empty-row"><td colspan="7">로그인 후 목록을 불러옵니다</td></tr>
+        <tbody id="users-tbody">
+          <tr class="empty-row"><td colspan="7"><span class="spinner"></span> 불러오는 중...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 직원 검수 수정 내역 -->
+  <div class="card">
+    <div class="corrections-header">
+      <div class="card-title" style="margin-bottom:0;">직원 검수 수정 내역</div>
+      <span id="corrections-summary"></span>
+    </div>
+    <div class="table-wrap">
+      <table id="corrections-table">
+        <thead>
+          <tr>
+            <th>일시</th>
+            <th>직원</th>
+            <th>PDF</th>
+            <th>문제</th>
+            <th>오류 메모</th>
+            <th>수정 내용</th>
+            <th>상태</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="corrections-tbody">
+          <tr class="empty-row"><td colspan="8"><span class="spinner"></span> 불러오는 중...</td></tr>
         </tbody>
       </table>
     </div>
@@ -423,368 +424,349 @@
 (function () {
   'use strict';
 
-  /* ── 상태 ── */
-  let password = sessionStorage.getItem('akp_admin_pw') || '';
-  let tokenList = [];
-
-  /* ── 초기화 ── */
+  /* ══════════════════════════════════════════════
+     초기화: 페이지 로드 시 /api/me 로 인증 확인
+  ══════════════════════════════════════════════ */
   window.addEventListener('DOMContentLoaded', function () {
-    var pw = sessionStorage.getItem('akp_admin_pw');
-    if (pw) {
-      document.getElementById('pw-input').value = pw;
-      doLogin();
-    }
-    document.getElementById('pw-input').addEventListener('keydown', function (e) {
-      if (e.key === 'Enter') doLogin();
+    // 폼 Enter 단축키
+    document.getElementById('add-name').addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') document.getElementById('add-email').focus();
     });
-    document.getElementById('issue-name').addEventListener('keydown', function (e) {
-      if (e.key === 'Enter') doIssue();
+    document.getElementById('add-email').addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') document.getElementById('add-cap').focus();
     });
+    document.getElementById('add-cap').addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') doAddUser();
+    });
+
+    checkAuth();
   });
 
-  /* ── 로그인 ── */
-  window.doLogin = function () {
-    var pw = document.getElementById('pw-input').value.trim();
-    if (!pw) return;
-    var btn = document.getElementById('login-btn');
-    btn.disabled = true;
-    btn.innerHTML = '<span class="spinner"></span>확인 중...';
-    document.getElementById('login-error').style.display = 'none';
+  function checkAuth() {
+    fetch('/api/me', { credentials: 'include' })
+      .then(function (r) {
+        if (r.status === 401 || r.status === 403) {
+          window.location.href = '/';
+          return null;
+        }
+        if (!r.ok) throw new Error('서버 오류 ' + r.status);
+        return r.json();
+      })
+      .then(function (me) {
+        if (!me) return;
+        if (!me.authenticated || !me.is_admin) {
+          window.location.href = '/';
+          return;
+        }
+        // 인증 성공 — UI 표시
+        var name = me.name || me.email || '관리자';
+        document.getElementById('greeting').textContent = '안녕하세요, ' + name + '님';
+        document.getElementById('loading-overlay').style.display = 'none';
+        document.getElementById('main-content').style.display = 'flex';
 
-    fetchTokens(pw)
-      .then(function (list) {
-        password = pw;
-        sessionStorage.setItem('akp_admin_pw', pw);
-        tokenList = list;
-        document.getElementById('my-token-section').style.display = 'block';
-        document.getElementById('issue-section').style.display = 'block';
-        document.getElementById('corrections-section').style.display = 'block';
-        document.getElementById('list-section').style.display = 'block';
-        renderTable(list);
-        loadMyToken();
+        loadUsers();
         loadCorrections();
       })
       .catch(function (err) {
-        document.getElementById('login-error').style.display = 'inline';
-        sessionStorage.removeItem('akp_admin_pw');
-      })
-      .finally(function () {
-        btn.disabled = false;
-        btn.textContent = '로그인';
+        showToast('인증 확인 실패: ' + (err.message || err), true);
+        document.getElementById('loading-overlay').style.display = 'none';
       });
+  }
+
+  /* ══════════════════════════════════════════════
+     로그아웃
+  ══════════════════════════════════════════════ */
+  window.doLogout = function () {
+    window.location.href = '/auth/logout';
   };
 
-  /* ── 토큰 발급 ── */
-  window.doIssue = function () {
-    var name = document.getElementById('issue-name').value.trim();
-    var cap  = parseFloat(document.getElementById('issue-cap').value) || 2.0;
+  /* ══════════════════════════════════════════════
+     사용자 추가
+  ══════════════════════════════════════════════ */
+  window.doAddUser = function () {
+    var name  = document.getElementById('add-name').value.trim();
+    var email = document.getElementById('add-email').value.trim();
+    var cap   = parseFloat(document.getElementById('add-cap').value);
 
-    if (!name) { showToast('이름을 입력하세요'); return; }
-    if (!password) { showToast('먼저 로그인하세요'); return; }
+    if (!name)  { showToast('이름을 입력하세요', true); return; }
+    if (!email) { showToast('이메일을 입력하세요', true); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      showToast('올바른 이메일 형식이 아닙니다', true); return;
+    }
+    if (isNaN(cap) || cap < 0) cap = 2.0;
 
-    var btn = document.getElementById('issue-btn');
+    var btn = document.getElementById('add-btn');
     btn.disabled = true;
-    btn.innerHTML = '<span class="spinner"></span>발급 중...';
+    btn.innerHTML = '<span class="spinner spinner-white"></span>추가 중...';
 
-    apiPost('/api/admin/tokens', { password: password, name: name, cap_usd: cap })
-      .then(function (data) {
-        var badge = document.getElementById('new-token-badge');
-        badge.textContent = data.token;
-        document.getElementById('copy-hint').textContent = '';
-        document.getElementById('issue-result').style.display = 'block';
-        document.getElementById('issue-name').value = '';
-        showToast('토큰이 발급되었습니다');
-        return fetchTokens(password);
-      })
-      .then(function (list) {
-        tokenList = list;
-        renderTable(list);
+    apiFetch('/api/admin/users', {
+      method: 'POST',
+      body: JSON.stringify({ email: email, name: name, cap_usd: cap })
+    })
+      .then(function () {
+        showToast(name + ' 님이 추가되었습니다');
+        document.getElementById('add-name').value  = '';
+        document.getElementById('add-email').value = '';
+        document.getElementById('add-cap').value   = '2.0';
+        loadUsers();
       })
       .catch(function (err) {
-        showToast('발급 실패: ' + (err.message || '알 수 없는 오류'));
+        showToast('추가 실패: ' + (err.message || err), true);
       })
       .finally(function () {
         btn.disabled = false;
-        btn.textContent = '토큰 발급';
+        btn.textContent = '사용자 추가';
       });
   };
 
-  /* ── 클립보드 복사 (토큰 뱃지) ── */
-  window.copyToken = function (el) {
-    var text = el.textContent.trim();
-    navigator.clipboard.writeText(text)
-      .then(function () {
-        var hint = document.getElementById('copy-hint');
-        if (hint) {
-          hint.textContent = '복사됨!';
-          setTimeout(function () { hint.textContent = ''; }, 2000);
-        }
-        showToast('클립보드에 복사되었습니다');
-      })
-      .catch(function () { showToast('복사 실패 (브라우저 지원 불가)'); });
-  };
-
-  /* ── 수정 내역 로드 ── */
-  function loadCorrections() {
-    fetch('/api/admin/corrections?password=' + encodeURIComponent(password) + '&days=30')
-      .then(function (r) { return r.json(); })
-      .then(function (data) {
-        var summary = data.summary || {};
-        var el = document.getElementById('corrections-summary');
-        if (el) {
-          var parts = ['이번 주 ' + (summary.total || 0) + '건'];
-          if (summary.reverted) parts.push('되돌림 ' + summary.reverted + '건');
-          if (summary.by_employee) {
-            var names = Object.entries(summary.by_employee)
-              .map(function (kv) { return kv[0] + ' ' + kv[1] + '건'; }).join(', ');
-            if (names) parts.push(names);
-          }
-          el.textContent = parts.join(' · ');
-        }
-        renderCorrections(data.corrections || []);
-      })
-      .catch(function (e) { console.warn('수정 내역 로드 실패', e); });
+  /* ══════════════════════════════════════════════
+     사용자 목록 로드 + 렌더
+  ══════════════════════════════════════════════ */
+  function loadUsers() {
+    apiFetch('/api/admin/users')
+      .then(function (list) { renderUsers(list); })
+      .catch(function (err) {
+        showToast('사용자 목록 로드 실패: ' + (err.message || err), true);
+        document.getElementById('users-tbody').innerHTML =
+          '<tr class="empty-row"><td colspan="7">로드 실패</td></tr>';
+      });
   }
 
-  function renderCorrections(list) {
-    var tbody = document.getElementById('corrections-tbody');
-    if (!tbody) return;
-    if (!list.length) {
-      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#9ca3af;padding:24px;">수정 내역 없음</td></tr>';
-      return;
-    }
-    tbody.innerHTML = list.map(function (e) {
-      var ts   = (e.ts || '').replace('T', ' ').slice(0, 16);
-      var note = e.correction_note || '';
-      var fix  = e.corrected_text  || '';
-      var rev  = e.status === 'reverted';
-      var style = rev ? 'opacity:0.45;text-decoration:line-through;' : '';
-      return '<tr style="' + style + '">'
-        + '<td style="white-space:nowrap;font-size:0.8rem;">' + ts + '</td>'
-        + '<td>' + esc(e.employee || '') + '</td>'
-        + '<td style="font-size:0.8rem;">' + esc((e.pdf_name||'').replace(/\.[^.]+$/, '')) + '</td>'
-        + '<td style="text-align:center;">' + (e.problem_number || '') + '번</td>'
-        + '<td>' + esc(note) + '</td>'
-        + '<td style="font-family:monospace;font-size:0.8rem;">' + esc(fix) + '</td>'
-        + '<td>' + (rev ? '<span style="color:#9ca3af;">되돌림</span>' : '<span style="color:#16a34a;">적용중</span>') + '</td>'
-        + '<td>' + (rev ? '' : '<button onclick="doRevert(\'' + e.id + '\')" style="font-size:0.75rem;padding:2px 8px;background:#fee2e2;color:#dc2626;border:none;border-radius:4px;cursor:pointer;">되돌리기</button>') + '</td>'
-        + '</tr>';
-    }).join('');
-  }
-
-  function esc(s) {
-    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  }
-
-  window.doRevert = function (cid) {
-    if (!confirm('이 수정을 되돌릴까요?')) return;
-    fetch('/api/admin/corrections/' + cid + '/revert', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password: password }),
-    })
-      .then(function () { loadCorrections(); showToast('되돌림 완료'); })
-      .catch(function (e) { showToast('오류: ' + (e.message || e)); });
-  };
-
-  /* ── 내 토큰 (관리자) 로드 + 변환기 열기 ── */
-  function loadMyToken() {
-    // "관리자" 이름으로 토큰 발급 (이미 있으면 기존 반환)
-    fetch('/api/admin/tokens', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password: password, name: '관리자', cap_usd: 0 }),
-    })
-      .then(function (r) { return r.json(); })
-      .then(function (data) {
-        var token = data.token || '';
-        var badge = document.getElementById('my-token-badge');
-        if (badge) {
-          badge.textContent = token;
-          badge.onclick = function () {
-            navigator.clipboard.writeText(token)
-              .then(function () {
-                document.getElementById('my-copy-hint').textContent = '복사됨!';
-                setTimeout(function () { document.getElementById('my-copy-hint').textContent = ''; }, 1500);
-              });
-          };
-        }
-        var btn = document.getElementById('open-converter-btn');
-        if (btn) {
-          btn.onclick = function () {
-            localStorage.setItem('akp_token', token);
-            window.location.href = '/';
-          };
-        }
-      })
-      .catch(function (e) { console.warn('내 토큰 로드 실패', e); });
-  }
-
-  /* ── 토큰 셀 클릭 복사 ── */
-  window.copyTokenCell = function (tokenStr) {
-    navigator.clipboard.writeText(tokenStr)
-      .then(function () { showToast('토큰 복사됨: ' + tokenStr); })
-      .catch(function () { showToast('복사 실패'); });
-  };
-
-  /* ── 비활성화 ── */
-  window.doRevoke = function (name) {
-    patchToken(name, { action: 'revoke' })
-      .then(refreshList)
-      .catch(function (e) { showToast('오류: ' + (e.message || e)); });
-  };
-
-  /* ── 활성화 ── */
-  window.doActivate = function (name) {
-    patchToken(name, { action: 'activate' })
-      .then(refreshList)
-      .catch(function (e) { showToast('오류: ' + (e.message || e)); });
-  };
-
-  /* ── 삭제 ── */
-  window.doDelete = function (name) {
-    if (!confirm('"' + name + '" 토큰을 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.')) return;
-    patchToken(name, { action: 'delete' })
-      .then(refreshList)
-      .catch(function (e) { showToast('오류: ' + (e.message || e)); });
-  };
-
-  /* ── 한도 변경 (인라인 편집 진입) ── */
-  window.startCapEdit = function (name, currentCap) {
-    var cell = document.getElementById('cap-cell-' + safeName(name));
-    if (!cell) return;
-    cell.innerHTML =
-      '<div class="cap-edit-wrap">' +
-      '<input type="number" id="cap-edit-input-' + safeName(name) + '" ' +
-        'value="' + currentCap + '" min="0" step="0.5" style="width:70px;">' +
-      '<button class="btn-sm btn-primary" onclick="saveCapEdit(\'' + escapeName(name) + '\')">저장</button>' +
-      '<button class="btn-sm btn-secondary" onclick="refreshList()">취소</button>' +
-      '</div>';
-  };
-
-  window.saveCapEdit = function (name) {
-    var input = document.getElementById('cap-edit-input-' + safeName(name));
-    if (!input) return;
-    var val = parseFloat(input.value);
-    if (isNaN(val) || val < 0) { showToast('올바른 금액을 입력하세요'); return; }
-    patchToken(name, { action: 'cap', cap_usd: val })
-      .then(function () {
-        showToast(name + ' 한도가 $' + val.toFixed(2) + '로 변경되었습니다');
-        return refreshList();
-      })
-      .catch(function (e) { showToast('오류: ' + (e.message || e)); });
-  };
-
-  /* ── 테이블 렌더 ── */
-  function renderTable(list) {
-    var tbody = document.getElementById('token-tbody');
+  function renderUsers(list) {
+    var tbody = document.getElementById('users-tbody');
     if (!list || list.length === 0) {
-      tbody.innerHTML = '<tr class="empty-row"><td colspan="7">등록된 토큰이 없습니다</td></tr>';
+      tbody.innerHTML = '<tr class="empty-row"><td colspan="7">등록된 사용자가 없습니다</td></tr>';
       return;
     }
 
-    var rows = list.map(function (t) {
-      var active    = t.active !== false;
-      var todayCost = t.today_cost || 0;
-      var totalCost = t.total_cost || 0;
-      var cap       = t.cap_usd || 0;
+    tbody.innerHTML = list.map(function (u) {
+      var active     = u.active !== false;
+      var todayCost  = u.today_cost  || 0;
+      var totalCost  = u.total_cost  || 0;
+      var cap        = u.cap_usd     || 0;
+      var emailSafe  = escAttr(u.email || '');
+      var nameSafe   = escHtml(u.name  || '');
+      var capId      = 'cap-cell-' + safeId(u.email);
 
-      /* 오늘 비용 색상 */
+      // 오늘 비용 색상
       var todayClass = '';
       if (cap > 0) {
         var ratio = todayCost / cap;
-        if (ratio >= 1)    todayClass = 'cost-exceed';
-        else if (ratio >= 0.8) todayClass = 'cost-warn';
+        if (ratio >= 1)         todayClass = 'cost-exceed';
+        else if (ratio >= 0.8)  todayClass = 'cost-warn';
       }
 
-      /* 상태 뱃지 */
+      // 상태 뱃지
       var badgeHtml = active
         ? '<span class="status-badge badge-active">활성</span>'
         : '<span class="status-badge badge-inactive">비활성</span>';
 
-      /* 버튼 그룹 */
-      var n = escapeName(t.name);
+      // 버튼 그룹
       var btnToggle = active
-        ? '<button class="btn-sm btn-warning" onclick="doRevoke(\'' + n + '\')">비활성화</button>'
-        : '<button class="btn-sm btn-success" onclick="doActivate(\'' + n + '\')">활성화</button>';
-      var btnCap  = '<button class="btn-sm btn-secondary" onclick="startCapEdit(\'' + n + '\',' + cap + ')">한도변경</button>';
-      var btnDel  = '<button class="btn-sm btn-danger" onclick="doDelete(\'' + n + '\')">삭제</button>';
+        ? '<button class="btn-sm btn-warning" onclick="doPatch(\'' + emailSafe + '\',{action:\'deactivate\'})">비활성화</button>'
+        : '<button class="btn-sm btn-success"  onclick="doPatch(\'' + emailSafe + '\',{action:\'activate\'})">활성화</button>';
+      var btnDel = '<button class="btn-sm btn-danger" onclick="doDelete(\'' + emailSafe + '\',\'' + nameSafe.replace(/'/g,"&#39;") + '\')">삭제</button>';
 
-      var safeid = safeName(t.name);
+      // 한도 셀 (클릭 시 인라인 편집)
+      var capText = cap > 0 ? ('$' + cap.toFixed(2)) : '$0 (무제한)';
+      var capCell = '<span class="cap-clickable" onclick="startCapEdit(\'' + emailSafe + '\',' + cap + ')">' + escHtml(capText) + '</span>';
 
-      return '<tr class="' + (active ? '' : 'inactive') + '">' +
-        '<td>' + escapeHtml(t.name) + '</td>' +
-        '<td class="token-cell" title="클릭하여 복사" onclick="copyTokenCell(\'' + escapeAttr(t.token) + '\')">' + escapeHtml(t.token) + '</td>' +
-        '<td id="cap-cell-' + safeid + '">$' + cap.toFixed(2) + '</td>' +
-        '<td class="' + todayClass + '">$' + todayCost.toFixed(2) + '</td>' +
-        '<td>$' + totalCost.toFixed(2) + '</td>' +
-        '<td>' + badgeHtml + '</td>' +
-        '<td><div class="actions">' + btnToggle + btnCap + btnDel + '</div></td>' +
-        '</tr>';
-    });
-
-    tbody.innerHTML = rows.join('');
+      return '<tr class="' + (active ? '' : 'inactive') + '">'
+        + '<td>' + nameSafe + '</td>'
+        + '<td class="email-cell" title="클릭하면 복사" onclick="copyText(\'' + emailSafe + '\')">' + escHtml(u.email || '') + '</td>'
+        + '<td id="' + capId + '">' + capCell + '</td>'
+        + '<td class="' + todayClass + '">$' + todayCost.toFixed(2) + '</td>'
+        + '<td>$' + totalCost.toFixed(2) + '</td>'
+        + '<td>' + badgeHtml + '</td>'
+        + '<td><div class="actions">' + btnToggle + btnDel + '</div></td>'
+        + '</tr>';
+    }).join('');
   }
 
-  /* ── API 헬퍼 ── */
-  function fetchTokens(pw) {
-    return fetch('/api/admin/tokens?password=' + encodeURIComponent(pw))
-      .then(checkStatus)
-      .then(function (r) { return r.json(); });
-  }
-
-  function apiPost(url, body) {
-    return fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    })
-      .then(checkStatus)
-      .then(function (r) { return r.json(); });
-  }
-
-  function patchToken(name, body) {
-    body.password = password;
-    return fetch('/api/admin/tokens/' + encodeURIComponent(name), {
+  /* ══════════════════════════════════════════════
+     사용자 PATCH (활성화/비활성화)
+  ══════════════════════════════════════════════ */
+  window.doPatch = function (email, body) {
+    apiFetch('/api/admin/users/' + encodeURIComponent(email), {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body)
     })
-      .then(checkStatus);
-  }
-
-  function checkStatus(r) {
-    if (!r.ok) {
-      return r.text().then(function (msg) {
-        var err = new Error(msg || r.statusText);
-        err.status = r.status;
-        throw err;
-      });
-    }
-    return r;
-  }
-
-  function refreshList() {
-    return fetchTokens(password)
-      .then(function (list) {
-        tokenList = list;
-        renderTable(list);
+      .then(function () {
+        var label = body.action === 'deactivate' ? '비활성화' : '활성화';
+        showToast(email + ' ' + label + ' 완료');
+        loadUsers();
       })
-      .catch(function (e) { showToast('목록 갱신 실패: ' + (e.message || e)); });
+      .catch(function (err) { showToast('오류: ' + (err.message || err), true); });
+  };
+
+  /* ══════════════════════════════════════════════
+     사용자 삭제
+  ══════════════════════════════════════════════ */
+  window.doDelete = function (email, name) {
+    if (!confirm('"' + (name || email) + '" 사용자를 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.')) return;
+    apiFetch('/api/admin/users/' + encodeURIComponent(email), {
+      method: 'PATCH',
+      body: JSON.stringify({ action: 'delete' })
+    })
+      .then(function () {
+        showToast(email + ' 삭제 완료');
+        loadUsers();
+      })
+      .catch(function (err) { showToast('삭제 실패: ' + (err.message || err), true); });
+  };
+
+  /* ══════════════════════════════════════════════
+     한도 인라인 편집
+  ══════════════════════════════════════════════ */
+  window.startCapEdit = function (email, currentCap) {
+    var cellId = 'cap-cell-' + safeId(email);
+    var cell   = document.getElementById(cellId);
+    if (!cell) return;
+
+    var inputId = 'cap-input-' + safeId(email);
+    cell.innerHTML =
+      '<div class="cap-edit-wrap">'
+      + '<input type="number" id="' + inputId + '" value="' + currentCap + '" min="0" step="0.5">'
+      + '<button class="btn-sm btn-primary" onclick="saveCapEdit(\'' + escAttr(email) + '\')">저장</button>'
+      + '<button class="btn-sm btn-secondary" onclick="loadUsers()">취소</button>'
+      + '</div>';
+
+    var inp = document.getElementById(inputId);
+    if (inp) { inp.focus(); inp.select(); }
+
+    inp && inp.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter')  saveCapEdit(email);
+      if (e.key === 'Escape') loadUsers();
+    });
+  };
+
+  window.saveCapEdit = function (email) {
+    var inp = document.getElementById('cap-input-' + safeId(email));
+    if (!inp) return;
+    var val = parseFloat(inp.value);
+    if (isNaN(val) || val < 0) { showToast('올바른 금액을 입력하세요', true); return; }
+
+    apiFetch('/api/admin/users/' + encodeURIComponent(email), {
+      method: 'PATCH',
+      body: JSON.stringify({ action: 'cap', cap_usd: val })
+    })
+      .then(function () {
+        showToast(email + ' 한도 $' + val.toFixed(2) + '로 변경됨');
+        loadUsers();
+      })
+      .catch(function (err) { showToast('한도 변경 실패: ' + (err.message || err), true); });
+  };
+
+  /* ══════════════════════════════════════════════
+     수정 내역 로드 + 렌더
+  ══════════════════════════════════════════════ */
+  function loadCorrections() {
+    apiFetch('/api/admin/corrections?days=30')
+      .then(function (data) {
+        var summary = data.summary || {};
+        var parts   = ['이번 30일 ' + (summary.total || 0) + '건'];
+        if (summary.reverted) parts.push('되돌림 ' + summary.reverted + '건');
+        if (summary.by_employee) {
+          var names = Object.entries(summary.by_employee)
+            .map(function (kv) { return kv[0] + ' ' + kv[1] + '건'; }).join(', ');
+          if (names) parts.push(names);
+        }
+        document.getElementById('corrections-summary').textContent = parts.join(' · ');
+        renderCorrections(data.corrections || []);
+      })
+      .catch(function (err) {
+        showToast('수정 내역 로드 실패: ' + (err.message || err), true);
+        document.getElementById('corrections-tbody').innerHTML =
+          '<tr class="empty-row"><td colspan="8">로드 실패</td></tr>';
+      });
   }
 
-  /* ── 토스트 ── */
+  function renderCorrections(list) {
+    var tbody = document.getElementById('corrections-tbody');
+    if (!list.length) {
+      tbody.innerHTML = '<tr class="empty-row"><td colspan="8">수정 내역 없음</td></tr>';
+      return;
+    }
+    tbody.innerHTML = list.map(function (e) {
+      var ts    = (e.ts || '').replace('T', ' ').slice(0, 16);
+      var rev   = e.status === 'reverted';
+      var style = rev ? 'opacity:0.45;text-decoration:line-through;' : '';
+
+      return '<tr style="' + style + '">'
+        + '<td style="white-space:nowrap;font-size:0.8rem;">'  + escHtml(ts) + '</td>'
+        + '<td>'  + escHtml(e.employee || '') + '</td>'
+        + '<td style="font-size:0.8rem;">'  + escHtml((e.pdf_name || '').replace(/\.[^.]+$/, '')) + '</td>'
+        + '<td style="text-align:center;">' + escHtml(String(e.problem_number || '')) + '번</td>'
+        + '<td>'  + escHtml(e.correction_note || '') + '</td>'
+        + '<td style="font-family:monospace;font-size:0.8rem;">' + escHtml(e.corrected_text || '') + '</td>'
+        + '<td>'  + (rev ? '<span style="color:#9ca3af;">되돌림</span>' : '<span style="color:#16a34a;">적용중</span>') + '</td>'
+        + '<td>'  + (rev ? '' : '<button onclick="doRevert(\'' + escAttr(String(e.id)) + '\')" style="font-size:0.75rem;padding:2px 8px;background:#fee2e2;color:#dc2626;border:none;border-radius:4px;cursor:pointer;">되돌리기</button>') + '</td>'
+        + '</tr>';
+    }).join('');
+  }
+
+  window.doRevert = function (cid) {
+    if (!confirm('이 수정을 되돌릴까요?')) return;
+    apiFetch('/api/admin/corrections/' + encodeURIComponent(cid) + '/revert', {
+      method: 'PATCH',
+      body: JSON.stringify({})
+    })
+      .then(function () { showToast('되돌림 완료'); loadCorrections(); })
+      .catch(function (err) { showToast('오류: ' + (err.message || err), true); });
+  };
+
+  /* ══════════════════════════════════════════════
+     이메일 클립보드 복사
+  ══════════════════════════════════════════════ */
+  window.copyText = function (text) {
+    navigator.clipboard.writeText(text)
+      .then(function () { showToast('복사됨: ' + text); })
+      .catch(function () { showToast('복사 실패', true); });
+  };
+
+  /* ══════════════════════════════════════════════
+     fetch 공통 헬퍼 (쿠키 세션 인증)
+  ══════════════════════════════════════════════ */
+  function apiFetch(url, options) {
+    var opts = Object.assign({ credentials: 'include', headers: {} }, options || {});
+    if (opts.body) {
+      opts.headers['Content-Type'] = 'application/json';
+    }
+    return fetch(url, opts).then(function (r) {
+      if (r.status === 401 || r.status === 403) {
+        window.location.href = '/';
+        return Promise.reject(new Error('권한 없음'));
+      }
+      if (!r.ok) {
+        return r.text().then(function (msg) {
+          var err = new Error(msg || r.statusText);
+          err.status = r.status;
+          return Promise.reject(err);
+        });
+      }
+      var ct = r.headers.get('content-type') || '';
+      if (ct.indexOf('application/json') !== -1) return r.json();
+      return r.text();
+    });
+  }
+
+  /* ══════════════════════════════════════════════
+     토스트
+  ══════════════════════════════════════════════ */
   var toastTimer = null;
-  function showToast(msg) {
+  function showToast(msg, isError) {
     var el = document.getElementById('toast');
     el.textContent = msg;
+    el.classList.toggle('error', !!isError);
     el.classList.add('show');
     if (toastTimer) clearTimeout(toastTimer);
-    toastTimer = setTimeout(function () { el.classList.remove('show'); }, 2200);
+    toastTimer = setTimeout(function () { el.classList.remove('show'); }, 2400);
   }
 
-  /* ── 유틸 ── */
-  function escapeHtml(s) {
+  /* ══════════════════════════════════════════════
+     유틸
+  ══════════════════════════════════════════════ */
+  function escHtml(s) {
     return String(s)
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
@@ -792,17 +774,14 @@
       .replace(/"/g, '&quot;');
   }
 
-  function escapeAttr(s) {
-    return String(s).replace(/'/g, "\\'").replace(/\\/g, '\\\\');
+  // onclick 속성 내 작은따옴표 이스케이프
+  function escAttr(s) {
+    return String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
   }
 
-  function escapeName(s) {
-    return String(s).replace(/'/g, "\\'");
-  }
-
-  /* CSS id 에 사용할 안전한 문자열 */
-  function safeName(s) {
-    return String(s).replace(/[^a-zA-Z0-9가-힣]/g, '_');
+  // CSS id 에 사용할 안전한 문자열
+  function safeId(s) {
+    return String(s).replace(/[^a-zA-Z0-9]/g, '_');
   }
 
 })();

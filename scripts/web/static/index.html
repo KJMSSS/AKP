@@ -327,24 +327,15 @@
 
 <!-- ── 상단바 ── -->
 <div id="topbar">
-  <h1>AKP 변환기 <span id="token-badge" title="클릭하면 토큰 변경"></span></h1>
+  <h1>AKP 변환기</h1>
   <div id="usage-info">
     <span id="usage-text">로딩 중...</span>
     <div id="progress-wrap"><div id="progress-bar"></div></div>
     <span id="remaining-text"></span>
     <span id="conv-count"></span>
-  </div>
-</div>
-
-<!-- ── 토큰 입력 모달 ── -->
-<div id="token-modal">
-  <div id="token-box">
-    <div id="token-title">AKP 변환기</div>
-    <div id="token-desc">학원장으로부터 받은 토큰을 입력하세요.</div>
-    <input type="text" id="token-input" placeholder="akp-xxxxxxxx" autocomplete="off" spellcheck="false">
-    <div id="token-err"></div>
-    <button id="token-submit">입력</button>
-    <div id="token-admin-link"><a href="/admin">관리자 페이지</a></div>
+    <span id="user-info" style="font-size:0.8rem;color:#9ca3af;margin-left:8px;"></span>
+    <a href="/admin" id="admin-link" style="display:none;font-size:0.8rem;color:#6b7280;margin-left:8px;text-decoration:none;">관리자</a>
+    <a href="/auth/logout" style="font-size:0.8rem;color:#6b7280;margin-left:8px;text-decoration:none;">로그아웃</a>
   </div>
 </div>
 
@@ -498,47 +489,13 @@ function escHtml(s) {
     .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-/* ── 토큰 관리 ── */
-const TOKEN_KEY = 'akp_token';
-
-function getToken() { return localStorage.getItem(TOKEN_KEY) || ''; }
-
-function setToken(t) {
-  localStorage.setItem(TOKEN_KEY, t);
-  const badge = $('token-badge');
-  if (badge) badge.textContent = t ? `🔑 ${t}` : '';
-}
-
-function showTokenModal() {
-  const modal = $('token-modal');
-  $('token-input').value = getToken();
-  $('token-err').textContent = '';
-  modal.classList.add('show');
-  setTimeout(() => $('token-input').focus(), 100);
-}
-
-function hideTokenModal() { $('token-modal').classList.remove('show'); }
-
-// 초기화: 토큰 없으면 모달 표시
-(function initToken() {
-  const t = getToken();
-  if (!t) {
-    showTokenModal();
-  } else {
-    setToken(t);
-  }
-  const badge = $('token-badge');
-  if (badge) badge.addEventListener('click', showTokenModal);
-})();
-
-$('token-submit').addEventListener('click', () => {
-  const t = $('token-input').value.trim();
-  if (!t) { $('token-err').textContent = '토큰을 입력하세요.'; return; }
-  setToken(t);
-  hideTokenModal();
-});
-$('token-input').addEventListener('keydown', e => {
-  if (e.key === 'Enter') $('token-submit').click();
+/* ── 사용자 정보 로드 ── */
+fetch('/api/me').then(r => r.json()).then(me => {
+  if (!me.authenticated) { window.location.href = '/auth/login'; return; }
+  const ui = $('user-info');
+  if (ui) ui.textContent = me.name || me.email;
+  const al = $('admin-link');
+  if (al && me.is_admin) al.style.display = 'inline';
 });
 
 /* ── 드롭존 ── */
@@ -629,16 +586,15 @@ $('convert-btn').addEventListener('click', async () => {
   const fd = new FormData();
   fd.append('file', selectedFile);
   fd.append('full_content', $('full-content').checked ? 'true' : 'false');
-  fd.append('token', getToken());
 
   let jobId;
   try {
     const res = await fetch('/convert', { method: 'POST', body: fd });
     if (!res.ok) {
       const txt = await res.text();
-      if (res.status === 401 || res.status === 403) {
-        $('token-err').textContent = '유효하지 않은 토큰입니다.';
-        showTokenModal();
+      if (res.status === 401 || res.status === 307) {
+        window.location.href = '/auth/login';
+        return;
       }
       throw new Error(JSON.parse(txt)?.detail || txt);
     }

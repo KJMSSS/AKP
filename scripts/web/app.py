@@ -1,12 +1,16 @@
 """
-AKP 웹 변환 서버 — FastAPI + SSE + 검수
+AKP 웹 변환 서버 — FastAPI + Google OAuth + SSE
 
 실행:
-    py -m uvicorn scripts.web.app:app --host 0.0.0.0 --port 8000
+    py -m uvicorn scripts.web.app:app --host 0.0.0.0 --port 8080
 
-접속:
-    내 PC  : http://localhost:8000
-    학원 PC: http://[집IP]:8000
+환경변수:
+    GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET  — Google OAuth2
+    SECRET_KEY       — 세션 서명 키
+    ADMIN_EMAIL      — 관리자 이메일
+    ANTHROPIC_API_KEY
+    DAILY_COST_CAP   — 전체 일일 비용 한도 (기본 5.0)
+    DATA_DIR         — 데이터 저장 경로 (Railway Volume)
 """
 from __future__ import annotations
 
@@ -23,18 +27,18 @@ from datetime import datetime
 from pathlib import Path
 
 import fitz  # PyMuPDF
+from authlib.integrations.starlette_client import OAuth
 from dotenv import load_dotenv
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, StreamingResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.sessions import SessionMiddleware
 
 load_dotenv()
 
 # ── 경로 설정 ──────────────────────────────────────────────────────────
 _HERE    = Path(__file__).resolve().parent
 _ROOT    = _HERE.parent.parent
-
-# Railway 등 클라우드에서는 /tmp 사용, 로컬은 scripts/web/tmp/
 _TMP_DIR = Path(os.environ.get("TMP_DIR", str(_HERE / "tmp")))
 _TMP_DIR.mkdir(exist_ok=True, parents=True)
 
@@ -55,64 +59,172 @@ from src.common.hwpx_validator import validate_hwpx                 # noqa: E402
 from scripts.web.usage_log import (                                 # noqa: E402
     append_entry, read_entries, today_summary, DAILY_CAP_USD,
 )
-from scripts.web.tokens import (                                    # noqa: E402
-    validate as validate_token, token_today_cost,
-    all_token_stats, create_token, revoke_token, activate_token,
-    delete_token, update_cap, ADMIN_PASSWORD,
-)
 from scripts.web.corrections_log import (                           # noqa: E402
     append_correction, read_corrections, revert_correction,
     corrections_summary,
 )
+from scripts.web.users import (                                     # noqa: E402
+    is_admin, is_allowed, get_user, add_user, update_user,
+    remove_user, list_users, user_today_cost, ADMIN_EMAIL,
+)
 
-# ── 템플릿 HWPX (header.xml 폰트 참조용) ─────────────────────────────
+# ── 템플릿 HWPX ───────────────────────────────────────────────────────
 _SAMPLES = _ROOT / "samples"
 _TEMPLATE = next(
     (f for f in _SAMPLES.glob("*.hwpx") if "워드초벌" in f.name and "]1." not in f.name),
     next(_SAMPLES.glob("*.hwpx"), None),
 )
 
-# ── 진행 중인 job 저장소 ───────────────────────────────────────────────
+# ── Job 저장소 ────────────────────────────────────────────────────────
 _jobs: dict[str, dict] = {}
 
+# ── Google OAuth 설정 ─────────────────────────────────────────────────
+GOOGLE_CLIENT_ID     = os.environ.get("GOOGLE_CLIENT_ID", "")
+GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET", "")
+SECRET_KEY           = os.environ.get("SECRET_KEY", "akp-default-secret-change-me")
+
+oauth = OAuth()
+oauth.register(
+    name="google",
+    client_id=GOOGLE_CLIENT_ID,
+    client_secret=GOOGLE_CLIENT_SECRET,
+    server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
+    client_kwargs={"scope": "openid email profile"},
+)
+
+# ── FastAPI 앱 ────────────────────────────────────────────────────────
 app = FastAPI(title="AKP 변환기")
+app.add_middleware(SessionMiddleware, secret_key=SECRET_KEY)
 app.mount("/static", StaticFiles(directory=str(_HERE / "static")), name="static")
+
+
+# ══════════════════════════════════════════════════════════════════════
+# 인증 헬퍼
+# ══════════════════════════════════════════════════════════════════════
+
+def _current_email(request: Request) -> str | None:
+    return request.session.get("email")
+
+
+def _require_login(request: Request) -> str:
+    email = _current_email(request)
+    if not email:
+        raise HTTPException(status_code=307, headers={"Location": "/login"})
+    if not is_allowed(email):
+        raise HTTPException(status_code=403, detail="접근 권한이 없습니다. 관리자에게 문의하세요.")
+    return email
+
+
+def _require_admin(request: Request) -> str:
+    email = _require_login(request)
+    if not is_admin(email):
+        raise HTTPException(status_code=403, detail="관리자만 접근 가능합니다.")
+    return email
+
+
+# ══════════════════════════════════════════════════════════════════════
+# 인증 라우트
+# ══════════════════════════════════════════════════════════════════════
+
+@app.get("/auth/login")
+async def auth_login(request: Request):
+    redirect_uri = str(request.url_for("auth_callback"))
+    return await oauth.google.authorize_redirect(request, redirect_uri)
+
+
+@app.get("/auth/callback")
+async def auth_callback(request: Request):
+    try:
+        token = await oauth.google.authorize_access_token(request)
+    except Exception:
+        return RedirectResponse("/auth/login")
+
+    user_info = token.get("userinfo") or {}
+    email = user_info.get("email", "")
+    name  = user_info.get("name", email)
+
+    if not email:
+        return RedirectResponse("/auth/login")
+
+    if not is_allowed(email) and not is_admin(email):
+        return HTMLResponse(
+            f"<h2 style='font-family:sans-serif;padding:40px'>접근 권한이 없습니다.</h2>"
+            f"<p style='font-family:sans-serif;padding:0 40px'>{email} 계정은 등록되지 않았습니다.<br>"
+            f"학원장에게 등록을 요청하세요.</p>",
+            status_code=403,
+        )
+
+    request.session["email"] = email
+    request.session["name"]  = name
+    return RedirectResponse("/")
+
+
+@app.get("/auth/logout")
+async def auth_logout(request: Request):
+    request.session.clear()
+    return RedirectResponse("/auth/login")
 
 
 # ══════════════════════════════════════════════════════════════════════
 # 기본 라우트
 # ══════════════════════════════════════════════════════════════════════
 
+@app.get("/login", response_class=HTMLResponse)
+async def login_page(request: Request):
+    if _current_email(request):
+        return RedirectResponse("/")
+    return HTMLResponse((_HERE / "static" / "login.html").read_text(encoding="utf-8"))
+
+
 @app.get("/", response_class=HTMLResponse)
-async def root():
+async def root(request: Request):
+    email = _current_email(request)
+    if not email or not is_allowed(email):
+        return RedirectResponse("/login")
     return HTMLResponse((_HERE / "static" / "index.html").read_text(encoding="utf-8"))
 
 
 @app.get("/api/usage")
-async def api_usage():
+async def api_usage(request: Request):
     return JSONResponse({"summary": today_summary(), "recent": read_entries(days=7)[:10]})
+
+
+@app.get("/api/me")
+async def api_me(request: Request):
+    email = _current_email(request)
+    if not email:
+        return JSONResponse({"authenticated": False})
+    return JSONResponse({
+        "authenticated": True,
+        "email": email,
+        "name": request.session.get("name", email),
+        "is_admin": is_admin(email),
+    })
 
 
 @app.post("/convert")
 async def convert(
+    request: Request,
     file: UploadFile = File(...),
     full_content: str = Form("false"),
-    token: str = Form(""),
 ):
-    """PDF 업로드 → job_id 반환. 백그라운드에서 변환 시작."""
+    email = _require_login(request)
+
     if not file.filename.lower().endswith(".pdf"):
         raise HTTPException(400, "PDF 파일만 업로드 가능합니다.")
 
-    # 토큰 검증
-    name, info = validate_token(token)
-    if name is None:
-        raise HTTPException(401, "유효하지 않은 토큰입니다. 학원장에게 문의하세요.")
-
-    # 토큰별 한도 체크 (cap=0 이면 무제한)
-    today_cost = token_today_cost(name)
-    cap = info.get("cap_usd", DAILY_CAP_USD)
-    if cap > 0 and today_cost >= cap:
-        raise HTTPException(429, f"오늘 사용 한도 ${cap:.2f}에 도달했습니다 (현재 ${today_cost:.2f}). 학원장에게 문의하세요.")
+    # 사용자별 한도 체크 (관리자는 무제한)
+    if not is_admin(email):
+        user = get_user(email)
+        cap  = user.get("cap_usd", DAILY_CAP_USD) if user else DAILY_CAP_USD
+        if cap > 0:
+            today_cost = user_today_cost(email)
+            if today_cost >= cap:
+                raise HTTPException(
+                    429,
+                    f"오늘 사용 한도 ${cap:.2f}에 도달했습니다 (현재 ${today_cost:.2f}). "
+                    "관리자에게 문의하세요.",
+                )
 
     job_id  = uuid.uuid4().hex[:12]
     pdf_dst = _TMP_DIR / f"{job_id}.pdf"
@@ -124,7 +236,7 @@ async def convert(
     full = full_content.lower() in ("true", "1", "yes")
     threading.Thread(
         target=_run_conversion,
-        args=(job_id, pdf_dst, file.filename, full, name),
+        args=(job_id, pdf_dst, file.filename, full, email),
         daemon=True,
     ).start()
     return JSONResponse({"job_id": job_id})
@@ -132,9 +244,8 @@ async def convert(
 
 @app.get("/stream/{job_id}")
 async def stream(job_id: str):
-    """SSE 실시간 로그 스트림."""
     if job_id not in _jobs:
-        raise HTTPException(404, "job을 찾을 수 없습니다.")
+        raise HTTPException(404)
 
     async def event_gen():
         q = _jobs[job_id]["queue"]
@@ -155,7 +266,7 @@ async def stream(job_id: str):
             fname = hwpx.name if hwpx else ""
             yield (
                 f"event: done\n"
-                f"data: {json.dumps({'file': fname, 'cost': meta.get('cost_usd', 0), 'tok_in': meta.get('in_tok', 0), 'tok_out': meta.get('out_tok', 0)})}\n\n"
+                f"data: {json.dumps({'file': fname, 'cost': meta.get('cost_usd', 0)})}\n\n"
             )
 
     return StreamingResponse(
@@ -169,72 +280,109 @@ async def stream(job_id: str):
 async def download(job_id: str):
     job = _jobs.get(job_id)
     if not job or not job.get("hwpx") or not job["hwpx"].exists():
-        raise HTTPException(404, "파일을 찾을 수 없습니다.")
+        raise HTTPException(404)
     hwpx: Path = job["hwpx"]
     return FileResponse(str(hwpx), media_type="application/octet-stream", filename=hwpx.name)
 
-
-# ══════════════════════════════════════════════════════════════════════
-# 검수 라우트
-# ══════════════════════════════════════════════════════════════════════
 
 # ══════════════════════════════════════════════════════════════════════
 # 관리자 라우트
 # ══════════════════════════════════════════════════════════════════════
 
 @app.get("/admin", response_class=HTMLResponse)
-async def admin_page():
+async def admin_page(request: Request):
+    _require_admin(request)
     return HTMLResponse((_HERE / "static" / "admin.html").read_text(encoding="utf-8"))
 
 
-def _check_admin(password: str) -> None:
-    if password != ADMIN_PASSWORD:
-        raise HTTPException(403, "관리자 비밀번호가 틀렸습니다.")
+@app.get("/api/admin/users")
+async def api_admin_users(request: Request):
+    _require_admin(request)
+    return JSONResponse(list_users())
 
 
-@app.get("/api/admin/tokens")
-async def api_admin_tokens(password: str = ""):
-    _check_admin(password)
-    return JSONResponse(all_token_stats())
-
-
-@app.post("/api/admin/tokens")
-async def api_create_token(request: Request):
+@app.post("/api/admin/users")
+async def api_add_user(request: Request):
+    _require_admin(request)
     body = await request.json()
-    _check_admin(body.get("password", ""))
+    email   = body.get("email", "").strip().lower()
     name    = body.get("name", "").strip()
     cap_usd = float(body.get("cap_usd", 2.0))
-    if not name:
-        raise HTTPException(400, "이름을 입력하세요.")
-    token = create_token(name, cap_usd)
-    return JSONResponse({"name": name, "token": token, "cap_usd": cap_usd})
+    if not email or not name:
+        raise HTTPException(400, "이메일과 이름을 입력하세요.")
+    add_user(email, name, cap_usd)
+    return JSONResponse({"ok": True, "email": email})
 
 
-@app.patch("/api/admin/tokens/{name}")
-async def api_update_token(name: str, request: Request):
-    body = await request.json()
-    _check_admin(body.get("password", ""))
+@app.patch("/api/admin/users/{email:path}")
+async def api_update_user(email: str, request: Request):
+    _require_admin(request)
+    body   = await request.json()
     action = body.get("action", "")
-    if action == "revoke":
-        revoke_token(name)
+    if action == "deactivate":
+        update_user(email, active=False)
     elif action == "activate":
-        activate_token(name)
+        update_user(email, active=True)
     elif action == "delete":
-        delete_token(name)
+        remove_user(email)
     elif action == "cap":
-        update_cap(name, float(body.get("cap_usd", 2.0)))
+        update_user(email, cap_usd=float(body.get("cap_usd", 2.0)))
     else:
         raise HTTPException(400, f"알 수 없는 액션: {action}")
     return JSONResponse({"ok": True})
 
 
+@app.get("/api/admin/corrections")
+async def api_corrections(request: Request, days: int = 30):
+    _require_admin(request)
+    return JSONResponse({
+        "corrections": read_corrections(days=days),
+        "summary":     corrections_summary(days=7),
+    })
+
+
+@app.patch("/api/admin/corrections/{cid}/revert")
+async def api_revert_correction(cid: str, request: Request):
+    _require_admin(request)
+    if not revert_correction(cid):
+        raise HTTPException(404)
+    return JSONResponse({"ok": True})
+
+
+# ══════════════════════════════════════════════════════════════════════
+# 검수 라우트
+# ══════════════════════════════════════════════════════════════════════
+
+@app.get("/review/{job_id}", response_class=HTMLResponse)
+async def review_page(job_id: str, request: Request):
+    _require_login(request)
+    if not (_TMP_DIR / f"{job_id}_review.json").exists():
+        raise HTTPException(404, "검수 데이터가 없습니다.")
+    return HTMLResponse((_HERE / "static" / "review.html").read_text(encoding="utf-8"))
+
+
+@app.get("/api/review/{job_id}")
+async def api_review(job_id: str, request: Request):
+    _require_login(request)
+    f = _TMP_DIR / f"{job_id}_review.json"
+    if not f.exists():
+        raise HTTPException(404)
+    return JSONResponse(json.loads(f.read_text(encoding="utf-8")))
+
+
+@app.get("/page/{job_id}/{page_num}")
+async def page_image(job_id: str, page_num: int, request: Request):
+    _require_login(request)
+    img = _TMP_DIR / f"{job_id}_page{page_num}.png"
+    if not img.exists():
+        raise HTTPException(404)
+    return FileResponse(str(img), media_type="image/png")
+
+
 @app.post("/api/review/{job_id}/corrections")
 async def save_corrections(job_id: str, request: Request):
-    """직원이 표시한 오류 목록을 수정 로그에 저장."""
-    body = await request.json()
-    token     = body.get("token", "")
-    name, _   = validate_token(token)
-    employee  = name or "알 수 없음"
+    email = _require_login(request)
+    body  = await request.json()
 
     review_file = _TMP_DIR / f"{job_id}_review.json"
     pdf_name = ""
@@ -244,151 +392,84 @@ async def save_corrections(job_id: str, request: Request):
         except Exception:
             pass
 
-    corrections: list[dict] = body.get("corrections", [])
-    saved_ids = []
-    for c in corrections:
+    saved = []
+    for c in body.get("corrections", []):
         cid = append_correction({
-            "employee":       employee,
-            "job_id":         job_id,
-            "pdf_name":       pdf_name,
-            "problem_number": c.get("problem_number"),
-            "problem_text":   c.get("problem_text", ""),
+            "employee":        request.session.get("name", email),
+            "token":           email,
+            "job_id":          job_id,
+            "pdf_name":        pdf_name,
+            "problem_number":  c.get("problem_number"),
+            "problem_text":    c.get("problem_text", ""),
             "correction_note": c.get("correction_note", ""),
-            "corrected_text": c.get("corrected_text", ""),
+            "corrected_text":  c.get("corrected_text", ""),
         })
-        saved_ids.append(cid)
-
-    return JSONResponse({"saved": len(saved_ids), "ids": saved_ids})
-
-
-@app.get("/api/admin/corrections")
-async def api_corrections(password: str = "", days: int = 30):
-    _check_admin(password)
-    entries  = read_corrections(days=days)
-    summary  = corrections_summary(days=7)
-    return JSONResponse({"corrections": entries, "summary": summary})
-
-
-@app.patch("/api/admin/corrections/{cid}/revert")
-async def api_revert_correction(cid: str, request: Request):
-    body = await request.json()
-    _check_admin(body.get("password", ""))
-    ok = revert_correction(cid)
-    if not ok:
-        raise HTTPException(404, "해당 수정 항목을 찾을 수 없습니다.")
-    return JSONResponse({"ok": True})
-
-
-@app.get("/review/{job_id}", response_class=HTMLResponse)
-async def review_page(job_id: str):
-    """검수 전용 페이지."""
-    review_file = _TMP_DIR / f"{job_id}_review.json"
-    if not review_file.exists():
-        raise HTTPException(404, "검수 데이터가 없습니다. 먼저 변환을 실행하세요.")
-    return HTMLResponse((_HERE / "static" / "review.html").read_text(encoding="utf-8"))
-
-
-@app.get("/api/review/{job_id}")
-async def api_review(job_id: str):
-    """검수 데이터 JSON 반환."""
-    review_file = _TMP_DIR / f"{job_id}_review.json"
-    if not review_file.exists():
-        raise HTTPException(404, "검수 데이터가 없습니다.")
-    return JSONResponse(json.loads(review_file.read_text(encoding="utf-8")))
-
-
-@app.get("/page/{job_id}/{page_num}")
-async def page_image(job_id: str, page_num: int):
-    """PDF 페이지 이미지 반환."""
-    img = _TMP_DIR / f"{job_id}_page{page_num}.png"
-    if not img.exists():
-        raise HTTPException(404, f"{page_num}페이지 이미지가 없습니다.")
-    return FileResponse(str(img), media_type="image/png")
+        saved.append(cid)
+    return JSONResponse({"saved": len(saved)})
 
 
 @app.post("/api/review/{job_id}/submit")
 async def review_submit(job_id: str, request: Request):
-    """수정된 문제 텍스트로 HWPX 재빌드 → 다운로드 URL 반환."""
+    _require_login(request)
     review_file = _TMP_DIR / f"{job_id}_review.json"
     if not review_file.exists():
-        raise HTTPException(404, "검수 데이터가 없습니다.")
+        raise HTTPException(404)
 
-    body = await request.json()
-    problems: list[dict] = body.get("problems", [])
+    body     = await request.json()
+    problems = body.get("problems", [])
     if not problems:
         raise HTTPException(400, "문제 데이터가 없습니다.")
 
-    # 수정된 텍스트로 마크다운 재조립
     review_data = json.loads(review_file.read_text(encoding="utf-8"))
-    header = review_data.get("header", "")
-    edited_blocks = [p["full_text"] for p in problems]
-    new_md = header + "\n\n" + "\n\n".join(edited_blocks)
+    header      = review_data.get("header", "")
+    new_md      = header + "\n\n" + "\n\n".join(p["full_text"] for p in problems)
 
-    # HWPX 재빌드
-    reviewed_id  = f"{job_id}_reviewed"
-    out_hwpx     = _TMP_DIR / f"{reviewed_id}.hwpx"
+    reviewed_id = f"{job_id}_reviewed"
+    out_hwpx    = _TMP_DIR / f"{reviewed_id}.hwpx"
 
     try:
         if not _TEMPLATE:
-            raise RuntimeError("템플릿 HWPX가 없습니다.")
+            raise RuntimeError("템플릿 없음")
         build_from_markdown(new_md, out_hwpx, _TEMPLATE)
         replace_condition_tables(out_hwpx)
         replace_boilerplate_tables(out_hwpx)
         fix_hwpx_namespaces(str(out_hwpx))
         errs = validate_hwpx(str(out_hwpx))
         if errs:
-            raise RuntimeError(f"HWPX 검증 실패: {errs[0]}")
+            raise RuntimeError(f"검증 실패: {errs[0]}")
     except Exception as e:
         raise HTTPException(500, str(e))
 
-    # 수정 건수 계산
-    edited_count = sum(1 for p in problems if p.get("status") == "edited")
-
-    # 검수 결과 로그
+    _jobs[reviewed_id] = {"queue": queue.Queue(), "hwpx": out_hwpx, "meta": {}}
+    edited = sum(1 for p in problems if p.get("status") == "edited")
     append_entry({
         "ts": datetime.now().isoformat(timespec="seconds"),
         "pdf": review_data.get("pdf_name", ""),
-        "mode": "review",
-        "in_tok": 0, "out_tok": 0, "cost_usd": 0,
-        "duration_s": 0,
-        "status": "ok",
-        "edited": edited_count,
+        "mode": "review", "in_tok": 0, "out_tok": 0,
+        "cost_usd": 0, "duration_s": 0, "status": "ok",
+        "edited": edited, "token": request.session.get("email", ""),
     })
-
-    # job에 검수본 HWPX 등록
-    if job_id not in _jobs:
-        _jobs[job_id] = {"queue": queue.Queue(), "hwpx": None, "meta": {}}
-    _jobs[reviewed_id] = {"queue": queue.Queue(), "hwpx": out_hwpx, "meta": {}}
-
-    return JSONResponse({
-        "download_url": f"/download/{reviewed_id}",
-        "filename": out_hwpx.name,
-        "edited": edited_count,
-    })
+    return JSONResponse({"download_url": f"/download/{reviewed_id}", "edited": edited})
 
 
 # ══════════════════════════════════════════════════════════════════════
-# 변환 워커 (백그라운드 스레드)
+# 변환 워커
 # ══════════════════════════════════════════════════════════════════════
 
 class _QueueWriter(io.TextIOBase):
-    """sys.stdout → Queue 리다이렉트."""
-    def __init__(self, q: "queue.Queue[str | None]"):
+    def __init__(self, q):
         self._q = q
-
-    def write(self, s: str) -> int:
+    def write(self, s):
         for line in s.splitlines():
             line = line.strip()
             if line:
                 self._q.put(f"data: {line}\n\n")
         return len(s)
-
     def flush(self):
         pass
 
 
 def _render_pdf_pages(pdf_path: Path, job_id: str) -> int:
-    """PDF 전 페이지를 150 DPI PNG로 저장. 페이지 수 반환."""
     doc = fitz.open(str(pdf_path))
     for i, page in enumerate(doc):
         pix = page.get_pixmap(dpi=150)
@@ -399,7 +480,6 @@ def _render_pdf_pages(pdf_path: Path, job_id: str) -> int:
 
 
 def _save_review_data(job_id: str, original_name: str, md: str, n_pages: int) -> None:
-    """변환된 마크다운을 문제 단위로 파싱해 검수 JSON 저장."""
     header, segments = parse_problems(md)
     data = {
         "job_id":   job_id,
@@ -407,12 +487,8 @@ def _save_review_data(job_id: str, original_name: str, md: str, n_pages: int) ->
         "header":   header,
         "pages":    n_pages,
         "problems": [
-            {
-                "number":       seg.number,
-                "full_text":    seg.raw_block,
-                "is_subjective": seg.is_subjective,
-                "status":       "pending",
-            }
+            {"number": seg.number, "full_text": seg.raw_block,
+             "is_subjective": seg.is_subjective, "status": "pending"}
             for seg in segments
         ],
     }
@@ -426,52 +502,43 @@ def _run_conversion(
     pdf_path: Path,
     original_name: str,
     full_content: bool,
-    token_name: str = "",
+    email: str = "",
 ) -> None:
     q    = _jobs[job_id]["queue"]
     meta = _jobs[job_id]["meta"]
 
     orig_stdout = sys.stdout
     sys.stdout  = _QueueWriter(q)
-
-    ts_start = datetime.now().isoformat(timespec="seconds")
-    t0       = time.time()
+    ts_start    = datetime.now().isoformat(timespec="seconds")
+    t0          = time.time()
 
     try:
-        # 일일 한도 체크
         guard = CostGuard(cap_usd=DAILY_CAP_USD)
         guard.check_or_raise("web")
 
-        # PDF 페이지 렌더링 (삭제 전에 수행)
         print("  [검수] PDF 페이지 렌더링 중...")
-        n_pages = _render_pdf_pages(pdf_path, job_id)
-
+        n_pages     = _render_pdf_pages(pdf_path, job_id)
         cost_before = guard.total_today()
 
-        # ── 변환 파이프라인 ──
         md = read_pdf_as_markdown(pdf_path, full_content=full_content)
         md = apply_fallback(md, pdf_path)
 
-        # ① 문제 파싱 + 그림 감지 (PDF 삭제 전)
         header, segments = parse_problems(md)
         fig_dir = _TMP_DIR / f"{job_id}_figs"
         fig_dir.mkdir(exist_ok=True)
         try:
-            figures   = extract_images(pdf_path, fig_dir, dpi=150)
+            figures    = extract_images(pdf_path, fig_dir, dpi=150)
             figure_map = {f.item_no: f for f in figures if f.item_no}
         except Exception as e:
-            print(f"  [그림] 감지 실패 (무시): {e}")
+            print(f"  [그림] 감지 실패: {e}")
             figure_map = {}
 
-        # ② 마커 삽입 (조건·보기·그림)
-        md = rebuild_markdown(header, segments,
-                              figure_items=set(figure_map) or None)
+        md = rebuild_markdown(header, segments, figure_items=set(figure_map) or None)
 
         out_hwpx = _TMP_DIR / f"{job_id}.hwpx"
         if not _TEMPLATE:
             raise RuntimeError("samples/ 폴더에 .hwpx 파일이 없습니다.")
 
-        # ③ HWPX 빌드
         build_from_markdown(md, out_hwpx, _TEMPLATE)
         replace_condition_tables(out_hwpx)
         replace_boilerplate_tables(out_hwpx)
@@ -480,7 +547,6 @@ def _run_conversion(
         if errs:
             raise RuntimeError(f"HWPX 검증 실패: {errs[0]}")
 
-        # ④ 그림 삽입
         for item_no, fig in sorted(figure_map.items()):
             try:
                 insert_figure_placeholder(out_hwpx, item_no, fig.image_path)
@@ -488,19 +554,18 @@ def _run_conversion(
             except Exception as e:
                 print(f"  [그림] {item_no}번 삽입 실패: {e}")
 
-        # 검수 데이터 저장
         print("  [검수] 문제 파싱 및 검수 데이터 저장 중...")
         _save_review_data(job_id, original_name, md, n_pages)
 
-        duration     = round(time.time() - t0, 1)
-        cost_usd     = round(guard.total_today() - cost_before, 4)
+        duration = round(time.time() - t0, 1)
+        cost_usd = round(guard.total_today() - cost_before, 4)
 
         append_entry({
             "ts": ts_start, "pdf": original_name,
             "mode": "full" if full_content else "questions",
             "in_tok": 0, "out_tok": 0,
             "cost_usd": cost_usd, "duration_s": duration,
-            "status": "ok", "token": token_name,
+            "status": "ok", "token": email,
         })
         guard.record("web", cost_usd)
 
@@ -513,7 +578,7 @@ def _run_conversion(
             "mode": "full" if full_content else "questions",
             "in_tok": 0, "out_tok": 0, "cost_usd": 0,
             "duration_s": round(time.time() - t0, 1),
-            "status": "cap_exceeded", "token": token_name,
+            "status": "cap_exceeded", "token": email,
         })
         meta["error"] = str(e)
 
@@ -526,7 +591,7 @@ def _run_conversion(
             "mode": "full" if full_content else "questions",
             "in_tok": 0, "out_tok": 0, "cost_usd": 0,
             "duration_s": round(time.time() - t0, 1),
-            "status": "error", "token": token_name,
+            "status": "error", "token": email,
         })
         meta["error"] = str(e)
 
