@@ -284,16 +284,34 @@ async def download(job_id: str):
         hwpx = job["hwpx"]
     else:
         # 서버 재시작 후에도 파일시스템에서 복원
+        base_id = job_id.removesuffix("_reviewed")
         for candidate in [
             _TMP_DIR / f"{job_id}_reviewed.hwpx",
             _TMP_DIR / f"{job_id}.hwpx",
+            _TMP_DIR / f"{base_id}_reviewed.hwpx",
+            _TMP_DIR / f"{base_id}.hwpx",
         ]:
             if candidate.exists():
                 hwpx = candidate
                 break
         else:
             raise HTTPException(404)
-    return FileResponse(str(hwpx), media_type="application/octet-stream", filename=hwpx.name)
+
+    # 원본 PDF 이름으로 다운로드 파일명 결정
+    base_id = job_id.removesuffix("_reviewed")
+    review_file = _TMP_DIR / f"{base_id}_review.json"
+    dl_name = hwpx.name  # 기본값
+    if review_file.exists():
+        try:
+            pdf_name = json.loads(review_file.read_text(encoding="utf-8")).get("pdf_name", "")
+            if pdf_name:
+                stem = Path(pdf_name).stem
+                suffix = "_검수" if "_reviewed" in hwpx.name else ""
+                dl_name = f"{stem}{suffix}.hwpx"
+        except Exception:
+            pass
+
+    return FileResponse(str(hwpx), media_type="application/octet-stream", filename=dl_name)
 
 
 @app.get("/api/jobs/{job_id}")
