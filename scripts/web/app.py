@@ -454,8 +454,9 @@ async def review_submit(job_id: str, request: Request):
     if not review_file.exists():
         raise HTTPException(404)
 
-    body     = await request.json()
-    problems = body.get("problems", [])
+    body         = await request.json()
+    problems     = body.get("problems", [])
+    overall_note = body.get("overall_note", "").strip()
     if not problems:
         raise HTTPException(400, "문제 데이터가 없습니다.")
 
@@ -480,14 +481,30 @@ async def review_submit(job_id: str, request: Request):
         raise HTTPException(500, str(e))
 
     _jobs[reviewed_id] = {"queue": queue.Queue(), "hwpx": out_hwpx, "meta": {}}
-    edited = sum(1 for p in problems if p.get("status") == "edited")
+    edited   = sum(1 for p in problems if p.get("status") == "edited")
+    email    = request.session.get("email", "")
+    pdf_name = review_data.get("pdf_name", "")
+
     append_entry({
         "ts": datetime.now().isoformat(timespec="seconds"),
-        "pdf": review_data.get("pdf_name", ""),
-        "mode": "review", "in_tok": 0, "out_tok": 0,
-        "cost_usd": 0, "duration_s": 0, "status": "ok",
-        "edited": edited, "token": request.session.get("email", ""),
+        "pdf": pdf_name, "mode": "review",
+        "in_tok": 0, "out_tok": 0, "cost_usd": 0, "duration_s": 0,
+        "status": "ok", "edited": edited, "token": email,
     })
+
+    # 전체 메모 저장
+    if overall_note:
+        append_correction({
+            "employee":        request.session.get("name", email),
+            "token":           email,
+            "job_id":          job_id,
+            "pdf_name":        pdf_name,
+            "problem_number":  "전체",
+            "problem_text":    "",
+            "correction_note": overall_note,
+            "corrected_text":  "",
+        })
+
     return JSONResponse({"download_url": f"/download/{reviewed_id}", "edited": edited})
 
 
