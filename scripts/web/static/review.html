@@ -582,6 +582,15 @@
 </head>
 <body>
 
+<!-- 검수 완료 경고 배너 -->
+<div id="already-done-banner" style="display:none;position:sticky;top:52px;z-index:90;background:#fef9c3;border-bottom:2px solid #fbbf24;padding:10px 20px;display:none;align-items:center;gap:12px;flex-wrap:wrap;">
+  <span style="font-size:13px;color:#92400e;">⚠️ <strong id="already-done-msg"></strong></span>
+  <button onclick="document.getElementById('already-done-banner').style.display='none'"
+    style="margin-left:auto;font-size:12px;padding:3px 12px;border:1px solid #fbbf24;border-radius:5px;background:#fff;color:#92400e;cursor:pointer;">
+    닫고 계속
+  </button>
+</div>
+
 <!-- 로딩 오버레이 -->
 <div id="overlay">
   <div class="spinner"></div>
@@ -789,6 +798,16 @@
       }));
       initUI();
       hideOverlay();
+
+      // 이미 다른 직원이 검수 완료했으면 경고
+      if (data.review_status === 'completed') {
+        const name = data.reviewer_name || data.reviewer_email || '누군가';
+        const at   = data.reviewed_at   || '';
+        const banner = document.getElementById('already-done-banner');
+        document.getElementById('already-done-msg').textContent =
+          `${name}님이 ${at ? at + '에 ' : ''}이미 검수 완료한 파일입니다. 중복 검수에 주의하세요.`;
+        banner.style.display = 'flex';
+      }
     } catch (e) {
       showOverlay('데이터 로드 실패', e.message);
     }

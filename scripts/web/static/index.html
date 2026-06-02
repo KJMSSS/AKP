@@ -852,20 +852,35 @@ async function renderMyJobs() {
   if (!jobs.length) { section.style.display = 'none'; return; }
   section.style.display = 'block';
 
+  // 우선 기본 렌더링
   tbody.innerHTML = jobs.map(j => {
-    const d   = new Date(j.ts);
-    const ts  = `${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+    const d  = new Date(j.ts);
+    const ts = `${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
     return `
-      <tr>
+      <tr id="job-row-${escHtml(j.id)}">
         <td style="white-space:nowrap;color:#868e96">${ts}</td>
         <td>${escHtml(j.file)}</td>
-        <td>
+        <td><span id="job-status-${escHtml(j.id)}" style="font-size:0.75rem;color:#adb5bd;margin-right:6px;"></span>
           <a class="job-btn primary" href="/download/${escHtml(j.id)}">다운로드</a>
           <a class="job-btn review" href="/review/${escHtml(j.id)}">검수 보기</a>
           <button class="job-btn" onclick="removeJob('${escHtml(j.id)}')">✕</button>
         </td>
       </tr>`;
   }).join('');
+
+  // 비동기로 검수 상태 업데이트
+  jobs.forEach(async j => {
+    try {
+      const res = await fetch(`/api/review/${j.id}`, { credentials: 'include' });
+      if (!res.ok) return;
+      const data = await res.json();
+      const el = $(`job-status-${j.id}`);
+      if (!el) return;
+      if (data.review_status === 'completed') {
+        el.innerHTML = `<span style="background:#dcfce7;color:#15803d;border-radius:4px;padding:1px 7px;font-weight:600;">검수완료</span>`;
+      }
+    } catch(_) {}
+  });
 }
 
 window.removeJob = function(jobId) {
