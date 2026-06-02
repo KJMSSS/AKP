@@ -42,6 +42,51 @@ _ROOT    = _HERE.parent.parent
 _TMP_DIR = Path(os.environ.get("TMP_DIR", str(_HERE / "tmp")))
 _TMP_DIR.mkdir(exist_ok=True, parents=True)
 
+_DATA_DIR = Path(os.environ.get("DATA_DIR", str(_HERE / "data")))
+_DATA_DIR.mkdir(exist_ok=True, parents=True)
+_CONFIG_FILE   = _DATA_DIR / "matrix_config.json"
+_REGISTRY_FILE = _DATA_DIR / "matrix_registry.json"
+_config_lock   = threading.Lock()
+_registry_lock = threading.Lock()
+
+_DEFAULT_SUBJECTS = [
+    {"id": "공수1", "name": "공통수학1", "grade": "1", "sem": "1"},
+    {"id": "공수2", "name": "공통수학2", "grade": "1", "sem": "2"},
+    {"id": "대수",  "name": "대수",      "grade": "2", "sem": "1"},
+    {"id": "확통",  "name": "확률과 통계","grade": "2", "sem": "2"},
+    {"id": "기하",  "name": "기하",      "grade": "2", "sem": "2"},
+    {"id": "미적1", "name": "미적분1",   "grade": "2", "sem": "2"},
+    {"id": "미적2", "name": "미적분2",   "grade": "3", "sem": "1"},
+]
+
+def _load_mconfig() -> dict:
+    with _config_lock:
+        if _CONFIG_FILE.exists():
+            try:
+                return json.loads(_CONFIG_FILE.read_text(encoding="utf-8"))
+            except Exception:
+                pass
+        cfg = {"subjects": _DEFAULT_SUBJECTS, "schools": []}
+        _CONFIG_FILE.write_text(json.dumps(cfg, ensure_ascii=False, indent=2), encoding="utf-8")
+        return cfg
+
+def _save_mconfig(cfg: dict) -> None:
+    with _config_lock:
+        _CONFIG_FILE.write_text(json.dumps(cfg, ensure_ascii=False, indent=2), encoding="utf-8")
+
+def _load_registry() -> dict:
+    with _registry_lock:
+        if _REGISTRY_FILE.exists():
+            try:
+                return json.loads(_REGISTRY_FILE.read_text(encoding="utf-8"))
+            except Exception:
+                pass
+        return {}
+
+def _save_registry(reg: dict) -> None:
+    with _registry_lock:
+        _REGISTRY_FILE.write_text(json.dumps(reg, ensure_ascii=False, indent=2), encoding="utf-8")
+
 sys.path.insert(0, str(_ROOT))
 
 from src.ocr.claude_pdf_reader import read_pdf_as_markdown          # noqa: E402
@@ -178,6 +223,14 @@ async def login_page(request: Request):
 
 @app.get("/", response_class=HTMLResponse)
 async def root(request: Request):
+    email = _current_email(request)
+    if not email or not is_allowed(email):
+        return RedirectResponse("/login")
+    return HTMLResponse((_HERE / "static" / "matrix.html").read_text(encoding="utf-8"))
+
+
+@app.get("/upload", response_class=HTMLResponse)
+async def upload_page(request: Request):
     email = _current_email(request)
     if not email or not is_allowed(email):
         return RedirectResponse("/login")
@@ -415,6 +468,126 @@ async def api_revert_correction(cid: str, request: Request):
 
 
 # ══════════════════════════════════════════════════════════════════════
+# ══════════════════════════════════════════════════════════════════════
+# Matrix 라우트
+# ══════════════════════════════════════════════════════════════════════
+
+@app.get("/matrix", response_class=HTMLResponse)
+async def matrix_page(request: Request):
+    email = _current_email(request)
+    if not email or not is_allowed(email):
+        return RedirectResponse("/login")
+    return HTMLResponse((_HERE / "static" / "matrix.html").read_text(encoding="utf-8"))
+
+
+@app.get("/api/config")
+async def api_get_config(request: Request):
+    _require_login(request)
+    return JSONResponse(_load_mconfig())
+
+
+@app.post("/api/config/schools")
+async def api_add_school(request: Request):
+    _require_login(request)
+    body = await request.json()
+    name = body.get("name", "").strip()
+    if not name:
+        raise HTTPException(400, "학교명을 입력하세요.")
+    cfg = _load_mconfig()
+    if name in cfg["schools"]:
+        raise HTTPException(409, f'"{name}"은 이미 등록된 학교입니다.')
+    cfg["schools"].append(name)
+    _save_mconfig(cfg)
+    return JSONResponse({"ok": True, "name": name})
+
+
+@app.delete("/api/config/schools/{school:path}")
+async def api_delete_school(school: str, request: Request):
+    _require_login(request)
+    cfg = _load_mconfig()
+    if school not in cfg["schools"]:
+        raise HTTPException(404)
+    cfg["schools"].remove(school)
+    _save_mconfig(cfg)
+    return JSONResponse({"ok": True})
+
+
+@app.post("/api/config/subjects")
+async def api_add_subject(request: Request):
+    _require_login(request)
+    body = await request.json()
+    sid  = body.get("id", "").strip()
+    name = body.get("name", "").strip()
+    if not sid or not name:
+        raise HTTPException(400, "id와 name을 입력하세요.")
+    cfg = _load_mconfig()
+    if any(s["id"] == sid for s in cfg["subjects"]):
+        raise HTTPException(409, f'"{sid}"는 이미 등록된 과목입니다.')
+    cfg["subjects"].append({"id": sid, "name": name, "grade": "", "sem": ""})
+    _save_mconfig(cfg)
+    return JSONResponse({"ok": True, "id": sid, "name": name})
+
+
+@app.patch("/api/config/subjects/{subj_id}")
+async def api_update_subject(subj_id: str, request: Request):
+    _require_login(request)
+    body = await request.json()
+    cfg  = _load_mconfig()
+    subj = next((s for s in cfg["subjects"] if s["id"] == subj_id), None)
+    if not subj:
+        raise HTTPException(404)
+    if "grade" in body: subj["grade"] = body["grade"]
+    if "sem"   in body: subj["sem"]   = body["sem"]
+    _save_mconfig(cfg)
+    return JSONResponse(subj)
+
+
+@app.get("/api/registry")
+async def api_get_registry(request: Request):
+    _require_login(request)
+    return JSONResponse(_load_registry())
+
+
+@app.post("/api/registry/register")
+async def api_registry_register(request: Request):
+    _require_login(request)
+    body         = await request.json()
+    registry_key = body.get("registry_key", "").strip()
+    job_id       = body.get("job_id", "").strip()
+    subject      = body.get("subject", "")
+    school       = body.get("school", "")
+    status       = body.get("status", "converting")
+    if not registry_key or not job_id:
+        raise HTTPException(400, "registry_key와 job_id는 필수입니다.")
+    reg      = _load_registry()
+    existing = reg.get(registry_key, {})
+    review_status = existing.get("review_status")
+    reviewer_name = existing.get("reviewer_name")
+    reviewed_at   = existing.get("reviewed_at")
+    if status == "done":
+        rf = _TMP_DIR / f"{job_id}_review.json"
+        if rf.exists():
+            try:
+                rv = json.loads(rf.read_text(encoding="utf-8"))
+                if rv.get("review_status") == "completed":
+                    review_status = "completed"
+                    reviewer_name = rv.get("reviewer_name", reviewer_name)
+                    reviewed_at   = rv.get("reviewed_at", reviewed_at)
+            except Exception:
+                pass
+    entry = {
+        "job_id": job_id, "status": status,
+        "review_status": review_status,
+        "reviewer_name": reviewer_name, "reviewed_at": reviewed_at,
+        "subject": subject, "school": school,
+        "created_at": existing.get("created_at", datetime.now().isoformat(timespec="seconds")),
+        "updated_at": datetime.now().isoformat(timespec="seconds"),
+    }
+    reg[registry_key] = entry
+    _save_registry(reg)
+    return JSONResponse(entry)
+
+
 # 검수 라우트
 # ══════════════════════════════════════════════════════════════════════
 
@@ -544,6 +717,16 @@ async def review_submit(job_id: str, request: Request):
             "correction_note": overall_note,
             "corrected_text":  "",
         })
+
+    # registry 검수완료 반영
+    reg = _load_registry()
+    for rk, ent in reg.items():
+        if ent.get("job_id") == job_id:
+            ent["review_status"] = "completed"
+            ent["reviewer_name"] = request.session.get("name", email)
+            ent["reviewed_at"]   = datetime.now().strftime("%Y-%m-%d %H:%M")
+            ent["updated_at"]    = datetime.now().isoformat(timespec="seconds")
+    _save_registry(reg)
 
     return JSONResponse({"download_url": f"/download/{reviewed_id}", "edited": edited})
 

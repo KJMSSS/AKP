@@ -1,0 +1,1124 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AKP 매트릭스</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: system-ui, -apple-system, 'Noto Sans KR', sans-serif;
+  background: #f8f9fa;
+  color: #212529;
+  min-height: 100vh;
+}
+
+/* ── 토스트 ── */
+#toast-container {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+}
+.toast {
+  background: #1e293b;
+  color: #f1f5f9;
+  padding: 10px 18px;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+  opacity: 0;
+  transform: translateY(12px);
+  transition: opacity 0.25s, transform 0.25s;
+  pointer-events: none;
+  max-width: 320px;
+}
+.toast.show { opacity: 1; transform: translateY(0); }
+.toast.toast-ok   { border-left: 4px solid #28a745; }
+.toast.toast-err  { border-left: 4px solid #dc3545; }
+.toast.toast-warn { border-left: 4px solid #fd7e14; }
+
+/* ── 상단바 ── */
+#topbar {
+  background: #fff;
+  border-bottom: 1px solid #dee2e6;
+  padding: 0 20px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+#topbar h1 {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #343a40;
+  white-space: nowrap;
+  margin-right: 6px;
+}
+.period-select {
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  padding: 5px 8px;
+  font-size: 0.85rem;
+  color: #495057;
+  background: #fff;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.period-select:focus { border-color: #0d6efd; }
+#topbar-spacer { flex: 1; }
+#user-name {
+  font-size: 0.83rem;
+  color: #6c757d;
+  white-space: nowrap;
+}
+#admin-link {
+  font-size: 0.83rem;
+  color: #6b7280;
+  text-decoration: none;
+  display: none;
+}
+#admin-link:hover { text-decoration: underline; }
+#logout-link {
+  font-size: 0.83rem;
+  color: #6b7280;
+  text-decoration: none;
+  white-space: nowrap;
+}
+#logout-link:hover { color: #343a40; text-decoration: underline; }
+
+/* ── 과목 탭 바 ── */
+#subject-bar {
+  background: #fff;
+  border-bottom: 1px solid #dee2e6;
+  padding: 0 20px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+#subject-bar::-webkit-scrollbar { display: none; }
+
+.subj-tab {
+  padding: 12px 18px;
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: #6c757d;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  white-space: nowrap;
+  transition: color 0.15s, border-color 0.15s;
+  margin-bottom: -1px;
+}
+.subj-tab:hover { color: #343a40; }
+.subj-tab.active {
+  color: #0d6efd;
+  border-bottom-color: #0d6efd;
+  font-weight: 600;
+}
+#add-subject-btn {
+  padding: 8px 14px;
+  font-size: 0.83rem;
+  color: #6c757d;
+  border: 1px dashed #ced4da;
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
+  white-space: nowrap;
+  margin-left: 6px;
+  transition: all 0.15s;
+}
+#add-subject-btn:hover { color: #0d6efd; border-color: #0d6efd; background: #f0f7ff; }
+
+/* ── 메인 컨텐츠 ── */
+#main {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px 20px;
+}
+
+/* ── 학교 추가 행 ── */
+#add-school-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+#add-school-btn {
+  padding: 7px 16px;
+  font-size: 0.85rem;
+  color: #0d6efd;
+  border: 1px dashed #0d6efd;
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+#add-school-btn:hover { background: #f0f7ff; }
+#school-input-wrap {
+  display: none;
+  align-items: center;
+  gap: 8px;
+}
+#school-input-wrap.show { display: flex; }
+#new-school-input {
+  border: 1.5px solid #0d6efd;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 0.88rem;
+  outline: none;
+  width: 180px;
+}
+.btn-sm {
+  padding: 6px 14px;
+  font-size: 0.83rem;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background 0.15s;
+}
+.btn-primary { background: #0d6efd; color: #fff; }
+.btn-primary:hover { background: #0b5ed7; }
+.btn-secondary { background: #6c757d; color: #fff; }
+.btn-secondary:hover { background: #5a6268; }
+
+/* ── 매트릭스 테이블 ── */
+#matrix-wrap {
+  overflow-x: auto;
+  border-radius: 10px;
+  border: 1px solid #dee2e6;
+  background: #fff;
+}
+#matrix-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 320px;
+}
+#matrix-table thead th {
+  background: #f1f3f5;
+  color: #495057;
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 10px 14px;
+  border-bottom: 2px solid #dee2e6;
+  white-space: nowrap;
+  text-align: left;
+}
+#matrix-table thead th:first-child {
+  width: 140px;
+  min-width: 120px;
+}
+#matrix-table thead th:nth-child(2) { min-width: 200px; }
+#matrix-table thead th:nth-child(3) { min-width: 180px; }
+
+#matrix-table tbody tr:hover { background: #f1f8ff; }
+#matrix-table tbody td {
+  padding: 10px 14px;
+  border-bottom: 1px solid #e9ecef;
+  vertical-align: middle;
+  font-size: 0.88rem;
+}
+#matrix-table tbody tr:last-child td { border-bottom: none; }
+
+/* 학교명 셀 */
+.school-cell {
+  font-weight: 600;
+  color: #343a40;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.del-school-btn {
+  background: none;
+  border: none;
+  color: #adb5bd;
+  cursor: pointer;
+  font-size: 0.85rem;
+  padding: 2px 4px;
+  border-radius: 4px;
+  line-height: 1;
+  display: none;
+}
+tr:hover .del-school-btn { display: inline; }
+.del-school-btn:hover { color: #dc3545; background: #fff0f0; }
+
+/* 상태 셀 */
+.status-cell { min-width: 180px; }
+
+/* 상태 배지 */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 100px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.badge-empty    { background: #f1f3f5; color: #6c757d; }
+.badge-done     { background: #d1fae5; color: #065f46; }
+.badge-reviewed { background: #ede9fe; color: #5b21b6; }
+.badge-error    { background: #fee2e2; color: #991b1b; }
+
+/* 로그 미니 */
+.cell-log {
+  font-size: 0.76rem;
+  color: #6c757d;
+  font-family: 'Consolas', 'Courier New', monospace;
+  margin-top: 4px;
+  max-height: 48px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* 업로드 버튼 */
+.upload-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 14px;
+  font-size: 0.82rem;
+  font-weight: 500;
+  border: 1.5px dashed #ced4da;
+  border-radius: 8px;
+  background: #fff;
+  color: #495057;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.upload-btn:hover { border-color: #0d6efd; color: #0d6efd; background: #f0f7ff; }
+.upload-btn.drag-over { border-color: #0d6efd; background: #e8f0fe; }
+
+/* 액션 버튼들 */
+.action-cell {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.act-btn {
+  padding: 4px 12px;
+  font-size: 0.80rem;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  font-weight: 500;
+  text-decoration: none;
+  display: inline-block;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.act-dl  { background: #198754; color: #fff; }
+.act-dl:hover  { background: #157347; }
+.act-rev { background: #2563eb; color: #fff; }
+.act-rev:hover { background: #1d4ed8; }
+
+/* 스피너 */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+.spinner {
+  width: 14px; height: 14px;
+  border: 2px solid #e9ecef;
+  border-top-color: #fd7e14;
+  border-radius: 50%;
+  display: inline-block;
+  animation: spin 0.7s linear infinite;
+  vertical-align: middle;
+}
+
+/* 숨긴 파일 입력 */
+.hidden-input { display: none; }
+
+/* 빈 상태 */
+#matrix-empty {
+  text-align: center;
+  padding: 48px 20px;
+  color: #adb5bd;
+  font-size: 0.9rem;
+}
+
+/* 반응형 */
+@media (max-width: 600px) {
+  #topbar { gap: 8px; padding: 0 12px; }
+  #topbar h1 { font-size: 0.9rem; }
+  .period-select { font-size: 0.78rem; padding: 4px 6px; }
+  #main { padding: 16px 12px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ── 토스트 컨테이너 ── -->
+<div id="toast-container"></div>
+
+<!-- ── 숨긴 파일 입력 (동적 생성용 템플릿) ── -->
+<input type="file" id="global-file-input" class="hidden-input" accept=".pdf,application/pdf">
+
+<!-- ── 상단바 ── -->
+<div id="topbar">
+  <h1>AKP 변환기</h1>
+
+  <select id="sel-year"  class="period-select"></select>
+  <select id="sel-round" class="period-select">
+    <option value="a">1차 (a)</option>
+    <option value="b">2차 (b)</option>
+  </select>
+
+  <div id="topbar-spacer"></div>
+  <span id="user-name"></span>
+  <a href="/admin" id="admin-link">관리자</a>
+  <a href="/auth/logout" id="logout-link">로그아웃</a>
+</div>
+
+<!-- ── 과목 탭 바 ── -->
+<div id="subject-bar">
+  <!-- 탭은 JS로 동적 생성 -->
+  <button id="add-subject-btn">+ 과목 추가</button>
+</div>
+
+<!-- ── 과목별 학년/학기 ── -->
+<div id="subject-meta-bar" style="background:#f8f9fa;border-bottom:1px solid #dee2e6;padding:6px 20px;display:flex;align-items:center;gap:10px;font-size:0.83rem;color:#495057;">
+  <span id="subj-meta-name" style="font-weight:600;color:#343a40;"></span>
+  <span style="color:#ced4da;">|</span>
+  <label style="display:flex;align-items:center;gap:4px;">
+    학년
+    <select id="subj-grade-sel" class="period-select">
+      <option value="">-</option>
+      <option value="1">1학년</option>
+      <option value="2">2학년</option>
+      <option value="3">3학년</option>
+    </select>
+  </label>
+  <label style="display:flex;align-items:center;gap:4px;">
+    학기
+    <select id="subj-sem-sel" class="period-select">
+      <option value="">-</option>
+      <option value="1">1학기</option>
+      <option value="2">2학기</option>
+    </select>
+  </label>
+  <span id="subj-meta-hint" style="color:#adb5bd;font-size:0.78rem;">← 이 과목의 학년·학기 설정 (과목마다 다르게 설정 가능)</span>
+</div>
+
+<!-- ── 메인 ── -->
+<div id="main">
+
+  <!-- 학교 추가 행 -->
+  <div id="add-school-row">
+    <button id="add-school-btn">+ 학교 추가</button>
+    <div id="school-input-wrap">
+      <input type="text" id="new-school-input" placeholder="학교명 입력 후 Enter">
+      <button class="btn-sm btn-primary" id="school-confirm-btn">추가</button>
+      <button class="btn-sm btn-secondary" id="school-cancel-btn">취소</button>
+    </div>
+  </div>
+
+  <!-- 매트릭스 테이블 -->
+  <div id="matrix-wrap">
+    <table id="matrix-table">
+      <thead>
+        <tr>
+          <th>학교명</th>
+          <th>상태 / 업로드</th>
+          <th>작업</th>
+        </tr>
+      </thead>
+      <tbody id="matrix-tbody">
+        <tr>
+          <td colspan="3">
+            <div id="matrix-empty">학교를 추가해 변환을 시작하세요.</div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+</div><!-- /main -->
+
+<script>
+"use strict";
+
+/* ══════════════════════════════════════════════════════
+   유틸
+══════════════════════════════════════════════════════ */
+const $ = id => document.getElementById(id);
+
+function escHtml(s) {
+  return String(s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function showToast(msg, type = 'ok') {
+  const container = $('toast-container');
+  const el = document.createElement('div');
+  el.className = `toast toast-${type}`;
+  el.textContent = msg;
+  container.appendChild(el);
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => el.classList.add('show'));
+  });
+  setTimeout(() => {
+    el.classList.remove('show');
+    setTimeout(() => el.remove(), 300);
+  }, 3200);
+}
+
+async function apiFetch(url, opts = {}) {
+  const res = await fetch(url, { credentials: 'include', ...opts });
+  if (res.status === 401 || res.status === 307) {
+    window.location.href = '/auth/login';
+    throw new Error('unauthenticated');
+  }
+  return res;
+}
+
+/* ══════════════════════════════════════════════════════
+   상태 저장소
+══════════════════════════════════════════════════════ */
+// config: { subjects:[{id,name}], schools:[string] }
+let gConfig = { subjects: [], schools: [] };
+
+// registry: { [key]: {job_id, status, review_status, ...} }
+let gRegistry = {};
+
+// 현재 선택된 과목 id
+let gCurrentSubject = '';
+
+// 진행 중인 SSE 연결: { [registryKey]: EventSource }
+const gActiveSse = {};
+
+/* ══════════════════════════════════════════════════════
+   기간 선택 (상단바 셀렉트)
+══════════════════════════════════════════════════════ */
+const PERIOD_KEYS = ['sel-year', 'sel-round'];
+
+function initYearSelect() {
+  const sel = $('sel-year');
+  const curY = new Date().getFullYear();
+  for (let y = 2020; y <= 2030; y++) {
+    const opt = document.createElement('option');
+    opt.value = y;
+    opt.textContent = `${y}년`;
+    sel.appendChild(opt);
+  }
+  sel.value = String(curY);
+}
+
+function loadPeriodFromStorage() {
+  const saved = JSON.parse(localStorage.getItem('akp_matrix_period') || 'null');
+  if (!saved) return;
+  PERIOD_KEYS.forEach(id => {
+    const el = $(id);
+    if (el && saved[id] !== undefined) el.value = String(saved[id]);
+  });
+}
+
+function savePeriodToStorage() {
+  const obj = {};
+  PERIOD_KEYS.forEach(id => { obj[id] = $(id).value; });
+  localStorage.setItem('akp_matrix_period', JSON.stringify(obj));
+}
+
+function getPeriod() {
+  return {
+    year:  $('sel-year').value,
+    round: $('sel-round').value,
+  };
+}
+
+function getSubjectMeta(subjectId) {
+  const subj = gConfig.subjects.find(s => s.id === subjectId) || {};
+  return { grade: subj.grade || '', sem: subj.sem || '' };
+}
+
+function buildRegistryKey(school, subjectId) {
+  const p = getPeriod();
+  const m = getSubjectMeta(subjectId);
+  return `${p.year}_${m.grade}_${m.sem}_${p.round}_${subjectId}_${school}`;
+}
+
+/* 과목 메타 바 렌더 */
+function renderSubjectMeta() {
+  const subj = gConfig.subjects.find(s => s.id === gCurrentSubject);
+  if (!subj) return;
+  $('subj-meta-name').textContent = subj.name || subj.id;
+  $('subj-grade-sel').value = subj.grade || '';
+  $('subj-sem-sel').value   = subj.sem   || '';
+}
+
+async function saveSubjectMeta(grade, sem) {
+  try {
+    const res = await apiFetch(`/api/config/subjects/${encodeURIComponent(gCurrentSubject)}`, {
+      method: 'PATCH',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ grade, sem }),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const updated = await res.json();
+    const subj = gConfig.subjects.find(s => s.id === gCurrentSubject);
+    if (subj) { subj.grade = updated.grade; subj.sem = updated.sem; }
+    renderMatrix();
+  } catch(e) {
+    showToast('학년/학기 저장 실패: ' + e.message, 'err');
+  }
+}
+
+$('subj-grade-sel').addEventListener('change', () =>
+  saveSubjectMeta($('subj-grade-sel').value, $('subj-sem-sel').value));
+$('subj-sem-sel').addEventListener('change', () =>
+  saveSubjectMeta($('subj-grade-sel').value, $('subj-sem-sel').value));
+
+PERIOD_KEYS.forEach(id => {
+  const el = $(id);
+  if (el) el.addEventListener('change', () => {
+    savePeriodToStorage();
+    renderMatrix();
+  });
+});
+
+/* ══════════════════════════════════════════════════════
+   API — config
+══════════════════════════════════════════════════════ */
+async function loadConfig() {
+  try {
+    const res = await apiFetch('/api/config');
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    gConfig = await res.json();
+  } catch(e) {
+    if (e.message === 'unauthenticated') return;
+    showToast('설정 로드 실패: ' + e.message, 'err');
+  }
+}
+
+async function addSchool(name) {
+  try {
+    const res = await apiFetch('/api/config/schools', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ name }),
+    });
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      throw new Error(d.detail || `HTTP ${res.status}`);
+    }
+    await loadConfig();
+    renderSubjectTabs();
+    renderMatrix();
+    showToast(`"${name}" 추가됨`, 'ok');
+  } catch(e) {
+    if (e.message === 'unauthenticated') return;
+    showToast('학교 추가 실패: ' + e.message, 'err');
+  }
+}
+
+async function deleteSchool(name) {
+  if (!confirm(`"${name}" 학교를 삭제할까요?\n이 학교의 변환 기록은 유지됩니다.`)) return;
+  try {
+    const res = await apiFetch(`/api/config/schools/${encodeURIComponent(name)}`, {
+      method: 'DELETE',
+    });
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      throw new Error(d.detail || `HTTP ${res.status}`);
+    }
+    await loadConfig();
+    renderSubjectTabs();
+    renderMatrix();
+    showToast(`"${name}" 삭제됨`, 'warn');
+  } catch(e) {
+    if (e.message === 'unauthenticated') return;
+    showToast('학교 삭제 실패: ' + e.message, 'err');
+  }
+}
+
+async function addSubject(id, name) {
+  try {
+    const res = await apiFetch('/api/config/subjects', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ id, name }),
+    });
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      throw new Error(d.detail || `HTTP ${res.status}`);
+    }
+    await loadConfig();
+    renderSubjectTabs();
+    renderMatrix();
+    showToast(`"${name}" 과목 추가됨`, 'ok');
+  } catch(e) {
+    if (e.message === 'unauthenticated') return;
+    showToast('과목 추가 실패: ' + e.message, 'err');
+  }
+}
+
+/* ══════════════════════════════════════════════════════
+   API — registry
+══════════════════════════════════════════════════════ */
+async function loadRegistry() {
+  try {
+    const res = await apiFetch('/api/registry');
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    gRegistry = await res.json();
+  } catch(e) {
+    if (e.message === 'unauthenticated') return;
+    // registry 오류는 조용히 처리
+    console.warn('registry 로드 실패:', e);
+  }
+}
+
+async function registerJob(registryKey, jobId, subjectId, school) {
+  try {
+    const res = await apiFetch('/api/registry/register', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        registry_key: registryKey,
+        job_id: jobId,
+        subject: subjectId,
+        school,
+      }),
+    });
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      console.warn('registry 등록 실패:', d.detail);
+    } else {
+      const entry = await res.json();
+      gRegistry[registryKey] = entry;
+    }
+  } catch(e) {
+    if (e.message !== 'unauthenticated') console.warn('registry 등록 오류:', e);
+  }
+}
+
+/* ══════════════════════════════════════════════════════
+   과목 탭 렌더
+══════════════════════════════════════════════════════ */
+function renderSubjectTabs() {
+  const bar = $('subject-bar');
+  // 기존 탭 제거 (add-subject-btn 유지)
+  Array.from(bar.querySelectorAll('.subj-tab')).forEach(el => el.remove());
+
+  const btn = $('add-subject-btn');
+
+  gConfig.subjects.forEach(subj => {
+    const tab = document.createElement('button');
+    tab.className = 'subj-tab' + (subj.id === gCurrentSubject ? ' active' : '');
+    tab.dataset.subjId = subj.id;
+    tab.textContent = subj.id;
+    tab.title = subj.name;
+    tab.addEventListener('click', () => {
+      gCurrentSubject = subj.id;
+      renderSubjectTabs();
+      renderMatrix();
+    });
+    bar.insertBefore(tab, btn);
+  });
+
+  // 기본 선택
+  if (gConfig.subjects.length && !gConfig.subjects.find(s => s.id === gCurrentSubject)) {
+    gCurrentSubject = gConfig.subjects[0].id;
+    renderSubjectTabs();
+    return;
+  }
+  renderSubjectMeta();
+}
+
+/* ══════════════════════════════════════════════════════
+   매트릭스 테이블 렌더
+══════════════════════════════════════════════════════ */
+function renderMatrix() {
+  const tbody = $('matrix-tbody');
+  const schools = [...gConfig.schools].sort((a, b) => a.localeCompare(b, 'ko'));
+
+  if (!schools.length) {
+    tbody.innerHTML = `<tr><td colspan="3"><div id="matrix-empty">학교를 추가해 변환을 시작하세요.</div></td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = '';
+  schools.forEach(school => {
+    const tr = document.createElement('tr');
+    const key = buildRegistryKey(school, gCurrentSubject);
+    const entry = gRegistry[key] || null;
+
+    tr.innerHTML = `
+      <td>
+        <div class="school-cell">
+          <span>${escHtml(school)}</span>
+          <button class="del-school-btn" title="학교 삭제" data-school="${escHtml(school)}">✕</button>
+        </div>
+      </td>
+      <td class="status-cell" id="status-${escHtml(key)}">
+        ${renderStatusCell(key, entry)}
+      </td>
+      <td class="action-cell" id="action-${escHtml(key)}">
+        ${renderActionCell(key, entry)}
+      </td>
+    `;
+
+    // 드래그&드롭 이벤트 (상태가 empty일 때)
+    if (!entry || entry.status === 'error') {
+      const statusTd = tr.querySelector('.status-cell');
+      setupDropTarget(statusTd, school, key);
+    }
+
+    tbody.appendChild(tr);
+  });
+
+  // 학교 삭제 버튼
+  tbody.querySelectorAll('.del-school-btn').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      deleteSchool(btn.dataset.school);
+    });
+  });
+
+  // 업로드 버튼 클릭
+  tbody.querySelectorAll('.upload-btn[data-key]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      triggerUpload(btn.dataset.school, btn.dataset.key);
+    });
+  });
+}
+
+function renderStatusCell(key, entry) {
+  if (!entry) {
+    const school = keyToSchool(key);
+    return `<button class="upload-btn" data-key="${escHtml(key)}" data-school="${escHtml(school)}">
+              📄 PDF 업로드
+            </button>`;
+  }
+  if (entry.status === 'converting') {
+    const log = entry._lastLog || '처리 중...';
+    return `<span class="badge" style="background:#fff3cd;color:#856404;">
+              <span class="spinner"></span> 변환 중
+            </span>
+            <div class="cell-log">${escHtml(log)}</div>`;
+  }
+  if (entry.status === 'done') {
+    if (entry.review_status === 'completed') {
+      return `<span class="badge badge-reviewed">📝 검수완료</span>`;
+    }
+    return `<span class="badge badge-done">✅ 완료</span>`;
+  }
+  if (entry.status === 'error') {
+    const school = keyToSchool(key);
+    return `<span class="badge badge-error" title="${escHtml(entry._errorMsg || '')}">⚠ 오류</span>
+            <button class="upload-btn" style="margin-top:6px;" data-key="${escHtml(key)}" data-school="${escHtml(school)}">
+              🔄 재업로드
+            </button>`;
+  }
+  return `<span class="badge badge-empty">—</span>`;
+}
+
+function renderActionCell(key, entry) {
+  if (!entry || entry.status === 'converting' || entry.status === 'error') {
+    return '—';
+  }
+  if (entry.status === 'done') {
+    return `<a class="act-btn act-dl" href="/download/${encodeURIComponent(entry.job_id)}" target="_blank">다운로드</a>
+            <a class="act-btn act-rev" href="/review/${encodeURIComponent(entry.job_id)}" target="_blank">검수보기</a>`;
+  }
+  return '—';
+}
+
+function keyToSchool(key) {
+  // key = year_grade_sem_round_subjectId_school
+  const parts = key.split('_');
+  // subjectId도 _ 없는 값이므로 뒤에서 1번째가 school
+  // 형식: {year}_{grade}_{sem}_{round}_{subjectId}_{school}
+  // index:  0       1      2    3       4            5...
+  // school에 _ 포함될 수 있으므로 index 5 이후 전부
+  return parts.slice(5).join('_');
+}
+
+/* ══════════════════════════════════════════════════════
+   드래그&드롭 설정
+══════════════════════════════════════════════════════ */
+function setupDropTarget(el, school, key) {
+  el.addEventListener('dragover', e => {
+    e.preventDefault();
+    el.querySelector('.upload-btn')?.classList.add('drag-over');
+  });
+  el.addEventListener('dragleave', () => {
+    el.querySelector('.upload-btn')?.classList.remove('drag-over');
+  });
+  el.addEventListener('drop', e => {
+    e.preventDefault();
+    el.querySelector('.upload-btn')?.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (file) handleFile(file, school, key);
+  });
+}
+
+/* ══════════════════════════════════════════════════════
+   파일 선택 트리거
+══════════════════════════════════════════════════════ */
+let _pendingUploadSchool = '';
+let _pendingUploadKey    = '';
+
+function triggerUpload(school, key) {
+  _pendingUploadSchool = school;
+  _pendingUploadKey    = key;
+  const inp = $('global-file-input');
+  inp.value = '';
+  inp.click();
+}
+
+$('global-file-input').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (file && _pendingUploadSchool) {
+    handleFile(file, _pendingUploadSchool, _pendingUploadKey);
+  }
+  _pendingUploadSchool = '';
+  _pendingUploadKey    = '';
+});
+
+/* ══════════════════════════════════════════════════════
+   파일 처리 → 업로드 → SSE
+══════════════════════════════════════════════════════ */
+async function handleFile(file, school, registryKey) {
+  if (!file.name.toLowerCase().endsWith('.pdf') && file.type !== 'application/pdf') {
+    showToast('PDF 파일만 업로드할 수 있습니다.', 'err');
+    return;
+  }
+
+  // 상태를 converting으로 즉시 업데이트
+  gRegistry[registryKey] = { status: 'converting', _lastLog: '업로드 중...' };
+  refreshCell(registryKey);
+
+  // custom_filename 구성
+  const customFilename = registryKey + '.hwpx';
+
+  // POST /convert
+  const fd = new FormData();
+  fd.append('file', file);
+  fd.append('full_content', 'false');
+  fd.append('custom_filename', customFilename);
+
+  let jobId;
+  try {
+    const res = await apiFetch('/convert', { method: 'POST', body: fd });
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      throw new Error(d.detail || `HTTP ${res.status}`);
+    }
+    const data = await res.json();
+    jobId = data.job_id;
+  } catch(e) {
+    if (e.message === 'unauthenticated') return;
+    gRegistry[registryKey] = { status: 'error', _errorMsg: e.message };
+    refreshCell(registryKey);
+    showToast(`업로드 실패: ${e.message}`, 'err');
+    return;
+  }
+
+  // registry 등록
+  await registerJob(registryKey, jobId, gCurrentSubject, school);
+  gRegistry[registryKey] = {
+    ...(gRegistry[registryKey] || {}),
+    job_id: jobId,
+    status: 'converting',
+    _lastLog: '변환 시작...',
+  };
+  refreshCell(registryKey);
+
+  // SSE 구독
+  subscribeSSE(registryKey, jobId);
+}
+
+function subscribeSSE(registryKey, jobId) {
+  // 기존 SSE 닫기
+  if (gActiveSse[registryKey]) {
+    gActiveSse[registryKey].close();
+    delete gActiveSse[registryKey];
+  }
+
+  const es = new EventSource(`/stream/${jobId}`);
+  gActiveSse[registryKey] = es;
+
+  es.addEventListener('message', e => {
+    const entry = gRegistry[registryKey] || {};
+    entry._lastLog = e.data;
+    entry.status   = 'converting';
+    gRegistry[registryKey] = entry;
+    refreshCell(registryKey);
+  });
+
+  es.addEventListener('done', e => {
+    es.close();
+    delete gActiveSse[registryKey];
+    const entry = gRegistry[registryKey] || {};
+    entry.status   = 'done';
+    entry._lastLog = '';
+    gRegistry[registryKey] = entry;
+    // registry에 done 반영
+    apiFetch('/api/registry/register', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        registry_key: registryKey,
+        job_id: entry.job_id,
+        subject: gCurrentSubject,
+        school: keyToSchool(registryKey),
+        status: 'done',
+      }),
+    }).catch(() => {});
+    refreshCell(registryKey);
+    showToast(`변환 완료: ${keyToSchool(registryKey)}`, 'ok');
+  });
+
+  es.addEventListener('error', e => {
+    const msg = e.data || 'SSE 오류';
+    es.close();
+    delete gActiveSse[registryKey];
+    const entry = gRegistry[registryKey] || {};
+    entry.status    = 'error';
+    entry._errorMsg = msg;
+    gRegistry[registryKey] = entry;
+    refreshCell(registryKey);
+    showToast(`변환 실패: ${keyToSchool(registryKey)} — ${msg}`, 'err');
+  });
+}
+
+/* 개별 셀만 갱신 (전체 리렌더 대신) */
+function refreshCell(registryKey) {
+  const safeKey = CSS.escape(registryKey);
+  const statusEl = document.getElementById(`status-${registryKey}`);
+  const actionEl = document.getElementById(`action-${registryKey}`);
+  if (!statusEl || !actionEl) {
+    renderMatrix();
+    return;
+  }
+  const entry = gRegistry[registryKey] || null;
+  statusEl.innerHTML = renderStatusCell(registryKey, entry);
+  actionEl.innerHTML = renderActionCell(registryKey, entry);
+
+  // 드래그&드롭 재설정
+  if (!entry || entry.status === 'error') {
+    const school = keyToSchool(registryKey);
+    setupDropTarget(statusEl, school, registryKey);
+  }
+
+  // 업로드 버튼 재연결
+  statusEl.querySelectorAll('.upload-btn[data-key]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      triggerUpload(btn.dataset.school, btn.dataset.key);
+    });
+  });
+}
+
+/* ══════════════════════════════════════════════════════
+   학교 추가 UI
+══════════════════════════════════════════════════════ */
+$('add-school-btn').addEventListener('click', () => {
+  $('add-school-btn').style.display = 'none';
+  $('school-input-wrap').classList.add('show');
+  $('new-school-input').value = '';
+  $('new-school-input').focus();
+});
+
+function confirmAddSchool() {
+  const name = $('new-school-input').value.trim();
+  if (!name) { $('new-school-input').focus(); return; }
+  if (gConfig.schools.includes(name)) {
+    showToast(`"${name}"은 이미 등록된 학교입니다.`, 'warn');
+    return;
+  }
+  cancelAddSchool();
+  addSchool(name);
+}
+
+function cancelAddSchool() {
+  $('school-input-wrap').classList.remove('show');
+  $('add-school-btn').style.display = '';
+  $('new-school-input').value = '';
+}
+
+$('school-confirm-btn').addEventListener('click', confirmAddSchool);
+$('school-cancel-btn').addEventListener('click', cancelAddSchool);
+$('new-school-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') confirmAddSchool();
+  if (e.key === 'Escape') cancelAddSchool();
+});
+
+/* ══════════════════════════════════════════════════════
+   과목 추가 UI
+══════════════════════════════════════════════════════ */
+$('add-subject-btn').addEventListener('click', () => {
+  const id = prompt('과목 ID를 입력하세요\n(예: 수1, 수2, 기하)\n짧게 4자 이내 권장');
+  if (!id || !id.trim()) return;
+  const tid = id.trim();
+  if (gConfig.subjects.find(s => s.id === tid)) {
+    showToast(`"${tid}"는 이미 있는 과목입니다.`, 'warn');
+    return;
+  }
+  const name = prompt(`"${tid}"의 전체 과목명을 입력하세요\n(예: 미적분1)`) || tid;
+  addSubject(tid, name.trim() || tid);
+});
+
+/* ══════════════════════════════════════════════════════
+   사용자 정보
+══════════════════════════════════════════════════════ */
+async function initUser() {
+  try {
+    const res = await apiFetch('/api/me');
+    if (!res.ok) { window.location.href = '/auth/login'; return; }
+    const me = await res.json();
+    if (!me.authenticated) { window.location.href = '/auth/login'; return; }
+    $('user-name').textContent = me.name || me.email;
+    if (me.is_admin) $('admin-link').style.display = 'inline';
+  } catch(e) {
+    if (e.message !== 'unauthenticated') {
+      window.location.href = '/auth/login';
+    }
+  }
+}
+
+/* ══════════════════════════════════════════════════════
+   진행 중 SSE 복원 (페이지 새로고침 후)
+══════════════════════════════════════════════════════ */
+function restoreActiveSse() {
+  Object.entries(gRegistry).forEach(([key, entry]) => {
+    if (entry && entry.status === 'converting' && entry.job_id) {
+      subscribeSSE(key, entry.job_id);
+    }
+  });
+}
+
+/* ══════════════════════════════════════════════════════
+   초기화
+══════════════════════════════════════════════════════ */
+async function init() {
+  initYearSelect();
+  loadPeriodFromStorage();
+  await initUser();
+  await loadConfig();
+  await loadRegistry();
+  renderSubjectTabs();
+  renderMatrix();
+  restoreActiveSse();
+}
+
+init();
+</script>
+</body>
+</html>
