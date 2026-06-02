@@ -388,24 +388,48 @@
     </div>
   </div>
 
-  <!-- 직원 검수 수정 내역 -->
+  <!-- 직원 검수 수정 로그 -->
   <div class="card">
     <div class="corrections-header">
-      <div class="card-title" style="margin-bottom:0;">직원 검수 수정 내역</div>
-      <span id="corrections-summary"></span>
+      <div class="card-title" style="margin-bottom:0;">직원 검수 수정 로그</div>
+      <span id="corrections-summary" style="font-size:0.82rem;color:#64748b;"></span>
     </div>
+
+    <!-- 직원별 통계 -->
+    <div id="emp-stats" style="display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 14px;"></div>
+
+    <!-- 필터 바 -->
+    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;align-items:center;">
+      <select id="filter-emp" style="border:1px solid #cbd5e1;border-radius:6px;padding:6px 10px;font-size:0.83rem;outline:none;">
+        <option value="">전체 직원</option>
+      </select>
+      <select id="filter-days" style="border:1px solid #cbd5e1;border-radius:6px;padding:6px 10px;font-size:0.83rem;outline:none;">
+        <option value="7">최근 7일</option>
+        <option value="30" selected>최근 30일</option>
+        <option value="90">최근 90일</option>
+        <option value="365">최근 1년</option>
+      </select>
+      <input id="filter-keyword" type="text" placeholder="PDF·문제·메모 검색" style="border:1px solid #cbd5e1;border-radius:6px;padding:6px 10px;font-size:0.83rem;outline:none;width:180px;">
+      <label style="display:flex;align-items:center;gap:5px;font-size:0.82rem;color:#475569;cursor:pointer;">
+        <input type="checkbox" id="filter-overall" style="cursor:pointer;">
+        전체 메모만
+      </label>
+      <button onclick="loadCorrections()" style="padding:6px 14px;background:#6366f1;color:#fff;border:none;border-radius:6px;font-size:0.82rem;cursor:pointer;">새로고침</button>
+      <span id="filter-count" style="font-size:0.8rem;color:#94a3b8;margin-left:4px;"></span>
+    </div>
+
     <div class="table-wrap">
-      <table id="corrections-table">
+      <table>
         <thead>
           <tr>
-            <th>일시</th>
-            <th>직원</th>
-            <th>PDF</th>
-            <th>문제</th>
-            <th>오류 메모</th>
-            <th>수정 내용</th>
-            <th>상태</th>
-            <th></th>
+            <th style="width:90px;">일시</th>
+            <th style="width:70px;">직원</th>
+            <th style="width:120px;">PDF</th>
+            <th style="width:50px;">문제</th>
+            <th>원본 OCR 텍스트</th>
+            <th>수정 메모 / 수정 내용</th>
+            <th style="width:60px;">상태</th>
+            <th style="width:60px;"></th>
           </tr>
         </thead>
         <tbody id="corrections-tbody">
@@ -660,50 +684,148 @@
   /* ══════════════════════════════════════════════
      수정 내역 로드 + 렌더
   ══════════════════════════════════════════════ */
+  var _allCorrections = [];
+
   function loadCorrections() {
-    apiFetch('/api/admin/corrections?days=30')
+    var days = document.getElementById('filter-days').value || 30;
+    apiFetch('/api/admin/corrections?days=' + days)
       .then(function (data) {
+        _allCorrections = data.corrections || [];
         var summary = data.summary || {};
-        var parts   = ['이번 30일 ' + (summary.total || 0) + '건'];
-        if (summary.reverted) parts.push('되돌림 ' + summary.reverted + '건');
-        if (summary.by_employee) {
-          var names = Object.entries(summary.by_employee)
-            .map(function (kv) { return kv[0] + ' ' + kv[1] + '건'; }).join(', ');
-          if (names) parts.push(names);
-        }
-        document.getElementById('corrections-summary').textContent = parts.join(' · ');
-        renderCorrections(data.corrections || []);
+        var total = _allCorrections.length;
+        document.getElementById('corrections-summary').textContent =
+          '전체 ' + total + '건 · 되돌림 ' + (summary.reverted || 0) + '건';
+
+        // 직원 필터 옵션 구성
+        var empSet = {};
+        _allCorrections.forEach(function (e) {
+          var emp = e.employee || '(알 수 없음)';
+          empSet[emp] = (empSet[emp] || 0) + 1;
+        });
+        var sel = document.getElementById('filter-emp');
+        var prevVal = sel.value;
+        sel.innerHTML = '<option value="">전체 직원 (' + total + '건)</option>';
+        Object.keys(empSet).sort().forEach(function (emp) {
+          var opt = document.createElement('option');
+          opt.value = emp;
+          opt.textContent = emp + ' (' + empSet[emp] + '건)';
+          sel.appendChild(opt);
+        });
+        if (prevVal) sel.value = prevVal;
+
+        // 직원별 통계 배지
+        var statsEl = document.getElementById('emp-stats');
+        statsEl.innerHTML = Object.keys(empSet).sort().map(function (emp) {
+          return '<span style="background:#f1f5f9;border:1px solid #e2e8f0;border-radius:20px;padding:3px 12px;font-size:0.8rem;color:#1e293b;">'
+            + escHtml(emp) + ' <strong>' + empSet[emp] + '</strong>건</span>';
+        }).join('');
+
+        renderCorrections();
       })
       .catch(function (err) {
-        showToast('수정 내역 로드 실패: ' + (err.message || err), true);
+        showToast('수정 로그 로드 실패: ' + (err.message || err), true);
         document.getElementById('corrections-tbody').innerHTML =
           '<tr class="empty-row"><td colspan="8">로드 실패</td></tr>';
       });
   }
 
-  function renderCorrections(list) {
-    var tbody = document.getElementById('corrections-tbody');
+  // 필터 이벤트
+  ['filter-emp', 'filter-days', 'filter-overall'].forEach(function (id) {
+    document.getElementById(id).addEventListener('change', function () {
+      if (id === 'filter-days') { loadCorrections(); return; }
+      renderCorrections();
+    });
+  });
+  document.getElementById('filter-keyword').addEventListener('input', renderCorrections);
+
+  function renderCorrections() {
+    var tbody   = document.getElementById('corrections-tbody');
+    var empVal  = document.getElementById('filter-emp').value;
+    var keyword = document.getElementById('filter-keyword').value.trim().toLowerCase();
+    var onlyOverall = document.getElementById('filter-overall').checked;
+
+    var list = _allCorrections.filter(function (e) {
+      if (empVal && (e.employee || '') !== empVal) return false;
+      if (onlyOverall && String(e.problem_number) !== '전체') return false;
+      if (keyword) {
+        var haystack = [e.pdf_name, e.employee, e.correction_note,
+                        e.problem_text, e.corrected_text,
+                        String(e.problem_number)].join(' ').toLowerCase();
+        if (haystack.indexOf(keyword) === -1) return false;
+      }
+      return true;
+    });
+
+    document.getElementById('filter-count').textContent =
+      list.length !== _allCorrections.length ? list.length + '건 표시 중' : '';
+
     if (!list.length) {
-      tbody.innerHTML = '<tr class="empty-row"><td colspan="8">수정 내역 없음</td></tr>';
+      tbody.innerHTML = '<tr class="empty-row"><td colspan="8">해당 항목 없음</td></tr>';
       return;
     }
-    tbody.innerHTML = list.map(function (e) {
-      var ts    = (e.ts || '').replace('T', ' ').slice(0, 16);
-      var rev   = e.status === 'reverted';
-      var style = rev ? 'opacity:0.45;text-decoration:line-through;' : '';
 
-      return '<tr style="' + style + '">'
-        + '<td style="white-space:nowrap;font-size:0.8rem;">'  + escHtml(ts) + '</td>'
-        + '<td>'  + escHtml(e.employee || '') + '</td>'
-        + '<td style="font-size:0.8rem;">'  + escHtml((e.pdf_name || '').replace(/\.[^.]+$/, '')) + '</td>'
-        + '<td style="text-align:center;">' + escHtml(String(e.problem_number || '')) + '번</td>'
-        + '<td>'  + escHtml(e.correction_note || '') + '</td>'
-        + '<td style="font-family:monospace;font-size:0.8rem;">' + escHtml(e.corrected_text || '') + '</td>'
-        + '<td>'  + (rev ? '<span style="color:#9ca3af;">되돌림</span>' : '<span style="color:#16a34a;">적용중</span>') + '</td>'
-        + '<td>'  + (rev ? '' : '<button onclick="doRevert(\'' + escAttr(String(e.id)) + '\')" style="font-size:0.75rem;padding:2px 8px;background:#fee2e2;color:#dc2626;border:none;border-radius:4px;cursor:pointer;">되돌리기</button>') + '</td>'
+    tbody.innerHTML = list.map(function (e) {
+      var ts       = (e.ts || '').replace('T', ' ').slice(0, 16);
+      var rev      = e.status === 'reverted';
+      var isGlobal = String(e.problem_number) === '전체';
+      var rowBg    = isGlobal ? 'background:#faf5ff;' : '';
+      var rowStyle = rev ? rowBg + 'opacity:0.5;' : rowBg;
+
+      // 원본 OCR 텍스트 (접이식)
+      var rawText = (e.problem_text || '').trim();
+      var textCell;
+      if (!rawText) {
+        textCell = '<span style="color:#cbd5e1;">—</span>';
+      } else if (rawText.length > 80) {
+        var shortText = escHtml(rawText.slice(0, 80)) + '…';
+        var fullText  = escHtml(rawText);
+        textCell = '<span class="ocr-short">' + shortText + '</span>'
+          + '<span class="ocr-full" style="display:none;">' + fullText + '</span>'
+          + '<button onclick="toggleOcr(this)" style="margin-left:4px;font-size:0.72rem;color:#6366f1;background:none;border:none;cursor:pointer;padding:0;">더보기</button>';
+      } else {
+        textCell = '<span style="font-family:monospace;font-size:0.78rem;white-space:pre-wrap;">' + escHtml(rawText) + '</span>';
+      }
+
+      // 수정 메모 + 수정 내용
+      var noteHtml = '';
+      if (e.correction_note) {
+        noteHtml += '<div style="color:#dc2626;font-size:0.82rem;">📝 ' + escHtml(e.correction_note) + '</div>';
+      }
+      if (e.corrected_text) {
+        noteHtml += '<div style="font-family:monospace;font-size:0.78rem;color:#0369a1;margin-top:3px;background:#f0f9ff;padding:3px 6px;border-radius:4px;">'
+          + escHtml(e.corrected_text) + '</div>';
+      }
+      if (!noteHtml) noteHtml = '<span style="color:#cbd5e1;">—</span>';
+
+      // 문제번호
+      var probNum = isGlobal
+        ? '<span style="background:#a78bfa;color:#fff;border-radius:4px;padding:1px 6px;font-size:0.75rem;">전체</span>'
+        : escHtml(String(e.problem_number || '')) + '번';
+
+      return '<tr style="' + rowStyle + '">'
+        + '<td style="white-space:nowrap;font-size:0.78rem;color:#64748b;">' + escHtml(ts) + '</td>'
+        + '<td style="font-weight:600;font-size:0.82rem;">' + escHtml(e.employee || '') + '</td>'
+        + '<td style="font-size:0.78rem;word-break:break-all;">' + escHtml((e.pdf_name || '').replace(/\.[^.]+$/, '')) + '</td>'
+        + '<td style="text-align:center;">' + probNum + '</td>'
+        + '<td style="max-width:240px;">' + textCell + '</td>'
+        + '<td style="max-width:200px;">' + noteHtml + '</td>'
+        + '<td>' + (rev
+            ? '<span style="color:#9ca3af;font-size:0.78rem;">되돌림</span>'
+            : '<span style="color:#16a34a;font-size:0.78rem;">적용</span>') + '</td>'
+        + '<td>' + (rev ? '' : '<button onclick="doRevert(\'' + escAttr(String(e.id)) + '\')" style="font-size:0.72rem;padding:2px 8px;background:#fee2e2;color:#dc2626;border:none;border-radius:4px;cursor:pointer;">되돌리기</button>') + '</td>'
         + '</tr>';
     }).join('');
   }
+
+  window.toggleOcr = function (btn) {
+    var td     = btn.closest('td');
+    var short  = td.querySelector('.ocr-short');
+    var full   = td.querySelector('.ocr-full');
+    var isOpen = full.style.display !== 'none';
+    short.style.display = isOpen ? '' : 'none';
+    full.style.display  = isOpen ? 'none' : '';
+    btn.textContent = isOpen ? '더보기' : '접기';
+  };
 
   window.doRevert = function (cid) {
     if (!confirm('이 수정을 되돌릴까요?')) return;
