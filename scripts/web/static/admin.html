@@ -439,7 +439,54 @@
     </div>
   </div>
 
+  <!-- 프롬프트 패턴 목록 -->
+  <div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+      <div class="card-title" style="margin-bottom:0;">프롬프트 교정 패턴</div>
+      <span style="font-size:0.78rem;color:#94a3b8;">승인된 패턴은 다음 변환 시 Claude에 자동 주입됩니다</span>
+    </div>
+    <div id="patterns-list">
+      <div style="color:#94a3b8;font-size:0.85rem;padding:12px 0;">패턴 없음</div>
+    </div>
+  </div>
+
 </div><!-- /container -->
+
+<!-- 패턴 등록 모달 -->
+<div id="pattern-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:12px;padding:28px 32px;width:480px;max-width:95vw;box-shadow:0 8px 32px rgba(0,0,0,.2);">
+    <h3 style="font-size:1rem;color:#1e293b;margin-bottom:16px;">패턴 등록 — Claude 프롬프트에 주입</h3>
+    <input type="hidden" id="pm-cid">
+    <div style="margin-bottom:12px;">
+      <label style="font-size:0.82rem;color:#64748b;display:block;margin-bottom:4px;">적용 범위</label>
+      <select id="pm-scope" style="border:1px solid #cbd5e1;border-radius:6px;padding:7px 10px;font-size:0.88rem;width:100%;outline:none;">
+        <option value="global">전체 공통 (모든 변환에 적용)</option>
+        <option value="school">학교별</option>
+        <option value="subject">과목별</option>
+      </select>
+    </div>
+    <div id="pm-scope-val-wrap" style="margin-bottom:12px;display:none;">
+      <label style="font-size:0.82rem;color:#64748b;display:block;margin-bottom:4px;" id="pm-scope-val-label">값</label>
+      <input id="pm-scope-val" type="text" placeholder="예: 경신여고 또는 공수1" style="border:1px solid #cbd5e1;border-radius:6px;padding:7px 10px;font-size:0.88rem;width:100%;outline:none;box-sizing:border-box;">
+    </div>
+    <div style="margin-bottom:12px;">
+      <label style="font-size:0.82rem;color:#64748b;display:block;margin-bottom:4px;">❌ 틀린 예시 (원본 OCR 텍스트)</label>
+      <textarea id="pm-original" rows="2" style="border:1px solid #cbd5e1;border-radius:6px;padding:7px 10px;font-size:0.85rem;width:100%;resize:vertical;font-family:monospace;outline:none;box-sizing:border-box;"></textarea>
+    </div>
+    <div style="margin-bottom:12px;">
+      <label style="font-size:0.82rem;color:#64748b;display:block;margin-bottom:4px;">✅ 올바른 표현 (교정된 텍스트)</label>
+      <textarea id="pm-corrected" rows="2" style="border:1px solid #cbd5e1;border-radius:6px;padding:7px 10px;font-size:0.85rem;width:100%;resize:vertical;font-family:monospace;outline:none;box-sizing:border-box;"></textarea>
+    </div>
+    <div style="margin-bottom:18px;">
+      <label style="font-size:0.82rem;color:#64748b;display:block;margin-bottom:4px;">메모 (선택)</label>
+      <input id="pm-note" type="text" placeholder="예: 분수 분자 오인식, 백슬래시 누락 등" style="border:1px solid #cbd5e1;border-radius:6px;padding:7px 10px;font-size:0.88rem;width:100%;outline:none;box-sizing:border-box;">
+    </div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;">
+      <button onclick="closePatternModal()" style="padding:8px 18px;border:1px solid #e2e8f0;border-radius:6px;background:#fff;color:#64748b;font-size:0.88rem;cursor:pointer;">취소</button>
+      <button onclick="submitPattern()" style="padding:8px 20px;border:none;border-radius:6px;background:#6d28d9;color:#fff;font-size:0.88rem;font-weight:600;cursor:pointer;">패턴 등록</button>
+    </div>
+  </div>
+</div>
 
 <!-- 토스트 -->
 <div id="toast"></div>
@@ -490,6 +537,7 @@
 
         loadUsers();
         loadCorrections();
+        loadPatterns();
       })
       .catch(function (err) {
         showToast('인증 확인 실패: ' + (err.message || err), true);
@@ -812,7 +860,10 @@
         + '<td>' + (rev
             ? '<span style="color:#9ca3af;font-size:0.78rem;">되돌림</span>'
             : '<span style="color:#16a34a;font-size:0.78rem;">적용</span>') + '</td>'
-        + '<td>' + (rev ? '' : '<button onclick="doRevert(\'' + escAttr(String(e.id)) + '\')" style="font-size:0.72rem;padding:2px 8px;background:#fee2e2;color:#dc2626;border:none;border-radius:4px;cursor:pointer;">되돌리기</button>') + '</td>'
+        + '<td style="white-space:nowrap;vertical-align:top;padding-top:8px;">'
+        + (rev ? '' : '<button onclick="doRevert(\'' + escAttr(String(e.id)) + '\')" style="font-size:0.72rem;padding:2px 7px;background:#fee2e2;color:#dc2626;border:none;border-radius:4px;cursor:pointer;display:block;margin-bottom:4px;">되돌리기</button>')
+        + (!rev ? '<button onclick="openPatternModal(\'' + escAttr(String(e.id)) + '\',\'' + escAttr(e.problem_text||'') + '\',\'' + escAttr(e.corrected_text||'') + '\',\'' + escAttr(e.correction_note||'') + '\')" style="font-size:0.72rem;padding:2px 7px;background:#ede9fe;color:#6d28d9;border:none;border-radius:4px;cursor:pointer;display:block;">패턴 등록</button>' : '')
+        + '</td>'
         + '</tr>';
     }).join('');
   }
@@ -905,6 +956,110 @@
   function safeId(s) {
     return String(s).replace(/[^a-zA-Z0-9]/g, '_');
   }
+
+  /* ══════════════════════════════════════════════
+     프롬프트 패턴 관리
+  ══════════════════════════════════════════════ */
+  function loadPatterns() {
+    apiFetch('/api/admin/patterns')
+      .then(function (list) { renderPatterns(list); })
+      .catch(function (err) { showToast('패턴 로드 실패: ' + (err.message || err), true); });
+  }
+
+  function renderPatterns(list) {
+    var el = document.getElementById('patterns-list');
+    if (!list || !list.length) {
+      el.innerHTML = '<div style="color:#94a3b8;font-size:0.85rem;padding:12px 0;">등록된 패턴 없음</div>';
+      return;
+    }
+    el.innerHTML = list.map(function (p) {
+      var active   = p.active !== false;
+      var scopeStr = p.scope === 'global' ? '전체공통' : (p.scope_value || p.scope);
+      var badgeCol = active ? '#6d28d9' : '#94a3b8';
+      return '<div style="display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid #f1f5f9;">'
+        + '<span style="background:' + badgeCol + ';color:#fff;border-radius:4px;padding:2px 8px;font-size:0.72rem;white-space:nowrap;flex-shrink:0;">' + escHtml(scopeStr) + '</span>'
+        + '<div style="flex:1;min-width:0;">'
+        + (p.original_text ? '<div style="font-family:monospace;font-size:0.78rem;color:#dc2626;">❌ ' + escHtml(p.original_text) + '</div>' : '')
+        + (p.corrected_text ? '<div style="font-family:monospace;font-size:0.78rem;color:#0369a1;">✅ ' + escHtml(p.corrected_text) + '</div>' : '')
+        + (p.note ? '<div style="font-size:0.75rem;color:#64748b;margin-top:2px;">' + escHtml(p.note) + '</div>' : '')
+        + '</div>'
+        + '<div style="display:flex;gap:6px;flex-shrink:0;">'
+        + '<button onclick="doTogglePattern(\'' + escAttr(p.id) + '\',' + (!active) + ')" style="font-size:0.72rem;padding:2px 8px;border:1px solid #e2e8f0;border-radius:4px;background:#fff;cursor:pointer;">'
+        + (active ? '비활성화' : '활성화') + '</button>'
+        + '<button onclick="doDeletePattern(\'' + escAttr(p.id) + '\')" style="font-size:0.72rem;padding:2px 8px;border:none;border-radius:4px;background:#fee2e2;color:#dc2626;cursor:pointer;">삭제</button>'
+        + '</div>'
+        + '</div>';
+    }).join('');
+  }
+
+  window.doTogglePattern = function (pid, active) {
+    apiFetch('/api/admin/patterns/' + encodeURIComponent(pid), {
+      method: 'PATCH',
+      body: JSON.stringify({ active: active }),
+    }).then(function () {
+      showToast(active ? '패턴 활성화됨' : '패턴 비활성화됨');
+      loadPatterns();
+    }).catch(function (err) { showToast('오류: ' + (err.message || err), true); });
+  };
+
+  window.doDeletePattern = function (pid) {
+    if (!confirm('이 패턴을 삭제할까요?')) return;
+    apiFetch('/api/admin/patterns/' + encodeURIComponent(pid), { method: 'DELETE' })
+      .then(function () { showToast('패턴 삭제됨', false); loadPatterns(); })
+      .catch(function (err) { showToast('삭제 실패: ' + (err.message || err), true); });
+  };
+
+  /* 모달 */
+  window.openPatternModal = function (cid, problemText, correctedText, note) {
+    document.getElementById('pm-cid').value       = cid;
+    document.getElementById('pm-original').value  = problemText || '';
+    document.getElementById('pm-corrected').value = correctedText || '';
+    document.getElementById('pm-note').value      = note || '';
+    document.getElementById('pm-scope').value     = 'global';
+    document.getElementById('pm-scope-val-wrap').style.display = 'none';
+    document.getElementById('pattern-modal').style.display = 'flex';
+  };
+
+  window.closePatternModal = function () {
+    document.getElementById('pattern-modal').style.display = 'none';
+  };
+
+  document.getElementById('pm-scope').addEventListener('change', function () {
+    var v = this.value;
+    var wrap  = document.getElementById('pm-scope-val-wrap');
+    var label = document.getElementById('pm-scope-val-label');
+    if (v === 'global') {
+      wrap.style.display = 'none';
+    } else {
+      wrap.style.display = 'block';
+      label.textContent  = v === 'school' ? '학교명 (예: 경신여고)' : '과목 ID (예: 공수1)';
+    }
+  });
+
+  window.submitPattern = function () {
+    var cid        = document.getElementById('pm-cid').value;
+    var scope      = document.getElementById('pm-scope').value;
+    var scopeVal   = document.getElementById('pm-scope-val').value.trim();
+    var original   = document.getElementById('pm-original').value.trim();
+    var corrected  = document.getElementById('pm-corrected').value.trim();
+    var note       = document.getElementById('pm-note').value.trim();
+
+    if (scope !== 'global' && !scopeVal) {
+      showToast('범위 값을 입력하세요.', true); return;
+    }
+
+    apiFetch('/api/admin/corrections/' + encodeURIComponent(cid) + '/approve-pattern', {
+      method: 'POST',
+      body: JSON.stringify({
+        scope: scope, scope_value: scopeVal,
+        original_text: original, corrected_text: corrected, note: note,
+      }),
+    }).then(function () {
+      showToast('패턴 등록 완료 — 다음 변환부터 Claude에 주입됩니다');
+      closePatternModal();
+      loadPatterns();
+    }).catch(function (err) { showToast('등록 실패: ' + (err.message || err), true); });
+  };
 
 })();
 </script>

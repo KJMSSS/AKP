@@ -107,6 +107,8 @@ from scripts.web.usage_log import (                                 # noqa: E402
 from scripts.web.corrections_log import (                           # noqa: E402
     append_correction, read_corrections, revert_correction,
     corrections_summary,
+    approve_as_pattern, get_active_patterns,
+    list_patterns, toggle_pattern, delete_pattern,
 )
 from scripts.web.users import (                                     # noqa: E402
     is_admin, is_allowed, get_user, add_user, update_user,
@@ -467,6 +469,45 @@ async def api_revert_correction(cid: str, request: Request):
     return JSONResponse({"ok": True})
 
 
+@app.post("/api/admin/corrections/{cid}/approve-pattern")
+async def api_approve_pattern(cid: str, request: Request):
+    _require_admin(request)
+    body          = await request.json()
+    scope         = body.get("scope", "global")
+    scope_value   = body.get("scope_value", "").strip()
+    original_text = body.get("original_text", "").strip()
+    corrected_text= body.get("corrected_text", "").strip()
+    note          = body.get("note", "").strip()
+    if not original_text and not corrected_text:
+        raise HTTPException(400, "original_text 또는 corrected_text를 입력하세요.")
+    pid = approve_as_pattern(cid, scope, scope_value, original_text, corrected_text, note)
+    return JSONResponse({"ok": True, "pid": pid})
+
+
+@app.get("/api/admin/patterns")
+async def api_list_patterns(request: Request):
+    _require_admin(request)
+    return JSONResponse(list_patterns())
+
+
+@app.patch("/api/admin/patterns/{pid}")
+async def api_toggle_pattern(pid: str, request: Request):
+    _require_admin(request)
+    body = await request.json()
+    active = bool(body.get("active", True))
+    if not toggle_pattern(pid, active):
+        raise HTTPException(404)
+    return JSONResponse({"ok": True})
+
+
+@app.delete("/api/admin/patterns/{pid}")
+async def api_delete_pattern(pid: str, request: Request):
+    _require_admin(request)
+    if not delete_pattern(pid):
+        raise HTTPException(404)
+    return JSONResponse({"ok": True})
+
+
 # ══════════════════════════════════════════════════════════════════════
 # ══════════════════════════════════════════════════════════════════════
 # Matrix 라우트
@@ -804,7 +845,20 @@ def _run_conversion(
         n_pages     = _render_pdf_pages(pdf_path, job_id)
         cost_before = guard.total_today()
 
-        md = read_pdf_as_markdown(pdf_path, full_content=full_content)
+        # custom_filename에서 학교/과목 파싱 (2026_2_1_a_공수1_경신여고.hwpx)
+        _school, _subject = "", ""
+        if custom_filename:
+            parts = Path(custom_filename).stem.split("_")
+            if len(parts) >= 6:
+                _subject = parts[4]
+                _school  = "_".join(parts[5:])
+        patterns = get_active_patterns(school=_school, subject=_subject)
+        if patterns:
+            print(f"  [패턴] {len(patterns)}건 프롬프트 주입 (학교:{_school} 과목:{_subject})")
+
+        md = read_pdf_as_markdown(
+            pdf_path, full_content=full_content, correction_patterns=patterns
+        )
         md = apply_fallback(md, pdf_path)
 
         header, segments = parse_problems(md)

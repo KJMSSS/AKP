@@ -99,18 +99,42 @@ _USER_PROMPT = "이 시험지 PDF의 모든 문제를 마크다운 형식으로 
 _USER_PROMPT_FULL = "이 PDF에 인쇄된 모든 내용(문제, 정답, 해설, 풀이 과정)을 빠짐없이 마크다운으로 전사해주세요."
 
 
+def _build_pattern_section(patterns: list[dict]) -> str:
+    """승인된 교정 패턴을 프롬프트 섹션으로 포맷."""
+    if not patterns:
+        return ""
+    lines = [
+        "",
+        "[알려진 교정 사례 — 반드시 준수]",
+        "아래는 이 유형 시험지에서 과거에 발견된 OCR 오류입니다. 동일한 실수를 하지 마세요.",
+    ]
+    for i, p in enumerate(patterns, 1):
+        orig = p.get("original_text", "").strip()
+        corr = p.get("corrected_text", "").strip()
+        note = p.get("note", "").strip()
+        scope = p.get("scope", "global")
+        sv    = p.get("scope_value", "")
+        ctx   = f"({sv})" if sv else ("(전체 공통)" if scope == "global" else "")
+        lines.append(f"{i}. {ctx}")
+        if orig: lines.append(f"   ❌ 틀린 예: {orig}")
+        if corr: lines.append(f"   ✅ 올바른 표현: {corr}")
+        if note: lines.append(f"   메모: {note}")
+    return "\n".join(lines)
+
+
 def read_pdf_as_markdown(
     pdf_path: Path,
     *,
     max_tokens: int | None = None,
     cost_cap_usd: float = 5.0,
     full_content: bool = False,
+    correction_patterns: list[dict] | None = None,
 ) -> str:
     """
     PDF → Claude API → Mathpix 호환 마크다운.
 
     full_content=True 이면 정답·해설을 포함한 모든 내용을 전사.
-    반환값은 $...$  / $$...$$ 형식이므로 기존 파이프라인 그대로 사용 가능.
+    correction_patterns: 관리자가 승인한 교정 패턴 목록 — 프롬프트에 주입됨.
     """
     api_key = os.environ.get("ANTHROPIC_API_KEY")
     if not api_key:
@@ -122,13 +146,17 @@ def read_pdf_as_markdown(
     pdf_bytes = pdf_path.read_bytes()
     n_pages = _count_pages(pdf_bytes)
 
-    system      = _SYSTEM_FULL if full_content else _SYSTEM
+    base_system = _SYSTEM_FULL if full_content else _SYSTEM
+    pattern_section = _build_pattern_section(correction_patterns or [])
+    system      = base_system + pattern_section
     user_prompt = _USER_PROMPT_FULL if full_content else _USER_PROMPT
     if max_tokens is None:
         max_tokens = _MAX_TOKENS_FULL if full_content else _MAX_TOKENS
 
     mode_label = "전체(정답·해설 포함)" if full_content else "문제만"
-    print(f"  [claude_pdf] {pdf_path.name}  ({n_pages}p)  {mode_label}")
+    n_pat = len(correction_patterns) if correction_patterns else 0
+    pat_label = f"  패턴 {n_pat}건 주입" if n_pat else ""
+    print(f"  [claude_pdf] {pdf_path.name}  ({n_pages}p)  {mode_label}{pat_label}")
 
     if n_pages == 0 or n_pages <= _PAGE_CHUNK:
         md, cost = _call_api(pdf_bytes, api_key, max_tokens, system, user_prompt)
