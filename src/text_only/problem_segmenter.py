@@ -16,7 +16,7 @@ from typing import AbstractSet
 _PROB_RE   = re.compile(r'^(\d{1,2})[.．]\s*(?=\S)')  # "1. " "1．$" "22. "
 _SUBJ_RE   = re.compile(r'(?:\[\^\d+\])?\s*서술형\s*(\d+)\s*[.．]?\s*')
 _SCORE_RE  = re.compile(r'[\[［][\d.．]+점[\]］]')  # [3점] ／ [4.5점] ／ ［4．7점］
-_CHOICE_RE = re.compile(r'^[（(]\s*([1-5])\s*[）)]\s*')
+_CHOICE_RE = re.compile(r'^(?:[（(]\s*[1-5]\s*[）)]|[①②③④⑤])\s*')
 _COND_RE   = re.compile(r'^[（(][가-힣][）)]\s*')         # （가）, (나) 조건문
 _BOGI_RE   = re.compile(r'^[ㄱ-ㅎ]\s*[.．]\s*|^보기\s*$')  # ㄱ. ㄴ. ㄷ. 또는 "보기" 헤더
 _ROMAN_ITEM_RE = re.compile(r'^\([ivxIVX]+\)\s+')          # (i) (ii) (iii) 로마자 번호 항목
@@ -231,7 +231,8 @@ def _split_block(
             continue
 
         # 선택지 1개 이상 있고 짧은 줄 → 번호 없는 선택지 후보
-        if choices and _looks_like_unlabeled_choice(s):
+        # ①②③④⑤ 형식이면 한글 길이 제한 없이 선택지로 수집
+        if choices and (_CHOICE_RE.match(s) or _looks_like_unlabeled_choice(s)):
             choices.append(s)
             i += 1
             continue
