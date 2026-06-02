@@ -145,6 +145,35 @@
     display: none;
   }
 
+  /* ── 메타데이터 입력 ── */
+  #meta-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 14px;
+  }
+  #meta-row input, #meta-row select {
+    border: 1px solid #ced4da;
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 0.85rem;
+    color: #495057;
+    background: #fff;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  #meta-row input:focus, #meta-row select:focus { border-color: #0d6efd; }
+  #meta-year    { width: 80px; }
+  #meta-grade, #meta-sem, #meta-round { width: 90px; }
+  #meta-subject { width: 110px; }
+  #meta-school  { width: 130px; }
+  #meta-preview {
+    margin-top: 6px;
+    font-size: 0.8rem;
+    color: #6c757d;
+    font-family: monospace;
+  }
+
   /* ── 옵션 + 버튼 ── */
   #options-row {
     display: flex;
@@ -408,6 +437,29 @@
     </div>
     <input type="file" id="file-input" accept=".pdf,application/pdf">
 
+    <!-- 파일명 메타데이터 -->
+    <div id="meta-row">
+      <input type="number" id="meta-year"  placeholder="년도" min="2000" max="2099" value="">
+      <select id="meta-grade">
+        <option value="">학년</option>
+        <option value="1">1학년</option>
+        <option value="2">2학년</option>
+        <option value="3">3학년</option>
+      </select>
+      <select id="meta-sem">
+        <option value="">학기</option>
+        <option value="1">1학기</option>
+        <option value="2">2학기</option>
+      </select>
+      <select id="meta-round">
+        <option value="">차수</option>
+        <option value="a">1차 (a)</option>
+        <option value="b">2차 (b)</option>
+      </select>
+      <input type="text" id="meta-subject" placeholder="과목 (예: 수1)">
+      <input type="text" id="meta-school"  placeholder="학교 (예: 경신여고)">
+    </div>
+
     <div id="options-row">
       <label id="full-label">
         <input type="checkbox" id="full-content">
@@ -570,6 +622,34 @@ fetch('/api/me').then(r => r.json()).then(me => {
   if (al && me.is_admin) al.style.display = 'inline';
 });
 
+/* ── 메타데이터 미리보기 ── */
+function buildFilename() {
+  const y = $('meta-year').value.trim();
+  const g = $('meta-grade').value;
+  const s = $('meta-sem').value;
+  const r = $('meta-round').value;
+  const sub = $('meta-subject').value.trim();
+  const sch = $('meta-school').value.trim();
+  const parts = [y, g, s, r, sub, sch].filter(Boolean);
+  return parts.length ? parts.join('_') + '.hwpx' : '';
+}
+
+function updateMetaPreview() {
+  let el = $('meta-preview');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'meta-preview';
+    $('meta-row').after(el);
+  }
+  const name = buildFilename();
+  el.textContent = name ? '파일명: ' + name : '';
+}
+
+['meta-year','meta-grade','meta-sem','meta-round','meta-subject','meta-school'].forEach(id => {
+  const el = $(id);
+  if (el) el.addEventListener('input', updateMetaPreview);
+});
+
 /* ── 드롭존 ── */
 let selectedFile = null;
 
@@ -659,6 +739,7 @@ $('convert-btn').addEventListener('click', async () => {
   const fd = new FormData();
   fd.append('file', selectedFile);
   fd.append('full_content', $('full-content').checked ? 'true' : 'false');
+  fd.append('custom_filename', buildFilename());
 
   let jobId;
   try {

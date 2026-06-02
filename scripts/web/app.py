@@ -207,6 +207,7 @@ async def convert(
     request: Request,
     file: UploadFile = File(...),
     full_content: str = Form("false"),
+    custom_filename: str = Form(""),
 ):
     email = _require_login(request)
 
@@ -236,7 +237,7 @@ async def convert(
     full = full_content.lower() in ("true", "1", "yes")
     threading.Thread(
         target=_run_conversion,
-        args=(job_id, pdf_dst, file.filename, full, email),
+        args=(job_id, pdf_dst, file.filename, full, email, custom_filename.strip()),
         daemon=True,
     ).start()
     return JSONResponse({"job_id": job_id})
@@ -297,16 +298,23 @@ async def download(job_id: str):
         else:
             raise HTTPException(404)
 
-    # 원본 PDF 이름으로 다운로드 파일명 결정
+    # 파일명 결정: custom_filename 우선, 없으면 PDF 이름
     base_id = job_id.removesuffix("_reviewed")
     review_file = _TMP_DIR / f"{base_id}_review.json"
     dl_name = hwpx.name  # 기본값
     if review_file.exists():
         try:
-            pdf_name = json.loads(review_file.read_text(encoding="utf-8")).get("pdf_name", "")
-            if pdf_name:
-                stem = Path(pdf_name).stem
-                suffix = "_검수" if "_reviewed" in hwpx.name else ""
+            meta = json.loads(review_file.read_text(encoding="utf-8"))
+            custom = meta.get("custom_filename", "")
+            pdf_name = meta.get("pdf_name", "")
+            is_reviewed = "_reviewed" in hwpx.name
+            if custom:
+                stem   = Path(custom).stem
+                suffix = "_검수" if is_reviewed else ""
+                dl_name = f"{stem}{suffix}.hwpx"
+            elif pdf_name:
+                stem   = Path(pdf_name).stem
+                suffix = "_검수" if is_reviewed else ""
                 dl_name = f"{stem}{suffix}.hwpx"
         except Exception:
             pass
@@ -553,13 +561,17 @@ def _render_pdf_pages(pdf_path: Path, job_id: str) -> int:
     return n
 
 
-def _save_review_data(job_id: str, original_name: str, md: str, n_pages: int) -> None:
+def _save_review_data(
+    job_id: str, original_name: str, md: str, n_pages: int,
+    custom_filename: str = "",
+) -> None:
     header, segments = parse_problems(md)
     data = {
-        "job_id":   job_id,
-        "pdf_name": original_name,
-        "header":   header,
-        "pages":    n_pages,
+        "job_id":          job_id,
+        "pdf_name":        original_name,
+        "custom_filename": custom_filename,
+        "header":          header,
+        "pages":           n_pages,
         "problems": [
             {"number": seg.number, "full_text": seg.raw_block,
              "is_subjective": seg.is_subjective, "status": "pending"}
@@ -577,6 +589,7 @@ def _run_conversion(
     original_name: str,
     full_content: bool,
     email: str = "",
+    custom_filename: str = "",
 ) -> None:
     q    = _jobs[job_id]["queue"]
     meta = _jobs[job_id]["meta"]
@@ -629,7 +642,7 @@ def _run_conversion(
                 print(f"  [그림] {item_no}번 삽입 실패: {e}")
 
         print("  [검수] 문제 파싱 및 검수 데이터 저장 중...")
-        _save_review_data(job_id, original_name, md, n_pages)
+        _save_review_data(job_id, original_name, md, n_pages, custom_filename)
 
         duration = round(time.time() - t0, 1)
         cost_usd = round(guard.total_today() - cost_before, 4)
