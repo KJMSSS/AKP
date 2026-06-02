@@ -1,0 +1,921 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>검수 페이지</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Malgun Gothic', '맑은 고딕', sans-serif;
+      background: #f0f2f5;
+      color: #1e293b;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── 상단 바 ── */
+    #topbar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: #1e293b;
+      color: #fff;
+      padding: 0 20px;
+      height: 52px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: 0 2px 6px rgba(0,0,0,.25);
+      flex-shrink: 0;
+    }
+    #topbar a.back-link {
+      color: #94a3b8;
+      text-decoration: none;
+      font-size: 13px;
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      transition: color .15s;
+    }
+    #topbar a.back-link:hover { color: #e2e8f0; }
+    #topbar .sep { color: #475569; font-size: 16px; }
+    #title-text {
+      font-size: 14px;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+    #error-counter {
+      font-size: 13px;
+      font-weight: 600;
+      white-space: nowrap;
+      flex-shrink: 0;
+      color: #fca5a5;
+    }
+    #error-counter .cnt-ok { color: #86efac; }
+    #error-counter .cnt-err { color: #fca5a5; }
+    #error-counter .cnt-total { color: #94a3b8; }
+
+    /* ── 메인 컨테이너 ── */
+    #main-container {
+      max-width: 1200px;
+      width: 100%;
+      margin: 0 auto;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── 좌우 분할 ── */
+    #split {
+      display: flex;
+      flex: 1;
+      align-items: flex-start;
+      gap: 0;
+      padding: 16px 16px 0;
+    }
+
+    /* ── 좌측 패널 (PDF 이미지) ── */
+    #left-panel {
+      width: 46%;
+      flex-shrink: 0;
+      position: sticky;
+      top: 52px;
+      max-height: calc(100vh - 52px - 74px);
+      display: flex;
+      flex-direction: column;
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 1px 4px rgba(0,0,0,.1);
+      overflow: hidden;
+      margin-right: 14px;
+    }
+
+    #page-tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      padding: 10px 10px 8px;
+      border-bottom: 1px solid #e2e8f0;
+      background: #f8fafc;
+      flex-shrink: 0;
+    }
+    .page-tab {
+      padding: 3px 10px;
+      border-radius: 5px;
+      border: 1px solid #cbd5e1;
+      background: #fff;
+      font-size: 12px;
+      cursor: pointer;
+      color: #475569;
+      transition: all .15s;
+    }
+    .page-tab:hover { background: #e2e8f0; }
+    .page-tab.active {
+      background: #1e293b;
+      color: #fff;
+      border-color: #1e293b;
+    }
+
+    #image-wrap {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+    }
+    #page-img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 4px;
+      display: none;
+    }
+    #img-loading {
+      font-size: 13px;
+      color: #94a3b8;
+      padding: 40px 0;
+      text-align: center;
+    }
+
+    /* ── 우측 패널 (문제 목록) ── */
+    #right-panel {
+      flex: 1;
+      min-width: 0;
+      overflow-y: auto;
+      max-height: calc(100vh - 52px - 74px);
+      padding-right: 2px;
+    }
+
+    /* ── 문제 카드 ── */
+    .problem-card {
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 1px 4px rgba(0,0,0,.08);
+      margin-bottom: 10px;
+      border-left: 4px solid #cbd5e1;
+      transition: border-color .2s, box-shadow .2s;
+      overflow: hidden;
+    }
+    .problem-card.status-ok    { border-left-color: #22c55e; }
+    .problem-card.status-error { border-left-color: #ef4444; box-shadow: 0 1px 8px rgba(239,68,68,.15); }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 9px 14px 8px;
+      background: #f8fafc;
+      border-bottom: 1px solid #f1f5f9;
+    }
+    .card-num {
+      font-size: 13px;
+      font-weight: 700;
+      color: #1e293b;
+    }
+    .card-badge {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 20px;
+      background: #e2e8f0;
+      color: #64748b;
+      font-weight: 600;
+    }
+    .problem-card.status-ok    .card-badge { background: #dcfce7; color: #15803d; }
+    .problem-card.status-error .card-badge { background: #fee2e2; color: #b91c1c; }
+
+    /* ── 텍스트 표시 영역 ── */
+    .card-text-wrap {
+      padding: 10px 14px 4px;
+      position: relative;
+    }
+    .card-text {
+      font-family: 'Consolas', 'Courier New', monospace;
+      font-size: 0.85rem;
+      line-height: 1.65;
+      color: #374151;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+    .card-text .latex {
+      color: #6366f1;
+      font-style: normal;
+    }
+    .card-text-collapsed {
+      max-height: 3.6em; /* 약 2줄 */
+      overflow: hidden;
+    }
+    .btn-expand {
+      display: inline-block;
+      margin-top: 2px;
+      font-size: 11px;
+      color: #6366f1;
+      cursor: pointer;
+      background: none;
+      border: none;
+      padding: 0;
+      text-decoration: underline;
+    }
+
+    /* ── 버튼 행 ── */
+    .card-actions {
+      display: flex;
+      gap: 8px;
+      padding: 8px 14px 12px;
+      align-items: center;
+    }
+    .btn-ok {
+      padding: 5px 16px;
+      border-radius: 6px;
+      border: 1.5px solid #22c55e;
+      background: #fff;
+      color: #15803d;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all .15s;
+    }
+    .btn-ok:hover, .btn-ok.active {
+      background: #22c55e;
+      color: #fff;
+    }
+    .btn-err {
+      padding: 5px 16px;
+      border-radius: 6px;
+      border: 1.5px solid #ef4444;
+      background: #fff;
+      color: #b91c1c;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all .15s;
+    }
+    .btn-err:hover, .btn-err.active {
+      background: #ef4444;
+      color: #fff;
+    }
+    /* 오류 메모 표시 (저장 후) */
+    .error-note-display {
+      display: none;
+      font-size: 12px;
+      color: #b91c1c;
+      background: #fff1f2;
+      border-radius: 5px;
+      padding: 4px 10px;
+      margin-left: 8px;
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .error-note-display.visible { display: block; }
+
+    /* ── 오류 메모 입력 슬라이드다운 ── */
+    .error-form-wrap {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height .3s ease, opacity .25s;
+      opacity: 0;
+    }
+    .error-form-wrap.open {
+      max-height: 300px;
+      opacity: 1;
+    }
+    .error-form {
+      padding: 10px 14px 14px;
+      border-top: 1px solid #fee2e2;
+      background: #fff8f8;
+    }
+    .error-form label {
+      display: block;
+      font-size: 12px;
+      color: #64748b;
+      margin-bottom: 4px;
+      margin-top: 10px;
+      font-weight: 600;
+    }
+    .error-form label:first-child { margin-top: 0; }
+    .error-form textarea {
+      width: 100%;
+      font-family: 'Malgun Gothic', '맑은 고딕', sans-serif;
+      font-size: 13px;
+      line-height: 1.55;
+      border: 1px solid #fca5a5;
+      border-radius: 6px;
+      padding: 7px 10px;
+      resize: vertical;
+      color: #1e293b;
+      background: #fff;
+      outline: none;
+      transition: border-color .15s;
+    }
+    .error-form textarea:focus { border-color: #ef4444; }
+    .error-form .form-btns {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .btn-save {
+      padding: 5px 18px;
+      border-radius: 6px;
+      border: none;
+      background: #ef4444;
+      color: #fff;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .15s;
+    }
+    .btn-save:hover { background: #dc2626; }
+    .btn-cancel {
+      padding: 5px 14px;
+      border-radius: 6px;
+      border: 1px solid #e2e8f0;
+      background: #fff;
+      color: #64748b;
+      font-size: 13px;
+      cursor: pointer;
+      transition: background .15s;
+    }
+    .btn-cancel:hover { background: #f1f5f9; }
+
+    /* ── 하단 바 ── */
+    #bottombar {
+      position: sticky;
+      bottom: 0;
+      z-index: 100;
+      background: #fff;
+      border-top: 1px solid #e2e8f0;
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      flex-shrink: 0;
+      box-shadow: 0 -2px 8px rgba(0,0,0,.07);
+    }
+    #btn-submit {
+      padding: 10px 36px;
+      font-size: 15px;
+      font-weight: 700;
+      border: none;
+      border-radius: 8px;
+      cursor: not-allowed;
+      background: #cbd5e1;
+      color: #94a3b8;
+      transition: all .2s;
+      min-width: 220px;
+    }
+    #btn-submit.active {
+      background: #2563eb;
+      color: #fff;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(37,99,235,.35);
+    }
+    #btn-submit.active:hover { background: #1d4ed8; }
+    #submit-note {
+      font-size: 12px;
+      color: #94a3b8;
+    }
+
+    /* ── 로딩 / 에러 오버레이 ── */
+    #overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(255,255,255,.88);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+      gap: 12px;
+    }
+    #overlay.hidden { display: none; }
+    .spinner {
+      width: 36px;
+      height: 36px;
+      border: 4px solid #e2e8f0;
+      border-top-color: #2563eb;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #overlay-msg  { font-size: 14px; color: #64748b; }
+    #overlay-err  { color: #dc2626; font-size: 13px; text-align: center; max-width: 360px; }
+    #overlay-retry {
+      display: none;
+      padding: 8px 24px;
+      border-radius: 6px;
+      border: 1px solid #e2e8f0;
+      background: #fff;
+      cursor: pointer;
+      font-size: 13px;
+      color: #1e293b;
+    }
+    #overlay-retry:hover { background: #f1f5f9; }
+
+    /* ── 완료 배너 ── */
+    #done-banner {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(15,23,42,.6);
+      z-index: 300;
+      align-items: center;
+      justify-content: center;
+    }
+    #done-banner.show { display: flex; }
+    .done-box {
+      background: #fff;
+      border-radius: 12px;
+      padding: 40px 48px;
+      text-align: center;
+      box-shadow: 0 8px 32px rgba(0,0,0,.25);
+      max-width: 380px;
+      width: 90%;
+    }
+    .done-box .done-icon {
+      font-size: 48px;
+      margin-bottom: 12px;
+    }
+    .done-box h2 {
+      font-size: 18px;
+      color: #15803d;
+      margin-bottom: 8px;
+    }
+    .done-box p {
+      font-size: 13px;
+      color: #64748b;
+      margin-bottom: 20px;
+    }
+    .done-box a {
+      display: inline-block;
+      padding: 8px 24px;
+      background: #1e293b;
+      color: #fff;
+      text-decoration: none;
+      border-radius: 7px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .done-box a:hover { background: #334155; }
+
+    /* ── 반응형 ── */
+    @media (max-width: 760px) {
+      #split { flex-direction: column; padding: 10px 10px 0; }
+      #left-panel {
+        width: 100%;
+        margin-right: 0;
+        margin-bottom: 12px;
+        position: static;
+        max-height: 42vh;
+      }
+      #right-panel { max-height: none; overflow-y: visible; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- 로딩 오버레이 -->
+<div id="overlay">
+  <div class="spinner"></div>
+  <div id="overlay-msg">데이터를 불러오는 중...</div>
+  <div id="overlay-err"></div>
+  <button id="overlay-retry">다시 시도</button>
+</div>
+
+<!-- 완료 배너 -->
+<div id="done-banner">
+  <div class="done-box">
+    <div class="done-icon">✅</div>
+    <h2>검수 완료! 수고하셨습니다.</h2>
+    <p id="done-msg">오류 내용이 전송되었습니다.</p>
+    <a href="/">← 변환기로 돌아가기</a>
+  </div>
+</div>
+
+<!-- 상단 바 -->
+<div id="topbar">
+  <a href="/" class="back-link">&#8592; 변환기로</a>
+  <span class="sep">|</span>
+  <span id="title-text">검수 페이지</span>
+  <span id="error-counter">
+    <span id="cnt-ok" class="cnt-ok">-</span>
+    <span class="cnt-total"> / </span>
+    <span id="cnt-total" class="cnt-total">-</span>
+    <span class="cnt-total"> 확인</span>
+    &nbsp;
+    <span id="cnt-err-wrap" style="display:none">
+      오류: <span id="cnt-err" class="cnt-err">0</span>건
+    </span>
+  </span>
+</div>
+
+<!-- 메인 -->
+<div id="main-container">
+  <div id="split">
+    <!-- 좌측: PDF 이미지 -->
+    <div id="left-panel">
+      <div id="page-tabs"></div>
+      <div id="image-wrap">
+        <div id="img-loading">이미지 로드 중...</div>
+        <img id="page-img" src="" alt="PDF 페이지" />
+      </div>
+    </div>
+
+    <!-- 우측: 문제 목록 -->
+    <div id="right-panel">
+      <div id="problem-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- 하단 바 -->
+<div id="bottombar">
+  <span id="submit-note"></span>
+  <button id="btn-submit" disabled>검수 완료 제출</button>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ─── 상태 ─── */
+  const state = {
+    jobId: null,
+    jobData: null,
+    problems: [],      // { number, full_text, is_subjective, status, note, corrected_text }
+    currentPage: 0,
+  };
+
+  /* ─── DOM ─── */
+  const $ = id => document.getElementById(id);
+  const overlay      = $('overlay');
+  const overlayMsg   = $('overlay-msg');
+  const overlayErr   = $('overlay-err');
+  const overlayRetry = $('overlay-retry');
+  const titleText    = $('title-text');
+  const cntOk        = $('cnt-ok');
+  const cntErr       = $('cnt-err');
+  const cntTotal     = $('cnt-total');
+  const cntErrWrap   = $('cnt-err-wrap');
+  const pageTabs     = $('page-tabs');
+  const pageImg      = $('page-img');
+  const imgLoading   = $('img-loading');
+  const problemList  = $('problem-list');
+  const btnSubmit    = $('btn-submit');
+  const submitNote   = $('submit-note');
+  const doneBanner   = $('done-banner');
+  const doneMsg      = $('done-msg');
+
+  /* ─── 유틸 ─── */
+  function showOverlay(msg, errMsg) {
+    overlay.classList.remove('hidden');
+    overlayMsg.textContent = msg || '';
+    overlayErr.textContent = '';
+    overlayRetry.style.display = 'none';
+    overlay.querySelector('.spinner').style.display = errMsg ? 'none' : 'block';
+    if (errMsg) {
+      overlayErr.textContent = errMsg;
+      overlayRetry.style.display = 'inline-block';
+    }
+  }
+  function hideOverlay() { overlay.classList.add('hidden'); }
+
+  /* ─── job_id 추출 ─── */
+  function extractJobId() {
+    return window.location.pathname.split('/')[2] || null;
+  }
+
+  /* ─── 데이터 로드 ─── */
+  async function loadData() {
+    showOverlay('데이터를 불러오는 중...');
+    try {
+      const res = await fetch(`/api/review/${state.jobId}`);
+      if (!res.ok) throw new Error(`서버 오류: ${res.status} ${res.statusText}`);
+      const data = await res.json();
+      state.jobData = data;
+      state.problems = data.problems.map(p => ({
+        number: p.number,
+        full_text: p.full_text || '',
+        is_subjective: !!p.is_subjective,
+        status: 'pending',
+        note: '',
+        corrected_text: '',
+      }));
+      initUI();
+      hideOverlay();
+    } catch (e) {
+      showOverlay('데이터 로드 실패', e.message);
+    }
+  }
+
+  /* ─── UI 초기화 ─── */
+  function initUI() {
+    const data = state.jobData;
+    titleText.textContent = `${data.pdf_name || state.jobId} 검수`;
+    document.title = `검수 — ${data.pdf_name || state.jobId}`;
+    cntTotal.textContent = state.problems.length;
+
+    // 페이지 탭
+    pageTabs.innerHTML = '';
+    for (let i = 0; i < (data.pages || 1); i++) {
+      const tab = document.createElement('button');
+      tab.className = 'page-tab' + (i === 0 ? ' active' : '');
+      tab.textContent = `${i + 1}p`;
+      tab.dataset.page = i;
+      tab.addEventListener('click', () => switchPage(i));
+      pageTabs.appendChild(tab);
+    }
+    switchPage(0);
+    renderProblems();
+    updateCounter();
+  }
+
+  /* ─── 페이지 전환 ─── */
+  function switchPage(n) {
+    state.currentPage = n;
+    pageTabs.querySelectorAll('.page-tab').forEach(t => {
+      t.classList.toggle('active', parseInt(t.dataset.page) === n);
+    });
+    pageImg.style.display = 'none';
+    imgLoading.style.display = 'block';
+    imgLoading.textContent = '이미지 로드 중...';
+
+    const src = `/page/${state.jobId}/${n}`;
+    const tmp = new Image();
+    tmp.onload = () => {
+      pageImg.src = src;
+      pageImg.style.display = 'block';
+      imgLoading.style.display = 'none';
+    };
+    tmp.onerror = () => {
+      imgLoading.textContent = `${n + 1}p 이미지를 불러올 수 없습니다.`;
+    };
+    tmp.src = src;
+  }
+
+  /* ─── LaTeX 하이라이트 ─── */
+  function renderLatex(raw) {
+    // $...$ 및 $$...$$ 를 <span class="latex"> 로 감싸기
+    // HTML 이스케이프 먼저, 그 다음 span 치환
+    const escaped = String(raw)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+
+    return escaped.replace(/(\$\$[\s\S]*?\$\$|\$[^$\n]+?\$)/g, (m) => {
+      return `<span class="latex">${m}</span>`;
+    });
+  }
+
+  /* ─── 문제 카드 렌더링 ─── */
+  function renderProblems() {
+    problemList.innerHTML = '';
+    state.problems.forEach(prob => {
+      problemList.appendChild(buildCard(prob));
+    });
+  }
+
+  function buildCard(prob) {
+    const card = document.createElement('div');
+    card.className = 'problem-card';
+    card.id = `card-${prob.number}`;
+
+    const labelText = prob.is_subjective
+      ? `서술형 ${prob.number}번`
+      : `${prob.number}번`;
+
+    // 텍스트가 길 경우 더보기 처리 (2줄 기준 약 160자 이상이면 접기)
+    const COLLAPSE_THRESHOLD = 160;
+    const isLong = prob.full_text.length > COLLAPSE_THRESHOLD;
+    const textHtml = renderLatex(prob.full_text);
+
+    card.innerHTML = `
+      <div class="card-header">
+        <span class="card-num">${escHtml(labelText)}</span>
+        <span class="card-badge">미확인</span>
+      </div>
+      <div class="card-text-wrap">
+        <div class="card-text${isLong ? ' card-text-collapsed' : ''}">${textHtml}</div>
+        ${isLong ? '<button class="btn-expand">더보기 ▼</button>' : ''}
+      </div>
+      <div class="card-actions">
+        <button class="btn-ok">✓ 정확</button>
+        <button class="btn-err">✗ 오류</button>
+        <span class="error-note-display"></span>
+      </div>
+      <div class="error-form-wrap">
+        <div class="error-form">
+          <label>어떤 오류인가요? (간단히 메모)</label>
+          <textarea class="ta-note" rows="2" placeholder="예: 분수가 7/27이 맞음, 글자 누락 등"></textarea>
+          <label>수정된 내용 (선택사항, LaTeX 가능)</label>
+          <textarea class="ta-corrected" rows="2" placeholder="빈칸도 가능"></textarea>
+          <div class="form-btns">
+            <button class="btn-save">저장</button>
+            <button class="btn-cancel">취소</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    // 더보기
+    if (isLong) {
+      const expandBtn = card.querySelector('.btn-expand');
+      const textDiv   = card.querySelector('.card-text');
+      let collapsed = true;
+      expandBtn.addEventListener('click', () => {
+        collapsed = !collapsed;
+        textDiv.classList.toggle('card-text-collapsed', collapsed);
+        expandBtn.textContent = collapsed ? '더보기 ▼' : '접기 ▲';
+      });
+    }
+
+    const btnOk      = card.querySelector('.btn-ok');
+    const btnErr     = card.querySelector('.btn-err');
+    const errFormWrap= card.querySelector('.error-form-wrap');
+    const taNoteEl   = card.querySelector('.ta-note');
+    const taCorrEl   = card.querySelector('.ta-corrected');
+    const btnSave    = card.querySelector('.btn-save');
+    const btnCancel  = card.querySelector('.btn-cancel');
+    const noteDisplay= card.querySelector('.error-note-display');
+
+    // ✓ 정확
+    btnOk.addEventListener('click', () => {
+      // 오류 폼이 열려 있으면 닫기
+      errFormWrap.classList.remove('open');
+      prob.status = 'ok';
+      prob.note = '';
+      prob.corrected_text = '';
+      refreshCard(card, prob);
+      updateCounter();
+    });
+
+    // ✗ 오류 → 폼 슬라이드다운
+    btnErr.addEventListener('click', () => {
+      const isOpen = errFormWrap.classList.contains('open');
+      if (isOpen) {
+        errFormWrap.classList.remove('open');
+      } else {
+        // 기존 note 값 복원
+        taNoteEl.value = prob.note || '';
+        taCorrEl.value = prob.corrected_text || '';
+        errFormWrap.classList.add('open');
+        setTimeout(() => taNoteEl.focus(), 50);
+      }
+    });
+
+    // 저장
+    btnSave.addEventListener('click', () => {
+      prob.note = taNoteEl.value.trim();
+      prob.corrected_text = taCorrEl.value.trim();
+      prob.status = 'error';
+      errFormWrap.classList.remove('open');
+      refreshCard(card, prob);
+      updateCounter();
+    });
+
+    // 취소
+    btnCancel.addEventListener('click', () => {
+      errFormWrap.classList.remove('open');
+    });
+
+    return card;
+  }
+
+  /* ─── 카드 상태 갱신 ─── */
+  function refreshCard(card, prob) {
+    const badge     = card.querySelector('.card-badge');
+    const btnOk     = card.querySelector('.btn-ok');
+    const btnErr    = card.querySelector('.btn-err');
+    const noteDisp  = card.querySelector('.error-note-display');
+
+    card.classList.remove('status-ok', 'status-error');
+
+    if (prob.status === 'ok') {
+      card.classList.add('status-ok');
+      badge.textContent = '정확';
+      btnOk.classList.add('active');
+      btnErr.classList.remove('active');
+      noteDisp.textContent = '';
+      noteDisp.classList.remove('visible');
+    } else if (prob.status === 'error') {
+      card.classList.add('status-error');
+      badge.textContent = '오류';
+      btnErr.classList.add('active');
+      btnOk.classList.remove('active');
+      noteDisp.textContent = prob.note || '오류 표시됨';
+      noteDisp.classList.add('visible');
+    } else {
+      badge.textContent = '미확인';
+      btnOk.classList.remove('active');
+      btnErr.classList.remove('active');
+      noteDisp.textContent = '';
+      noteDisp.classList.remove('visible');
+    }
+  }
+
+  /* ─── 상단 카운터 갱신 ─── */
+  function updateCounter() {
+    const total  = state.problems.length;
+    const okCnt  = state.problems.filter(p => p.status === 'ok').length;
+    const errCnt = state.problems.filter(p => p.status === 'error').length;
+    const done   = okCnt + errCnt;
+
+    cntOk.textContent    = done;
+    cntTotal.textContent = total;
+    cntErr.textContent   = errCnt;
+    cntErrWrap.style.display = errCnt > 0 ? 'inline' : 'none';
+
+    // 제출 버튼: 1개 이상 OK 또는 오류 표시가 있을 때 활성
+    const canSubmit = done >= 1;
+    btnSubmit.disabled = !canSubmit;
+    btnSubmit.classList.toggle('active', canSubmit);
+
+    if (!canSubmit) {
+      submitNote.textContent = '한 문제 이상 확인해주세요';
+    } else {
+      const remaining = total - done;
+      submitNote.textContent = remaining > 0 ? `${remaining}개 미확인` : `전체 ${total}개 확인 완료`;
+    }
+  }
+
+  /* ─── 제출 ─── */
+  async function handleSubmit() {
+    if (btnSubmit.disabled) return;
+
+    btnSubmit.disabled = true;
+    btnSubmit.classList.remove('active');
+    btnSubmit.textContent = '전송 중...';
+    submitNote.textContent = '';
+
+    const token = localStorage.getItem('akp_token') || '';
+    const corrections = state.problems
+      .filter(p => p.status === 'error')
+      .map(p => ({
+        problem_number:  p.number,
+        problem_text:    p.full_text,
+        correction_note: p.note,
+        corrected_text:  p.corrected_text,
+      }));
+
+    const payload = { token, corrections };
+
+    try {
+      const res = await fetch(`/api/review/${state.jobId}/corrections`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const txt = await res.text().catch(() => '');
+        throw new Error(`서버 오류 ${res.status}: ${txt}`);
+      }
+
+      const errCnt = corrections.length;
+      doneMsg.textContent = errCnt > 0
+        ? `오류 ${errCnt}건이 전송되었습니다.`
+        : '이상 없음으로 제출되었습니다.';
+      doneBanner.classList.add('show');
+
+    } catch (e) {
+      btnSubmit.textContent = '검수 완료 제출';
+      btnSubmit.disabled = false;
+      btnSubmit.classList.add('active');
+      submitNote.textContent = `오류: ${e.message}`;
+      submitNote.style.color = '#dc2626';
+    }
+  }
+
+  /* ─── HTML 이스케이프 ─── */
+  function escHtml(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  /* ─── 이벤트 ─── */
+  btnSubmit.addEventListener('click', handleSubmit);
+  overlayRetry.addEventListener('click', loadData);
+
+  /* ─── 진입점 ─── */
+  state.jobId = extractJobId();
+  if (!state.jobId) {
+    showOverlay('', 'URL에서 job_id를 찾을 수 없습니다.\n(/review/{job_id} 형식이어야 합니다)');
+  } else {
+    loadData();
+  }
+})();
+</script>
+</body>
+</html>

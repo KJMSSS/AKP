@@ -102,6 +102,11 @@ def _postprocess_lines(lines: list[str]) -> list[str]:
     for raw in lines:
         s = raw.strip()
 
+        # 마크다운 테이블 줄은 변경 없이 통과
+        if s.startswith('|'):
+            out.append(raw)
+            continue
+
         # 문항 번호 줄: 첫 번째 제외하고 앞에 빈 줄
         if _PROB_LINE_RE.match(s):
             if first_q:
@@ -195,6 +200,27 @@ def _preprocess_md(md: str) -> list[str]:
         md, flags=re.DOTALL,
     )
     return md.split('\n')
+
+
+# ── 마크다운 테이블 파싱 ─────────────────────────────────────────────
+_TABLE_SEP_RE = re.compile(r'^\s*\|[-| :]+\|\s*$')
+
+
+def _parse_md_table(lines: list[str]) -> tuple[list[str], list[list[str]]]:
+    """마크다운 테이블 줄 → (헤더 행, 데이터 행 목록)."""
+    rows: list[list[str]] = []
+    for line in lines:
+        s = line.strip()
+        if not s.startswith('|'):
+            continue
+        if _TABLE_SEP_RE.match(s):
+            continue
+        cells = [c.strip() for c in s.strip('|').split('|')]
+        if cells:
+            rows.append(cells)
+    if not rows:
+        return [], []
+    return rows[0], rows[1:]
 
 
 # ── XML 생성 ─────────────────────────────────────────────────────────
@@ -365,13 +391,94 @@ class _HwpxWriter:
             '</hp:p>'
         )
 
+    # ── 마크다운 테이블 → HWPX 데이터 표 ────────────────────────────
+
+    def _md_table_to_hwpx(self, tbl_lines: list[str]) -> str:
+        """마크다운 테이블 줄 → HWPX 단락 XML (데이터 표)."""
+        headers, data_rows = _parse_md_table(tbl_lines)
+        if not headers:
+            return ''
+
+        all_rows = [headers] + data_rows
+        n_cols   = max(len(r) for r in all_rows)
+        n_rows   = len(all_rows)
+        row_h    = 2400
+        cell_w   = _TW // n_cols
+        inner_w  = max(1, cell_w - 1020)
+        total_w  = cell_w * n_cols
+        total_h  = row_h * n_rows
+        zo       = self._ez()
+        tbl_pid  = self._pid()
+
+        rows_xml = ''
+        for ri, row in enumerate(all_rows):
+            cells_xml = ''
+            bfid = '3' if ri == 0 else '4'
+            for ci in range(n_cols):
+                cell_text = (row[ci] if ci < len(row) else '').strip()
+                segs = _parse_segments(cell_text)
+                cell_para = self._para(segs, cpr=0)
+                cells_xml += (
+                    f'<hp:tc name="" header="0" hasMargin="0" protect="0" editable="0" dirty="0" '
+                    f'borderFillIDRef="{bfid}">'
+                    f'<hp:subList id="" textDirection="HORIZONTAL" lineWrap="BREAK" vertAlign="CENTER" '
+                    f'linkListIDRef="0" linkListNextIDRef="0" textWidth="{inner_w}" textHeight="0" '
+                    f'hasTextRef="0" hasNumRef="0">'
+                    f'{cell_para}'
+                    f'</hp:subList>'
+                    f'<hp:cellAddr colAddr="{ci}" rowAddr="{ri}"/>'
+                    f'<hp:cellSpan colSpan="1" rowSpan="1"/>'
+                    f'<hp:cellSz width="{cell_w}" height="{row_h}"/>'
+                    f'<hp:cellMargin left="510" right="510" top="141" bottom="141"/>'
+                    f'</hp:tc>'
+                )
+            rows_xml += f'<hp:tr>{cells_xml}</hp:tr>'
+
+        tbl_xml = (
+            f'<hp:tbl id="{tbl_pid}" zOrder="{zo}" numberingType="TABLE" '
+            f'textWrap="TOP_AND_BOTTOM" textFlow="BOTH_SIDES" lock="0" dropcapstyle="None" '
+            f'pageBreak="CELL" repeatHeader="1" rowCnt="{n_rows}" colCnt="{n_cols}" '
+            f'cellSpacing="0" borderFillIDRef="2" noAdjust="0">'
+            f'<hp:sz width="{total_w}" widthRelTo="ABSOLUTE" height="{total_h}" heightRelTo="ABSOLUTE" protect="0"/>'
+            f'<hp:pos treatAsChar="0" affectLSpacing="0" flowWithText="1" allowOverlap="0" '
+            f'holdAnchorAndSO="0" vertRelTo="PARA" horzRelTo="COLUMN" vertAlign="TOP" '
+            f'horzAlign="LEFT" vertOffset="0" horzOffset="0"/>'
+            f'<hp:outMargin left="283" right="283" top="283" bottom="283"/>'
+            f'<hp:inMargin left="510" right="510" top="141" bottom="141"/>'
+            f'{rows_xml}'
+            f'</hp:tbl>'
+        )
+        return (
+            f'<hp:p id="{self._pid()}" paraPrIDRef="8" styleIDRef="0" '
+            f'pageBreak="0" columnBreak="0" merged="0">'
+            f'<hp:run charPrIDRef="0">{tbl_xml}<hp:t/></hp:run>'
+            f'<hp:linesegarray/>'
+            f'</hp:p>'
+        )
+
     # ── 전체 section XML ─────────────────────────────────────────────
 
     def build_section(self, lines: list[str]) -> str:
         paras: list[str] = [self._secpr_para()]
         lines = _postprocess_lines(lines)
 
-        for raw in lines:
+        idx = 0
+        while idx < len(lines):
+            raw = lines[idx]
+
+            # 마크다운 테이블 블록 감지 → HWPX 표 생성
+            if raw.strip().startswith('|'):
+                tbl_lines: list[str] = []
+                while idx < len(lines) and lines[idx].strip().startswith('|'):
+                    tbl_lines.append(lines[idx])
+                    idx += 1
+                tbl_xml = self._md_table_to_hwpx(tbl_lines)
+                if tbl_xml:
+                    paras.append(tbl_xml)
+                continue
+
+            idx += 1
+
             # 마크다운 헤더 기호 제거
             line = re.sub(r'^#+\s*', '', raw)
 
@@ -387,11 +494,9 @@ class _HwpxWriter:
                 if content.strip() and not _SCORE_PAT_RE.search(content):
                     content_segs = _parse_segments(content)
                     if all(k == 'text' for k, _ in content_segs):
-                        # $...$ 없는 텍스트(한글 포함) → inline 수식으로 변환 (C: 한글 예외 제거)
                         segs = [('text', bullet), ('inline', content.strip())]
                         self._choice_eq += 1
                     else:
-                        # 이미 $...$ 포함 → 불릿만 text로 분리
                         segs = [('text', bullet)] + content_segs
                 else:
                     segs = _parse_segments(line)
@@ -577,7 +682,15 @@ def build_from_markdown(md: str, output_path: Path, base_template: Path) -> dict
 
     # 임시 파일 → 최종 경로로 교체
     import shutil
-    shutil.move(str(tmp_path), str(output_path))
+    try:
+        output_path.unlink(missing_ok=True)
+        shutil.move(str(tmp_path), str(output_path))
+    except PermissionError:
+        # Windows: 파일이 다른 프로세스(한글 등)에 의해 잠긴 경우 → 대체 경로 사용
+        alt = output_path.with_stem(output_path.stem + '_new')
+        shutil.move(str(tmp_path), str(alt))
+        print(f"  [주의] 기존 파일이 잠겨 있어 대체 경로에 저장: {alt.name}")
+        output_path = alt
 
     return {
         'paragraphs':   para_count,

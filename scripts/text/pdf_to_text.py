@@ -4,6 +4,13 @@ PDF → 빈 HWPX 직접 타이핑 변환 (템플릿 불필요)
 사용법:
     py scripts/text/pdf_to_text.py [PDF경로]
     py scripts/text/pdf_to_text.py [PDF경로] --filter-handwriting
+    py scripts/text/pdf_to_text.py [PDF경로] --ocr-engine claude
+    py scripts/text/pdf_to_text.py [PDF경로] --ocr-engine claude --full-content
+
+옵션:
+    --ocr-engine mathpix  (기본값) Mathpix API 사용
+    --ocr-engine claude   Claude API 직접 사용 (Mathpix 구독 불필요)
+    --full-content        정답·해설 포함 전체 내용 전사 (--ocr-engine claude 전용)
 
 출력:
     samples/output_text_{파일명}.hwpx
@@ -16,9 +23,14 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 sys.stdout.reconfigure(encoding='utf-8')
 
 from src.common.ocr.mathpix_client import MathpixClient
+from src.ocr.claude_pdf_reader import read_pdf_as_markdown
 from src.text_only.text_builder import build_from_markdown
 from src.text_only.handwriting_filter import filter_handwriting
 from src.text_only.ocr_fallback import apply_fallback, reinforce_placeholders
+from src.text_only.problem_segmenter import parse_problems, rebuild_markdown
+from src.common.image_extractor import extract_images
+from src.common.hwpx_image_inserter import insert_figure_placeholder
+from src.common.hwpx_table_inserter import replace_condition_tables, replace_boilerplate_tables
 from src.common.hwpx_namespace_fixer import fix_hwpx_namespaces
 from src.common.hwpx_validator import validate_hwpx, HWPXValidationError
 
@@ -43,24 +55,26 @@ def _pick_template() -> Path:
     raise FileNotFoundError("samples/ 폴더에 .hwpx 파일이 없습니다.")
 
 
-def convert(pdf_path: Path, filter_hw: bool = False) -> Path:
+def convert(pdf_path: Path, filter_hw: bool = False, ocr_engine: str = "mathpix", full_content: bool = False) -> Path:
     stem    = pdf_path.stem
     out_md  = ROOT / "output_text_temp.md"          # 임시 마크다운 저장
     out_hwpx = SAMPLES_DIR / f"output_text_{stem}.hwpx"
 
     print("─" * 62)
-    print("[ 1단계 ] PDF OCR")
+    print(f"[ 1단계 ] PDF OCR  (엔진: {ocr_engine})")
     print("─" * 62)
     print(f"  PDF: {pdf_path.name}")
 
-    client = MathpixClient()
     t0 = time.time()
 
-    pdf_id = client.submit_pdf(pdf_path)
-    print(f"  제출 완료 (pdf_id={pdf_id})")
-
-    client.poll_pdf(pdf_id, progress=True)
-    md = client.fetch_pdf_markdown(pdf_id)
+    if ocr_engine == "claude":
+        md = read_pdf_as_markdown(pdf_path, full_content=full_content)
+    else:
+        client = MathpixClient()
+        pdf_id = client.submit_pdf(pdf_path)
+        print(f"  제출 완료 (pdf_id={pdf_id})")
+        client.poll_pdf(pdf_id, progress=True)
+        md = client.fetch_pdf_markdown(pdf_id)
 
     ocr_time = time.time() - t0
     print(f"  마크다운: {len(md):,}자  ({ocr_time:.1f}s)")
@@ -71,6 +85,20 @@ def convert(pdf_path: Path, filter_hw: bool = False) -> Path:
 
     raw_md_for_reinforce = md  # 보강 시 손상 카운트의 기준
     md = apply_fallback(md, pdf_path)
+
+    # 문제 파싱 + 그림 감지 + 마커 삽입
+    header, segments = parse_problems(md)
+    fig_dir = ROOT / "log" / "figures_tmp"
+    fig_dir.mkdir(parents=True, exist_ok=True)
+    try:
+        figures    = extract_images(pdf_path, fig_dir, dpi=150)
+        figure_map = {f.item_no: f for f in figures if f.item_no}
+        if figure_map:
+            print(f"  그림 감지: {len(figure_map)}건 ({', '.join(sorted(figure_map))}번)")
+    except Exception as e:
+        print(f"  그림 감지 실패 (무시): {e}")
+        figure_map = {}
+    md = rebuild_markdown(header, segments, figure_items=set(figure_map) or None)
 
     if filter_hw:
         print()
@@ -104,11 +132,27 @@ def convert(pdf_path: Path, filter_hw: bool = False) -> Path:
 
     t1 = time.time()
     result = build_from_markdown(md, out_hwpx, base)
+    out_hwpx = result['output']  # 잠금으로 인해 대체 경로에 저장된 경우 반영
+    replace_condition_tables(out_hwpx)
+    replace_boilerplate_tables(out_hwpx)
     build_time = time.time() - t1
 
     print(f"  문단: {result['paragraphs']}개  수식: {result['equations']}개")
     print(f"  생성 시간: {build_time:.1f}s")
     print(f"  파일 크기: {out_hwpx.stat().st_size:,} bytes")
+
+    # 그림 삽입
+    if figure_map:
+        print()
+        print("─" * 62)
+        print("[ 2.3단계 ] 그림 삽입")
+        print("─" * 62)
+        for item_no, fig in sorted(figure_map.items()):
+            try:
+                insert_figure_placeholder(out_hwpx, item_no, fig.image_path)
+                print(f"  {item_no}번 그림 삽입 완료")
+            except Exception as e:
+                print(f"  {item_no}번 그림 삽입 실패: {e}")
 
     print()
     print("─" * 62)
@@ -137,11 +181,24 @@ def convert(pdf_path: Path, filter_hw: bool = False) -> Path:
 
 if __name__ == "__main__":
     args = sys.argv[1:]
-    filter_hw = "--filter-handwriting" in args
-    positional = [a for a in args if not a.startswith("--")]
+    filter_hw    = "--filter-handwriting" in args
+    full_content = "--full-content" in args
+
+    # --ocr-engine 파싱
+    ocr_engine = "mathpix"
+    for i, a in enumerate(args):
+        if a == "--ocr-engine" and i + 1 < len(args):
+            ocr_engine = args[i + 1]
+        elif a.startswith("--ocr-engine="):
+            ocr_engine = a.split("=", 1)[1]
+    if ocr_engine not in ("mathpix", "claude"):
+        print(f"알 수 없는 OCR 엔진: {ocr_engine}  (mathpix|claude)")
+        sys.exit(1)
+
+    positional = [a for a in args if not a.startswith("--") and a not in ("mathpix", "claude")]
 
     if not positional:
-        print("사용법: py scripts/text/pdf_to_text.py [PDF경로] [--filter-handwriting]")
+        print("사용법: py scripts/text/pdf_to_text.py [PDF경로] [--filter-handwriting] [--ocr-engine mathpix|claude] [--full-content]")
         sys.exit(1)
 
     pdf = Path(positional[0])
@@ -154,4 +211,4 @@ if __name__ == "__main__":
             print(f"파일 없음: {pdf}")
             sys.exit(1)
 
-    convert(pdf, filter_hw=filter_hw)
+    convert(pdf, filter_hw=filter_hw, ocr_engine=ocr_engine, full_content=full_content)

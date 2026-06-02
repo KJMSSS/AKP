@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AKP 변환기</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: #f8f9fa;
+    color: #212529;
+    min-height: 100vh;
+    padding: 0 0 40px;
+  }
+
+  /* ── 상단바 ── */
+  #topbar {
+    background: #fff;
+    border-bottom: 1px solid #dee2e6;
+    padding: 10px 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  #topbar h1 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #343a40;
+    white-space: nowrap;
+  }
+  #usage-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+    min-width: 240px;
+  }
+  #usage-text {
+    font-size: 0.85rem;
+    color: #495057;
+    white-space: nowrap;
+  }
+  #progress-wrap {
+    flex: 1;
+    min-width: 80px;
+    max-width: 160px;
+    height: 8px;
+    background: #e9ecef;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  #progress-bar {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.4s, background 0.4s;
+    width: 0%;
+    background: #28a745;
+  }
+  #remaining-text {
+    font-size: 0.8rem;
+    color: #868e96;
+    white-space: nowrap;
+  }
+  #conv-count {
+    font-size: 0.8rem;
+    color: #868e96;
+    white-space: nowrap;
+  }
+
+  /* ── 메인 컨텐츠 ── */
+  #main {
+    max-width: 800px;
+    margin: 30px auto 0;
+    padding: 0 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  /* ── 카드 공통 ── */
+  .card {
+    background: #fff;
+    border-radius: 8px;
+    border: 1px solid #dee2e6;
+    padding: 20px;
+  }
+  .card-title {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #495057;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .card-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: #dee2e6;
+  }
+
+  /* ── 드롭존 ── */
+  #dropzone {
+    border: 2px dashed #ced4da;
+    border-radius: 8px;
+    padding: 36px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s;
+    user-select: none;
+  }
+  #dropzone:hover, #dropzone.dragover {
+    background: #e8f4fd;
+    border-color: #74b9e9;
+  }
+  #dropzone.has-file {
+    border-color: #28a745;
+    background: #f0fff4;
+  }
+  #dropzone-icon {
+    font-size: 2rem;
+    margin-bottom: 8px;
+    display: block;
+  }
+  #dropzone-label {
+    font-size: 0.95rem;
+    color: #6c757d;
+  }
+  #dropzone-label span {
+    color: #0d6efd;
+    text-decoration: underline;
+  }
+  #file-name {
+    margin-top: 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #28a745;
+    display: none;
+  }
+  #file-input {
+    display: none;
+  }
+
+  /* ── 옵션 + 버튼 ── */
+  #options-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 14px;
+  }
+  #full-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.9rem;
+    color: #495057;
+    cursor: pointer;
+  }
+  #full-label input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    accent-color: #0d6efd;
+  }
+  #convert-btn {
+    background: #0d6efd;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 9px 28px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s, opacity 0.2s;
+  }
+  #convert-btn:hover:not(:disabled) { background: #0b5ed7; }
+  #convert-btn:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+  }
+
+  /* ── 로그 박스 ── */
+  #log-section { display: none; }
+  #log-box {
+    background: #1a1a1a;
+    color: #f0f0f0;
+    font-family: "Consolas", "Courier New", monospace;
+    font-size: 0.82rem;
+    line-height: 1.5;
+    height: 200px;
+    overflow-y: auto;
+    border-radius: 6px;
+    padding: 10px 12px;
+  }
+  #log-box .log-line { display: block; }
+  #log-box .log-dim  { color: #888; }
+  #log-box .log-ok   { color: #4caf50; }
+  #log-box .log-err  { color: #f44336; }
+
+  #log-summary {
+    margin-top: 10px;
+    font-size: 0.85rem;
+    color: #495057;
+    background: #f1f8e9;
+    border: 1px solid #c5e1a5;
+    border-radius: 6px;
+    padding: 10px 14px;
+    display: none;
+  }
+  #download-btn {
+    display: none;
+    margin-top: 12px;
+    background: #198754;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 9px 28px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  #download-btn:hover { background: #157347; }
+  #review-btn {
+    display: none;
+    margin-top: 12px;
+    margin-left: 8px;
+    background: #2563eb;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 9px 28px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  #review-btn:hover { background: #1d4ed8; }
+
+  /* ── 토큰 모달 ── */
+  #token-modal {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.55);
+    z-index: 1000;
+    align-items: center; justify-content: center;
+  }
+  #token-modal.show { display: flex; }
+  #token-box {
+    background: #fff;
+    border-radius: 12px;
+    padding: 36px 40px;
+    width: 360px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+    text-align: center;
+  }
+  #token-title { font-size: 1.3rem; font-weight: 700; margin-bottom: 8px; }
+  #token-desc  { font-size: 0.9rem; color: #666; margin-bottom: 20px; }
+  #token-input {
+    width: 100%; padding: 10px 14px; font-size: 1rem;
+    border: 1.5px solid #d1d5db; border-radius: 6px;
+    text-align: center; letter-spacing: 1px;
+    box-sizing: border-box; margin-bottom: 8px;
+  }
+  #token-input:focus { outline: none; border-color: #2563eb; }
+  #token-err   { color: #dc2626; font-size: 0.85rem; min-height: 20px; margin-bottom: 8px; }
+  #token-submit {
+    width: 100%; padding: 10px; background: #2563eb; color: #fff;
+    border: none; border-radius: 6px; font-size: 1rem; font-weight: 600;
+    cursor: pointer; transition: background 0.2s;
+  }
+  #token-submit:hover { background: #1d4ed8; }
+  #token-admin-link { margin-top: 14px; font-size: 0.82rem; color: #9ca3af; }
+  #token-admin-link a { color: #6b7280; text-decoration: underline; }
+
+  /* ── 상단바 토큰 표시 ── */
+  #token-badge {
+    font-size: 0.8rem; color: #6b7280;
+    background: #f3f4f6; border-radius: 4px;
+    padding: 2px 8px; margin-left: 8px; cursor: pointer;
+  }
+  #token-badge:hover { background: #e5e7eb; }
+
+  /* ── 기록 테이블 ── */
+  #history-section table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.83rem;
+  }
+  #history-section thead th {
+    background: #f1f3f5;
+    color: #495057;
+    font-weight: 600;
+    padding: 7px 10px;
+    text-align: left;
+    border-bottom: 2px solid #dee2e6;
+    white-space: nowrap;
+  }
+  #history-section tbody tr:hover { background: #f8f9fa; }
+  #history-section tbody td {
+    padding: 7px 10px;
+    border-bottom: 1px solid #e9ecef;
+    color: #343a40;
+    vertical-align: middle;
+  }
+  .status-ok   { color: #28a745; font-weight: 700; }
+  .status-err  { color: #dc3545; font-weight: 700; }
+  .status-cap  { color: #fd7e14; font-weight: 600; font-size: 0.75rem; }
+  .mode-full   { color: #0d6efd; }
+  .mode-quest  { color: #6f42c1; }
+
+  #history-empty {
+    text-align: center;
+    color: #adb5bd;
+    padding: 16px;
+    font-size: 0.85rem;
+  }
+</style>
+</head>
+<body>
+
+<!-- ── 상단바 ── -->
+<div id="topbar">
+  <h1>AKP 변환기 <span id="token-badge" title="클릭하면 토큰 변경"></span></h1>
+  <div id="usage-info">
+    <span id="usage-text">로딩 중...</span>
+    <div id="progress-wrap"><div id="progress-bar"></div></div>
+    <span id="remaining-text"></span>
+    <span id="conv-count"></span>
+  </div>
+</div>
+
+<!-- ── 토큰 입력 모달 ── -->
+<div id="token-modal">
+  <div id="token-box">
+    <div id="token-title">AKP 변환기</div>
+    <div id="token-desc">학원장으로부터 받은 토큰을 입력하세요.</div>
+    <input type="text" id="token-input" placeholder="akp-xxxxxxxx" autocomplete="off" spellcheck="false">
+    <div id="token-err"></div>
+    <button id="token-submit">입력</button>
+    <div id="token-admin-link"><a href="/admin">관리자 페이지</a></div>
+  </div>
+</div>
+
+<!-- ── 메인 ── -->
+<div id="main">
+
+  <!-- 업로드 카드 -->
+  <div class="card">
+    <div id="dropzone" role="button" tabindex="0" aria-label="PDF 파일 선택">
+      <span id="dropzone-icon">📄</span>
+      <div id="dropzone-label">
+        PDF 파일을 여기에 드롭하거나 <span>클릭하세요</span>
+      </div>
+      <div id="file-name"></div>
+    </div>
+    <input type="file" id="file-input" accept=".pdf,application/pdf">
+
+    <div id="options-row">
+      <label id="full-label">
+        <input type="checkbox" id="full-content">
+        정답·해설 포함 (전체 내용 전사)
+      </label>
+      <button id="convert-btn" disabled>변환 시작</button>
+    </div>
+  </div>
+
+  <!-- 로그 카드 -->
+  <div class="card" id="log-section">
+    <div class="card-title">변환 로그</div>
+    <div id="log-box" aria-live="polite" aria-label="변환 로그"></div>
+    <div id="log-summary"></div>
+    <button id="download-btn">HWPX 다운로드</button>
+    <button id="review-btn">검수 시작</button>
+  </div>
+
+  <!-- 기록 카드 -->
+  <div class="card" id="history-section">
+    <div class="card-title">최근 변환 기록</div>
+    <table>
+      <thead>
+        <tr>
+          <th>시각</th>
+          <th>파일명</th>
+          <th>모드</th>
+          <th>토큰 (in/out)</th>
+          <th>비용</th>
+          <th>시간</th>
+          <th>상태</th>
+        </tr>
+      </thead>
+      <tbody id="history-tbody">
+        <tr><td colspan="7" id="history-empty">기록이 없습니다.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</div><!-- /main -->
+
+<script>
+"use strict";
+
+/* ── 유틸 ── */
+const $ = id => document.getElementById(id);
+
+function fmtTime(tsStr) {
+  const d = new Date(tsStr);
+  const now = new Date();
+  const todayStr = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`;
+  const dStr = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mm = String(d.getMinutes()).padStart(2, '0');
+  if (todayStr === dStr) return `${hh}:${mm}`;
+  const mo = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${mo}-${dd} ${hh}:${mm}`;
+}
+
+function fmtNum(n) {
+  return Number(n).toLocaleString('ko-KR');
+}
+
+function fmtMode(m) {
+  if (m === 'full') return '<span class="mode-full">전체</span>';
+  if (m === 'questions') return '<span class="mode-quest">문제만</span>';
+  return m;
+}
+
+function fmtStatus(s) {
+  if (s === 'ok')           return '<span class="status-ok">✓</span>';
+  if (s === 'error')        return '<span class="status-err">✗</span>';
+  if (s === 'cap_exceeded') return '<span class="status-cap">한도초과</span>';
+  return s;
+}
+
+/* ── 상태바 갱신 ── */
+async function loadUsage() {
+  try {
+    const res = await fetch('/api/usage');
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    const s = data.summary;
+    const used = s.cost_usd;
+    const cap  = s.cap_usd;
+    const pct  = cap > 0 ? Math.min(100, (used / cap) * 100) : 0;
+    const remaining = s.remaining_usd;
+
+    $('usage-text').textContent =
+      `오늘: $${used.toFixed(2)} / $${cap.toFixed(2)}`;
+
+    const bar = $('progress-bar');
+    bar.style.width = `${pct.toFixed(1)}%`;
+    if (pct >= 80)      bar.style.background = '#dc3545';
+    else if (pct >= 50) bar.style.background = '#fd7e14';
+    else                bar.style.background = '#28a745';
+
+    const leftPct = (100 - pct).toFixed(0);
+    $('remaining-text').textContent = `${leftPct}% 남음`;
+    $('conv-count').textContent = `변환 ${s.conversions}건`;
+
+    renderHistory(data.recent || []);
+  } catch(e) {
+    $('usage-text').textContent = '사용량 조회 실패';
+    console.error('loadUsage:', e);
+  }
+}
+
+/* ── 기록 테이블 렌더 ── */
+function renderHistory(recent) {
+  const tbody = $('history-tbody');
+  const rows = recent.slice(0, 10);
+  if (rows.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7" id="history-empty">기록이 없습니다.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = rows.map(r => `
+    <tr>
+      <td>${fmtTime(r.ts)}</td>
+      <td>${escHtml(r.pdf)}</td>
+      <td>${fmtMode(r.mode)}</td>
+      <td>${fmtNum(r.in_tok)} / ${fmtNum(r.out_tok)}</td>
+      <td>$${Number(r.cost_usd).toFixed(4)}</td>
+      <td>${Number(r.duration_s).toFixed(0)}s</td>
+      <td>${fmtStatus(r.status)}</td>
+    </tr>
+  `).join('');
+}
+
+function escHtml(s) {
+  return String(s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* ── 토큰 관리 ── */
+const TOKEN_KEY = 'akp_token';
+
+function getToken() { return localStorage.getItem(TOKEN_KEY) || ''; }
+
+function setToken(t) {
+  localStorage.setItem(TOKEN_KEY, t);
+  const badge = $('token-badge');
+  if (badge) badge.textContent = t ? `🔑 ${t}` : '';
+}
+
+function showTokenModal() {
+  const modal = $('token-modal');
+  $('token-input').value = getToken();
+  $('token-err').textContent = '';
+  modal.classList.add('show');
+  setTimeout(() => $('token-input').focus(), 100);
+}
+
+function hideTokenModal() { $('token-modal').classList.remove('show'); }
+
+// 초기화: 토큰 없으면 모달 표시
+(function initToken() {
+  const t = getToken();
+  if (!t) {
+    showTokenModal();
+  } else {
+    setToken(t);
+  }
+  const badge = $('token-badge');
+  if (badge) badge.addEventListener('click', showTokenModal);
+})();
+
+$('token-submit').addEventListener('click', () => {
+  const t = $('token-input').value.trim();
+  if (!t) { $('token-err').textContent = '토큰을 입력하세요.'; return; }
+  setToken(t);
+  hideTokenModal();
+});
+$('token-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') $('token-submit').click();
+});
+
+/* ── 드롭존 ── */
+let selectedFile = null;
+
+const dropzone  = $('dropzone');
+const fileInput = $('file-input');
+const fileNameEl = $('file-name');
+
+function setFile(file) {
+  if (!file || file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+    alert('PDF 파일만 선택할 수 있습니다.');
+    return;
+  }
+  selectedFile = file;
+  fileNameEl.textContent = file.name;
+  fileNameEl.style.display = 'block';
+  dropzone.querySelector('#dropzone-label').style.display = 'none';
+  dropzone.querySelector('#dropzone-icon').textContent = '✅';
+  dropzone.classList.add('has-file');
+  $('convert-btn').disabled = false;
+}
+
+dropzone.addEventListener('click', () => fileInput.click());
+dropzone.addEventListener('keydown', e => {
+  if (e.key === 'Enter' || e.key === ' ') fileInput.click();
+});
+fileInput.addEventListener('change', () => {
+  if (fileInput.files[0]) setFile(fileInput.files[0]);
+});
+
+dropzone.addEventListener('dragover', e => {
+  e.preventDefault();
+  dropzone.classList.add('dragover');
+});
+dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+dropzone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropzone.classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if (file) setFile(file);
+});
+
+/* ── 로그 박스 헬퍼 ── */
+function appendLog(text, forceCls) {
+  const logBox = $('log-box');
+  const line = document.createElement('span');
+  line.className = 'log-line';
+
+  let cls = forceCls || '';
+  if (!cls) {
+    if (text.startsWith('['))      cls = 'log-dim';
+    if (text.includes('✓'))        cls = 'log-ok';
+    if (text.includes('✗'))        cls = 'log-err';
+  }
+  if (cls) line.classList.add(cls);
+  line.textContent = text;
+
+  logBox.appendChild(line);
+  logBox.scrollTop = logBox.scrollHeight;
+}
+
+function clearLog() {
+  $('log-box').innerHTML = '';
+  $('log-summary').style.display = 'none';
+  $('download-btn').style.display = 'none';
+  $('review-btn').style.display = 'none';
+}
+
+/* ── 변환 시작 ── */
+let currentJobId = null;
+let currentEs    = null;
+
+$('convert-btn').addEventListener('click', async () => {
+  if (!selectedFile) return;
+
+  // 기존 SSE 닫기
+  if (currentEs) { currentEs.close(); currentEs = null; }
+
+  const btn = $('convert-btn');
+  btn.disabled = true;
+  btn.textContent = '변환 중...';
+
+  $('log-section').style.display = 'block';
+  clearLog();
+  appendLog('[변환 요청 전송 중...]', 'log-dim');
+
+  const fd = new FormData();
+  fd.append('file', selectedFile);
+  fd.append('full_content', $('full-content').checked ? 'true' : 'false');
+  fd.append('token', getToken());
+
+  let jobId;
+  try {
+    const res = await fetch('/convert', { method: 'POST', body: fd });
+    if (!res.ok) {
+      const txt = await res.text();
+      if (res.status === 401 || res.status === 403) {
+        $('token-err').textContent = '유효하지 않은 토큰입니다.';
+        showTokenModal();
+      }
+      throw new Error(JSON.parse(txt)?.detail || txt);
+    }
+    const json = await res.json();
+    jobId = json.job_id;
+    currentJobId = jobId;
+  } catch(e) {
+    appendLog(`✗ 오류: ${e.message}`, 'log-err');
+    btn.disabled = false;
+    btn.textContent = '변환 시작';
+    return;
+  }
+
+  appendLog(`[job_id: ${jobId}] SSE 연결 중...`, 'log-dim');
+
+  const es = new EventSource(`/stream/${jobId}`);
+  currentEs = es;
+
+  // 일반 로그
+  es.addEventListener('message', e => {
+    appendLog(e.data);
+  });
+
+  // 완료
+  es.addEventListener('done', e => {
+    es.close();
+    currentEs = null;
+
+    let info = {};
+    try { info = JSON.parse(e.data); } catch(_) {}
+
+    const cost   = info.cost    != null ? `$${Number(info.cost).toFixed(4)}`   : '-';
+    const tokIn  = info.tok_in  != null ? fmtNum(info.tok_in)  : '-';
+    const tokOut = info.tok_out != null ? fmtNum(info.tok_out) : '-';
+    const fname  = info.file    || 'result.hwpx';
+
+    appendLog(`✓ 변환 완료 — ${fname}`, 'log-ok');
+
+    const summary = $('log-summary');
+    summary.innerHTML =
+      `완료: <strong>${escHtml(fname)}</strong> &nbsp;|&nbsp; ` +
+      `비용: <strong>${cost}</strong> &nbsp;|&nbsp; ` +
+      `토큰: ${tokIn} in / ${tokOut} out`;
+    summary.style.display = 'block';
+
+    const dlBtn = $('download-btn');
+    dlBtn.style.display = 'inline-block';
+    dlBtn.onclick = () => { window.location.href = `/download/${jobId}`; };
+
+    const rvBtn = $('review-btn');
+    rvBtn.style.display = 'inline-block';
+    rvBtn.onclick = () => { window.location.href = `/review/${jobId}`; };
+
+    btn.disabled = selectedFile ? false : true;
+    btn.textContent = '변환 시작';
+
+    // 상태바 + 기록 갱신
+    loadUsage();
+  });
+
+  // 오류
+  es.addEventListener('error', e => {
+    // SSE 연결 자체 오류와 서버가 보낸 error 이벤트 둘 다 처리
+    const msg = (e.data) ? e.data : 'SSE 연결 오류';
+    appendLog(`✗ ${msg}`, 'log-err');
+    es.close();
+    currentEs = null;
+    btn.disabled = false;
+    btn.textContent = '변환 시작';
+  });
+});
+
+/* ── 초기 로드 ── */
+loadUsage();
+</script>
+</body>
+</html>
