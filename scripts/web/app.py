@@ -508,6 +508,16 @@ async def review_submit(job_id: str, request: Request):
 
     _jobs[reviewed_id] = {"queue": queue.Queue(), "hwpx": out_hwpx, "meta": {}}
     edited   = sum(1 for p in problems if p.get("status") == "edited")
+
+    # review.json을 수정된 내용으로 갱신 → 재방문 시 마지막 수정본 로드
+    edit_map = {p["number"]: p["full_text"] for p in problems}
+    for p in review_data.get("problems", []):
+        if p["number"] in edit_map:
+            p["full_text"] = edit_map[p["number"]]
+            p["status"]    = "pending"
+    review_file.write_text(
+        json.dumps(review_data, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
     email    = request.session.get("email", "")
     pdf_name = review_data.get("pdf_name", "")
 

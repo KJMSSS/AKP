@@ -594,9 +594,13 @@
 <div id="done-banner">
   <div class="done-box">
     <div class="done-icon">✅</div>
-    <h2>검수 완료! 수고하셨습니다.</h2>
-    <p id="done-msg">오류 내용이 전송되었습니다.</p>
-    <a href="/">← 변환기로 돌아가기</a>
+    <h2>HWPX 재생성 완료!</h2>
+    <p id="done-msg"></p>
+    <div style="display:flex;flex-direction:column;gap:10px;margin-top:4px;">
+      <a id="done-dl-link" href="#" style="display:inline-block;padding:8px 24px;background:#1e293b;color:#fff;text-decoration:none;border-radius:7px;font-size:13px;font-weight:600;">수정된 HWPX 다운로드</a>
+      <button id="done-continue" style="padding:8px 24px;background:#fff;color:#1e293b;border:1.5px solid #cbd5e1;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;transition:background .15s;">계속 수정</button>
+      <a href="/" style="font-size:12px;color:#94a3b8;text-decoration:none;">← 변환기로 돌아가기</a>
+    </div>
   </div>
 </div>
 
@@ -1134,18 +1138,15 @@
         : '검수 완료 (수정 없음)';
 
       // 완료 배너에 다운로드 링크 삽입
-      const doneLink = doneBanner.querySelector('.done-box a');
-      doneLink.href = data.download_url;
-      doneLink.textContent = '수정된 HWPX 다운로드';
-
+      $('done-dl-link').href = data.download_url;
       doneBanner.classList.add('show');
     } catch (e) {
-      btnSubmit.textContent = '검수 완료 → HWPX 재생성';
       btnSubmit.disabled = false;
       btnSubmit.classList.add('active');
       submitNote.textContent = `오류: ${e.message}`;
       submitNote.style.color = '#dc2626';
     }
+    btnSubmit.textContent = '검수 완료 → HWPX 재생성';
   }
 
   /* ─── HTML 이스케이프 ─── */
@@ -1160,6 +1161,14 @@
   /* ─── 이벤트 ─── */
   btnSubmit.addEventListener('click', handleSubmit);
   overlayRetry.addEventListener('click', loadData);
+  $('done-continue').addEventListener('click', () => {
+    doneBanner.classList.remove('show');
+    btnSubmit.disabled = false;
+    btnSubmit.classList.add('active');
+    btnSubmit.textContent = '검수 완료 → HWPX 재생성';
+    submitNote.style.color = '';
+    updateCounter();
+  });
 
   /* ─── 진입점 ─── */
   state.jobId = extractJobId();
