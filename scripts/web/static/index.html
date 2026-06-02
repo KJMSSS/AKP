@@ -227,6 +227,21 @@
     transition: background 0.2s;
   }
   #download-btn:hover { background: #157347; }
+  #retry-btn {
+    display: none;
+    margin-top: 12px;
+    margin-left: 8px;
+    background: #6c757d;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 9px 28px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  #retry-btn:hover { background: #5a6268; }
   #review-btn {
     display: none;
     margin-top: 12px;
@@ -369,6 +384,7 @@
     <div id="log-summary"></div>
     <button id="download-btn">HWPX 다운로드</button>
     <button id="review-btn">검수 시작</button>
+    <button id="retry-btn">다시 시도</button>
   </div>
 
   <!-- 기록 카드 -->
@@ -563,6 +579,7 @@ function clearLog() {
   $('log-summary').style.display = 'none';
   $('download-btn').style.display = 'none';
   $('review-btn').style.display = 'none';
+  $('retry-btn').style.display = 'none';
 }
 
 /* ── 변환 시작 ── */
@@ -657,13 +674,17 @@ $('convert-btn').addEventListener('click', async () => {
 
   // 오류
   es.addEventListener('error', e => {
-    // SSE 연결 자체 오류와 서버가 보낸 error 이벤트 둘 다 처리
     const msg = (e.data) ? e.data : 'SSE 연결 오류';
     appendLog(`✗ ${msg}`, 'log-err');
     es.close();
     currentEs = null;
     btn.disabled = false;
     btn.textContent = '변환 시작';
+    if (selectedFile) {
+      const retryBtn = $('retry-btn');
+      retryBtn.style.display = 'inline-block';
+      retryBtn.onclick = () => $('convert-btn').click();
+    }
   });
 });
 
