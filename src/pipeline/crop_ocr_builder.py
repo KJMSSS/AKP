@@ -26,7 +26,7 @@ from src.ocr.llm_postprocess import postprocess_markdown
 from src.common.hwpx_table_inserter import replace_condition_tables, replace_boilerplate_tables
 from src.common.hwpx_namespace_fixer import fix_hwpx_namespaces
 from src.common.hwpx_validator import validate_hwpx as _hwpx_struct_validate
-from src.common.image_extractor import extract_images, extract_figures_by_vision
+from src.common.image_extractor import extract_images, extract_figures_from_crops
 from src.common.hwpx_image_inserter import insert_figure_placeholder
 from src.common.ocr.mathpix_client import MathpixClient
 
@@ -375,19 +375,20 @@ def build_one_crop(
     except Exception as e:
         print(f"\n  [그림] PyMuPDF 스킵: {e}")
 
-    # B. Vision 폴백 (스캔 PDF 등 PyMuPDF 실패 시)
+    # B. Vision 폴백 (스캔 PDF 등 PyMuPDF 실패 시) — 문제별 크롭으로 개별 판정
     if not figure_map:
-        crop_pngs = sorted(
-            [crop_dir / f"prob_{n}.png" for n in sorted(bboxes.keys())
-             if (crop_dir / f"prob_{n}.png").exists()],
-            key=lambda p: int(re.search(r'prob_(\d+)', p.stem).group(1)),
-        )
+        crop_pngs = {
+            str(n): crop_dir / f"prob_{n}.png"
+            for n in sorted(bboxes.keys())
+            if (crop_dir / f"prob_{n}.png").exists()
+        }
         if crop_pngs:
-            print(f"\n=== 그림 감지 (Vision 폴백) ===")
+            print(f"\n=== 그림 감지 (Vision 폴백, {len(crop_pngs)}문제) ===")
             try:
                 import os as _os
-                vision_map = extract_figures_by_vision(
-                    crop_pngs, fig_dir, api_key=_os.environ.get("ANTHROPIC_API_KEY", "")
+                vision_map = extract_figures_from_crops(
+                    crop_pngs, fig_dir,
+                    api_key=_os.environ.get("ANTHROPIC_API_KEY", ""),
                 )
                 figure_map.update(vision_map)
             except Exception as e:

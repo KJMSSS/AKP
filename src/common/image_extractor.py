@@ -104,21 +104,29 @@ def _nearest_item_no(page: fitz.Page, rect: fitz.Rect) -> str:
 
 
 _VISION_PROMPT = """\
-다음은 한국 수학 시험지의 페이지 이미지들입니다(순서대로 1페이지, 2페이지, ...).
-각 페이지에서 수학 그래프, 좌표평면, 도형, 다이어그램 등 **그림** 요소를 찾아주세요.
-(수식, 텍스트, 선택지 ①②③④⑤, 조건/보기 박스는 제외)
+다음은 한국 수학 시험지 페이지 이미지들입니다(순서대로 p1, p2, ...).
 
-각 그림에 대해 아래 JSON 배열로만 응답하세요. 설명 없이 JSON만 출력:
-[
-  {"problem": "7", "page": 2, "bbox": [52, 35, 95, 65]},
-  ...
-]
+[찾을 대상 — 인쇄된 순수 시각 요소만]
+• 좌표평면 / 수직선 (x축·y축과 그 위의 곡선·점)
+• 기하 도형 (삼각형·원·포물선 등 선만으로 이루어진 인쇄 그림)
+• 벡터·선분 다이어그램
 
-- problem: 해당 그림이 속한 문제 번호(숫자 문자열)
-- page: 이미지 순서 번호(1부터)
-- bbox: [left%, top%, right%, bottom%] (페이지 이미지 전체 크기 대비 백분율, 정수)
+[반드시 제외]
+• 문제 번호 및 문제 설명 텍스트
+• 수식 ($...$ 형태의 기호·수식)
+• 선택지 ①②③④⑤
+• 조건 (가)(나) / 보기 ㄱ ㄴ ㄷ 텍스트 박스
+• 학생 손글씨 풀이 (연필·볼펜 필기 흔적)
+• 빈 칸(답 기입란)
 
-그림이 전혀 없으면 빈 배열 [] 만 출력.\
+[bbox 규칙]
+그래프·도형 자체만 타이트하게 표시. 주변 텍스트·여백은 bbox에 포함하지 말 것.
+그림 상단이 잘리지 않도록 그림 위쪽 경계를 실제보다 3~5% 위에서 시작할 것.
+
+JSON 배열만 출력 (마크다운·설명 없이):
+[{"problem":"7","page":2,"bbox":[left%,top%,right%,bottom%]}]
+
+인쇄된 그림이 없으면: []\
 """
 
 
@@ -174,6 +182,9 @@ def extract_figures_by_vision(
         print(f"  [vision_fig] JSON 파싱 실패: {raw[:200]}")
         return {}
 
+    # 상단 추가 여백 (Vision이 top을 약간 낮게 잡는 경향 보정)
+    _TOP_MARGIN_PCT = 3
+
     result: dict[str, Path] = {}
     for fig in figures_json:
         prob = str(fig.get("problem", "")).strip()
@@ -184,12 +195,12 @@ def extract_figures_by_vision(
         if pg < 1 or pg > len(page_pngs):
             continue
 
-        # 페이지 이미지에서 bbox 크롭
+        # 페이지 이미지에서 bbox 크롭 (top에 여백 추가)
         page_png = page_pngs[pg - 1]
         img = PILImage.open(page_png)
         W, H = img.size
         x0 = max(0, int(bbox[0] / 100 * W))
-        y0 = max(0, int(bbox[1] / 100 * H))
+        y0 = max(0, int((bbox[1] - _TOP_MARGIN_PCT) / 100 * H))
         x1 = min(W, int(bbox[2] / 100 * W))
         y1 = min(H, int(bbox[3] / 100 * H))
         if x1 <= x0 or y1 <= y0:
@@ -201,6 +212,118 @@ def extract_figures_by_vision(
         result[prob] = out_path
         print(f"  [vision_fig] {prob}번: p{pg} bbox={bbox} → {out_path.name}")
 
+    return result
+
+
+_CROP_VISION_PROMPT = """\
+이 이미지는 한국 수학 시험지의 문제 {num}번 영역 크롭입니다.
+
+이 이미지 안에 인쇄된 수학 그래프·좌표평면·기하 도형이 있는지 판단하세요.
+
+[그림으로 인정]
+• 좌표축(x축·y축)이 그려진 그래프
+• 기하 도형 (삼각형·원·포물선 등)
+• 벡터·선분 다이어그램
+
+[그림 아님 — 이 경우 has_figure: false]
+• 텍스트, 수식만 있는 경우
+• 학생 손글씨 풀이
+• 빈 칸(답 기입란)
+• 선택지 ①②③④⑤만 있는 경우
+
+그림이 있으면: 그래프·도형 자체만 타이트하게 감싸는 bbox를 픽셀 백분율로 주세요.
+그림 상단이 잘리지 않도록 실제 그림 위쪽보다 3~5% 더 올려서 시작하세요.
+
+JSON만 출력 (설명 없이):
+{"has_figure": true, "bbox": [left%, top%, right%, bottom%]}
+또는
+{"has_figure": false}\
+"""
+
+
+def detect_figure_in_crop(
+    crop_png: Path,
+    problem_no: str,
+    output_dir: Path,
+    api_key: str | None = None,
+) -> Path | None:
+    """
+    단일 문제 크롭 이미지에서 그림을 감지·추출.
+
+    반환: 그림 PNG 경로 (없으면 None)
+    """
+    import anthropic
+    from PIL import Image as PILImage
+
+    key = api_key or os.environ.get("ANTHROPIC_API_KEY", "")
+    if not key:
+        raise RuntimeError("ANTHROPIC_API_KEY 환경변수 없음")
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    client = anthropic.Anthropic(api_key=key)
+
+    b64 = base64.standard_b64encode(crop_png.read_bytes()).decode()
+    prompt = _CROP_VISION_PROMPT.replace("{num}", problem_no)
+
+    resp = client.messages.create(
+        model="claude-sonnet-4-6",
+        max_tokens=256,
+        messages=[{
+            "role": "user",
+            "content": [
+                {"type": "image", "source": {"type": "base64", "media_type": "image/png", "data": b64}},
+                {"type": "text", "text": prompt},
+            ],
+        }],
+    )
+    raw = resp.content[0].text.strip()
+
+    try:
+        m = re.search(r'\{.*\}', raw, re.DOTALL)
+        data = json.loads(m.group(0)) if m else {}
+    except Exception:
+        return None
+
+    if not data.get("has_figure"):
+        return None
+
+    bbox = data.get("bbox", [])
+    if not bbox or len(bbox) != 4:
+        return None
+
+    img = PILImage.open(crop_png)
+    W, H = img.size
+    x0 = max(0, int(bbox[0] / 100 * W))
+    y0 = max(0, int(bbox[1] / 100 * H))
+    x1 = min(W, int(bbox[2] / 100 * W))
+    y1 = min(H, int(bbox[3] / 100 * H))
+    if x1 <= x0 or y1 <= y0:
+        return None
+
+    out_path = output_dir / f"fig_crop_{problem_no}.png"
+    img.crop((x0, y0, x1, y1)).save(str(out_path))
+    print(f"  [vision_fig] {problem_no}번 크롭: bbox={bbox} → {out_path.name}")
+    return out_path
+
+
+def extract_figures_from_crops(
+    crop_pngs: dict[str, Path],
+    output_dir: Path,
+    api_key: str | None = None,
+) -> dict[str, Path]:
+    """
+    문제별 크롭 PNG에서 그림을 개별 Vision으로 감지·추출.
+
+    crop_pngs: {item_no: crop_png_path}
+    반환: {item_no: figure_png_path}
+    """
+    result: dict[str, Path] = {}
+    for num, crop in sorted(crop_pngs.items(), key=lambda x: int(x[0]) if x[0].isdigit() else 999):
+        fig = detect_figure_in_crop(crop, num, output_dir, api_key=api_key)
+        if fig:
+            result[num] = fig
+        else:
+            print(f"  [vision_fig] {num}번: 그림 없음")
     return result
 
 
