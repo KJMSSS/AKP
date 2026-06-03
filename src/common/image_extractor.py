@@ -385,7 +385,7 @@ def extract_figure_by_tesseract(
     except ImportError:
         raise RuntimeError("pytesseract 미설치: pip install pytesseract")
 
-    # Windows 기본 경로 자동 설정
+    # Tesseract 바이너리 경로 설정
     tess_cmd = os.environ.get("TESSERACT_CMD", "")
     if tess_cmd:
         pytesseract.pytesseract.tesseract_cmd = tess_cmd
@@ -394,17 +394,27 @@ def extract_figure_by_tesseract(
         if Path(default).exists():
             pytesseract.pytesseract.tesseract_cmd = default
 
+    # tessdata 경로 (equ 등 커스텀 데이터 포함)
+    tessdata_prefix = os.environ.get("TESSDATA_PREFIX", "")
+    custom_config = "--oem 3 --psm 3"  # PSM 3: 자동 레이아웃 분석
+    if tessdata_prefix:
+        custom_config += f" --tessdata-dir {tessdata_prefix}"
+
     output_dir.mkdir(parents=True, exist_ok=True)
     img_gray = PILImage.open(crop_png).convert("L")
     arr = np.array(img_gray)
     H, W = arr.shape
 
-    # 텍스트 bbox 감지 (kor+eng, PSM 6 = 균일 블록 가정)
+    # equ 사용 가능 여부 확인
+    tessdata_dir = Path(tessdata_prefix) if tessdata_prefix else Path(r"C:\Program Files\Tesseract-OCR\tessdata")
+    lang = "kor+eng+equ" if (tessdata_dir / "equ.traineddata").exists() else "kor+eng"
+
+    # 텍스트 bbox 감지 (PSM 3 = 자동 레이아웃, equ 포함 시 수식도 감지)
     data = pytesseract.image_to_data(
         img_gray,
-        lang="kor+eng",
+        lang=lang,
         output_type=pytesseract.Output.DICT,
-        config="--oem 3 --psm 6",
+        config=custom_config,
     )
 
     # 텍스트 마스크 생성
@@ -442,8 +452,8 @@ def extract_figure_by_tesseract(
     y0 = max(0, rows[0] - margin);  y1 = min(H, rows[-1] + margin)
     x0 = max(0, cols[0] - margin);  x1 = min(W, cols[-1] + margin)
 
-    # 원본(마스킹 전) 이미지에서 크롭
-    figure_img = PILImage.fromarray(arr[y0:y1, x0:x1])
+    # 마스킹된 이미지에서 크롭 (텍스트 제거 후 그림만)
+    figure_img = PILImage.fromarray(masked[y0:y1, x0:x1])
     out_path = output_dir / f"fig_tess_{problem_no}.png"
     figure_img.save(str(out_path))
 
