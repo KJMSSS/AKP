@@ -26,7 +26,7 @@ from src.ocr.llm_postprocess import postprocess_markdown
 from src.common.hwpx_table_inserter import replace_condition_tables, replace_boilerplate_tables
 from src.common.hwpx_namespace_fixer import fix_hwpx_namespaces
 from src.common.hwpx_validator import validate_hwpx as _hwpx_struct_validate
-from src.common.image_extractor import extract_images
+from src.common.image_extractor import extract_images, extract_figures_by_vision
 from src.common.hwpx_image_inserter import insert_figure_placeholder
 from src.common.ocr.mathpix_client import MathpixClient
 
@@ -362,20 +362,41 @@ def build_one_crop(
         raw_cache.write_text(md_raw, encoding="utf-8")
         print(f"  raw.md 생성: {len(md_raw)}자 → {raw_cache}")
 
-    # Step 4.5: PDF 그림 감지 (텍스트 기반 PDF만 — 이미지 PDF는 skip)
+    # Step 4.5: PDF 그림 감지
     fig_dir = crop_dir / "figures"
-    figure_map: dict[str, object] = {}   # item_no → ExtractedImage
+    figure_map: dict[str, Path] = {}   # item_no → figure PNG path
+
+    # A. PyMuPDF (텍스트 기반 PDF)
     try:
         figures = extract_images(pdf, fig_dir, dpi=150)
         for fig in figures:
             if fig.item_no:
-                figure_map[fig.item_no] = fig
-        if figure_map:
-            print(f"\n=== 그림 감지 ===")
-            for no, fig in sorted(figure_map.items(), key=lambda x: int(x[0]) if x[0].isdigit() else 999):
-                print(f"  {no}번: {fig.image_path.name} ({fig.bbox.width:.0f}×{fig.bbox.height:.0f}pt)")
+                figure_map[fig.item_no] = fig.image_path
     except Exception as e:
-        print(f"\n  [그림 감지 스킵] {e}")
+        print(f"\n  [그림] PyMuPDF 스킵: {e}")
+
+    # B. Vision 폴백 (스캔 PDF 등 PyMuPDF 실패 시)
+    if not figure_map:
+        crop_pngs = sorted(
+            [crop_dir / f"prob_{n}.png" for n in sorted(bboxes.keys())
+             if (crop_dir / f"prob_{n}.png").exists()],
+            key=lambda p: int(re.search(r'prob_(\d+)', p.stem).group(1)),
+        )
+        if crop_pngs:
+            print(f"\n=== 그림 감지 (Vision 폴백) ===")
+            try:
+                import os as _os
+                vision_map = extract_figures_by_vision(
+                    crop_pngs, fig_dir, api_key=_os.environ.get("ANTHROPIC_API_KEY", "")
+                )
+                figure_map.update(vision_map)
+            except Exception as e:
+                print(f"  [그림] Vision 실패: {e}")
+
+    if figure_map:
+        print(f"\n=== 그림 감지 결과 ===")
+        for no in sorted(figure_map, key=lambda x: int(x) if x.isdigit() else 999):
+            print(f"  {no}번: {figure_map[no].name}")
 
     # Step 5: 파싱
     print("\n=== 파싱 ===")
@@ -422,9 +443,9 @@ def build_one_crop(
     if figure_map:
         print("\n=== 그림 삽입 ===")
         n_fig = 0
-        for item_no, fig in sorted(figure_map.items(), key=lambda x: int(x[0]) if x[0].isdigit() else 999):
+        for item_no in sorted(figure_map, key=lambda x: int(x) if x.isdigit() else 999):
             try:
-                insert_figure_placeholder(out_hwpx, item_no, fig.image_path)
+                insert_figure_placeholder(out_hwpx, item_no, figure_map[item_no])
                 n_fig += 1
             except Exception as e:
                 print(f"  [그림] {item_no}번 삽입 실패: {e}")

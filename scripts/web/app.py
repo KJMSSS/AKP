@@ -19,6 +19,7 @@ import io
 import json
 import os
 import queue
+import re
 import sys
 import threading
 import time
@@ -94,7 +95,7 @@ from src.ocr.cost_guard import CostGuard, CostCapError              # noqa: E402
 from src.text_only.text_builder import build_from_markdown           # noqa: E402
 from src.text_only.ocr_fallback import apply_fallback               # noqa: E402
 from src.text_only.problem_segmenter import parse_problems, rebuild_markdown  # noqa: E402
-from src.common.image_extractor import extract_images               # noqa: E402
+from src.common.image_extractor import extract_images, extract_figures_by_vision  # noqa: E402
 from src.common.hwpx_image_inserter import insert_figure_placeholder  # noqa: E402
 from src.common.hwpx_table_inserter import (                        # noqa: E402
     replace_condition_tables, replace_boilerplate_tables,
@@ -864,14 +865,45 @@ def _run_conversion(
         header, segments = parse_problems(md)
         fig_dir = _TMP_DIR / f"{job_id}_figs"
         fig_dir.mkdir(exist_ok=True)
-        try:
-            figures    = extract_images(pdf_path, fig_dir, dpi=150)
-            figure_map = {f.item_no: f for f in figures if f.item_no}
-        except Exception as e:
-            print(f"  [그림] 감지 실패: {e}")
-            figure_map = {}
 
-        md = rebuild_markdown(header, segments, figure_items=set(figure_map) or None)
+        # Claude OCR이 이미 【★ 그림:N번】 마커를 출력 → 세그먼트에서 감지
+        figure_items_from_claude: set[str] = set()
+        for seg in segments:
+            m = re.search(r'【★ 그림:(\d+)번】', seg.problem_text)
+            if m:
+                figure_items_from_claude.add(m.group(1))
+
+        # figure_map: item_no → image_path (PyMuPDF 또는 Vision)
+        figure_map: dict[str, Path] = {}
+
+        try:
+            figures = extract_images(pdf_path, fig_dir, dpi=150)
+            for f in figures:
+                if f.item_no:
+                    figure_map[f.item_no] = f.image_path
+        except Exception as e:
+            print(f"  [그림] PyMuPDF 감지 실패: {e}")
+
+        # Vision 폴백: PyMuPDF가 못 찾은 Claude 마커 문제들 처리
+        unresolved = figure_items_from_claude - set(figure_map)
+        if unresolved:
+            print(f"  [그림] Vision 폴백 ({len(unresolved)}건): {sorted(unresolved)}")
+            page_pngs = sorted(
+                _TMP_DIR.glob(f"{job_id}_page*.png"),
+                key=lambda p: int(re.search(r'page(\d+)', p.stem).group(1)),
+            )
+            try:
+                api_key = os.environ.get("ANTHROPIC_API_KEY", "")
+                vision_map = extract_figures_by_vision(page_pngs, fig_dir, api_key=api_key)
+                figure_map.update(vision_map)
+            except Exception as e:
+                print(f"  [그림] Vision 감지 실패: {e}")
+
+        # rebuild_markdown:
+        # - Claude 마커는 problem_text에 이미 있으므로 중복 추가하지 않음
+        # - PyMuPDF/Vision이 찾았지만 Claude가 안 넣은 문제만 figure_items로 추가
+        figure_items_extra = set(figure_map) - figure_items_from_claude
+        md = rebuild_markdown(header, segments, figure_items=figure_items_extra or None)
 
         out_hwpx = _TMP_DIR / f"{job_id}.hwpx"
         if not _TEMPLATE:
@@ -885,9 +917,14 @@ def _run_conversion(
         if errs:
             raise RuntimeError(f"HWPX 검증 실패: {errs[0]}")
 
-        for item_no, fig in sorted(figure_map.items()):
+        # 그림 삽입: Claude 마커 기준 + figure_map에서 PNG 조달
+        all_fig_nos = figure_items_from_claude | set(figure_map)
+        for item_no in sorted(all_fig_nos, key=lambda x: int(x)):
+            if item_no not in figure_map:
+                print(f"  [그림] {item_no}번 PNG 없음 — 플레이스홀더 유지")
+                continue
             try:
-                insert_figure_placeholder(out_hwpx, item_no, fig.image_path)
+                insert_figure_placeholder(out_hwpx, item_no, figure_map[item_no])
                 print(f"  [그림] {item_no}번 삽입 완료")
             except Exception as e:
                 print(f"  [그림] {item_no}번 삽입 실패: {e}")

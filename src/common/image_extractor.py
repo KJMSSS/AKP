@@ -1,15 +1,19 @@
 """
-PDF 그림 영역 자동 감지 + PNG 추출 (pymupdf 기반).
+PDF 그림 영역 자동 감지 + PNG 추출.
 
-전략:
-  1. 각 페이지에서 벡터/래스터 오브젝트 bbox 수집
-  2. 텍스트 없는 큰 사각형 영역 = 그림 후보
-  3. 인접 문제 텍스트 bbox와 매칭 → 문항 번호 태그
+두 가지 전략:
+  A. PyMuPDF (텍스트 기반 PDF):
+     벡터/래스터 오브젝트 bbox 수집 → 텍스트 없는 영역 = 그림 후보
+  B. Claude Vision (스캔 PDF):
+     렌더링된 페이지 PNG들을 한 번에 전송 → 문제별 그림 bbox 반환
 
 반환: list[ExtractedImage]  (파일 경로 + 문항 매칭 정보)
 """
 from __future__ import annotations
 
+import base64
+import json
+import os
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -97,6 +101,107 @@ def _nearest_item_no(page: fitz.Page, rect: fitz.Rect) -> str:
         if m:
             return m.group(1)
     return ""
+
+
+_VISION_PROMPT = """\
+다음은 한국 수학 시험지의 페이지 이미지들입니다(순서대로 1페이지, 2페이지, ...).
+각 페이지에서 수학 그래프, 좌표평면, 도형, 다이어그램 등 **그림** 요소를 찾아주세요.
+(수식, 텍스트, 선택지 ①②③④⑤, 조건/보기 박스는 제외)
+
+각 그림에 대해 아래 JSON 배열로만 응답하세요. 설명 없이 JSON만 출력:
+[
+  {"problem": "7", "page": 2, "bbox": [52, 35, 95, 65]},
+  ...
+]
+
+- problem: 해당 그림이 속한 문제 번호(숫자 문자열)
+- page: 이미지 순서 번호(1부터)
+- bbox: [left%, top%, right%, bottom%] (페이지 이미지 전체 크기 대비 백분율, 정수)
+
+그림이 전혀 없으면 빈 배열 [] 만 출력.\
+"""
+
+
+def extract_figures_by_vision(
+    page_pngs: list[Path],
+    output_dir: Path,
+    api_key: str | None = None,
+) -> dict[str, Path]:
+    """
+    Claude Vision으로 시험지 페이지들에서 그림 감지 + 크롭.
+
+    page_pngs: 렌더링된 페이지 PNG 리스트 (순서대로 p1, p2, ...)
+    output_dir: 크롭된 그림 PNG 저장 폴더
+    api_key: Anthropic API key (None이면 환경변수 사용)
+
+    반환: {item_no: cropped_figure_path}
+    """
+    import anthropic
+    from PIL import Image as PILImage
+
+    if not page_pngs:
+        return {}
+
+    key = api_key or os.environ.get("ANTHROPIC_API_KEY", "")
+    if not key:
+        raise RuntimeError("ANTHROPIC_API_KEY 환경변수 없음")
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    client = anthropic.Anthropic(api_key=key)
+
+    # 이미지 콘텐츠 블록 구성
+    content: list[dict] = []
+    for png in page_pngs:
+        b64 = base64.standard_b64encode(png.read_bytes()).decode()
+        content.append({
+            "type": "image",
+            "source": {"type": "base64", "media_type": "image/png", "data": b64},
+        })
+    content.append({"type": "text", "text": _VISION_PROMPT})
+
+    resp = client.messages.create(
+        model="claude-sonnet-4-6",
+        max_tokens=1024,
+        messages=[{"role": "user", "content": content}],
+    )
+    raw = resp.content[0].text.strip()
+
+    # JSON 파싱
+    try:
+        m = re.search(r'\[.*\]', raw, re.DOTALL)
+        figures_json: list[dict] = json.loads(m.group(0)) if m else []
+    except Exception:
+        print(f"  [vision_fig] JSON 파싱 실패: {raw[:200]}")
+        return {}
+
+    result: dict[str, Path] = {}
+    for fig in figures_json:
+        prob = str(fig.get("problem", "")).strip()
+        pg   = int(fig.get("page", 1))
+        bbox = fig.get("bbox", [])
+        if not prob or not bbox or len(bbox) != 4:
+            continue
+        if pg < 1 or pg > len(page_pngs):
+            continue
+
+        # 페이지 이미지에서 bbox 크롭
+        page_png = page_pngs[pg - 1]
+        img = PILImage.open(page_png)
+        W, H = img.size
+        x0 = max(0, int(bbox[0] / 100 * W))
+        y0 = max(0, int(bbox[1] / 100 * H))
+        x1 = min(W, int(bbox[2] / 100 * W))
+        y1 = min(H, int(bbox[3] / 100 * H))
+        if x1 <= x0 or y1 <= y0:
+            continue
+
+        cropped = img.crop((x0, y0, x1, y1))
+        out_path = output_dir / f"fig_vision_{prob}.png"
+        cropped.save(str(out_path))
+        result[prob] = out_path
+        print(f"  [vision_fig] {prob}번: p{pg} bbox={bbox} → {out_path.name}")
+
+    return result
 
 
 def extract_images(
