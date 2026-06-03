@@ -217,15 +217,20 @@ def extract_figures_by_vision(
 
 _BOUNDARY_PROMPT = """\
 이 이미지는 한국 수학 시험지 문제 {num}번의 크롭입니다.
-(위→아래 순서: 문제 텍스트 → 그림 → 선택지 ①②③④⑤)
+(위→아래 순서: 문제 텍스트 → 수학 그림(그래프·도형) → 선택지 ①②③④⑤)
 
-이미지 높이 대비 백분율(%)로 두 경계를 알려주세요:
-- text_end_pct  : 문제 설명 텍스트가 **끝나는** 위치 (마지막 줄 하단)
-- choices_start_pct : 선택지 ①②③④⑤가 **시작하는** 위치 (① 상단)
-  선택지가 없으면 이미지 하단 5% 위 값을 입력
+수학 그림(그래프·도형)만을 담는 직사각형 경계를 %로 알려주세요.
 
-JSON만 출력 (설명 없이):
-{"text_end_pct": 18, "choices_start_pct": 72}\
+- text_end_pct     : 문제 설명 텍스트 마지막 줄 **하단** (그림 위쪽 경계)
+- choices_start_pct: 선택지 ①②③④⑤ 첫 줄 **상단** (그림 아래쪽 경계)
+  선택지가 없으면 95
+- left_pct  : 그림의 왼쪽 경계 (이미지 폭 대비 %)
+- right_pct : 그림의 오른쪽 경계 (이미지 폭 대비 %)
+
+그림이 없으면: {"no_figure": true}
+
+JSON만 출력:
+{"text_end_pct": 18, "choices_start_pct": 72, "left_pct": 10, "right_pct": 90}\
 """
 
 _CROP_VISION_PROMPT = """\
@@ -398,21 +403,29 @@ def detect_figure_in_crop(
         print(f"  [vision_boundary] {problem_no}번 파싱 실패: {raw[:80]}")
         return None
 
-    text_end   = data.get("text_end_pct", 20)
+    if data.get("no_figure"):
+        print(f"  [boundary_fig] {problem_no}번: 그림 없음")
+        return None
+
+    text_end   = data.get("text_end_pct",      20)
     choices_st = data.get("choices_start_pct", 80)
+    left_pct   = data.get("left_pct",           0)
+    right_pct  = data.get("right_pct",         100)
 
     img = PILImage.open(crop_png)
     W, H = img.size
-    y0 = max(0,  int(text_end   / 100 * H))
-    y1 = min(H,  int(choices_st / 100 * H))
+    y0 = max(0, int(text_end   / 100 * H))
+    y1 = min(H, int(choices_st / 100 * H))
+    x0 = max(0, int(left_pct   / 100 * W))
+    x1 = min(W, int(right_pct  / 100 * W))
 
-    if y1 <= y0 or (y1 - y0) < int(H * 0.05):
-        print(f"  [vision_boundary] {problem_no}번 유효 범위 없음 ({text_end}%~{choices_st}%)")
+    if y1 <= y0 or x1 <= x0 or (y1 - y0) < int(H * 0.05):
+        print(f"  [vision_boundary] {problem_no}번 유효 범위 없음")
         return None
 
     out_path = output_dir / f"fig_boundary_{problem_no}.png"
-    img.crop((0, y0, W, y1)).save(str(out_path))
-    print(f"  [boundary_fig] {problem_no}번: {text_end}%~{choices_st}% → {out_path.name}")
+    img.crop((x0, y0, x1, y1)).save(str(out_path))
+    print(f"  [boundary_fig] {problem_no}번: y={text_end}%~{choices_st}% x={left_pct}%~{right_pct}% → {out_path.name}")
     return out_path
 
 
