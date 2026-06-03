@@ -215,6 +215,19 @@ def extract_figures_by_vision(
     return result
 
 
+_BOUNDARY_PROMPT = """\
+이 이미지는 한국 수학 시험지 문제 {num}번의 크롭입니다.
+(위→아래 순서: 문제 텍스트 → 그림 → 선택지 ①②③④⑤)
+
+이미지 높이 대비 백분율(%)로 두 경계를 알려주세요:
+- text_end_pct  : 문제 설명 텍스트가 **끝나는** 위치 (마지막 줄 하단)
+- choices_start_pct : 선택지 ①②③④⑤가 **시작하는** 위치 (① 상단)
+  선택지가 없으면 이미지 하단 5% 위 값을 입력
+
+JSON만 출력 (설명 없이):
+{"text_end_pct": 18, "choices_start_pct": 72}\
+"""
+
 _CROP_VISION_PROMPT = """\
 이 이미지는 수학 시험지에서 문제 {num}번만 크롭한 것입니다.
 
@@ -344,15 +357,10 @@ def detect_figure_in_crop(
     """
     단일 문제 크롭에서 그림 추출.
 
-    1차: 밀도 분석 (API 불필요) — 텍스트 고밀도 행 제외 후 중간 구간 크롭
-    2차: 밀도 분석 실패 시 Vision 폴백 (API 사용)
+    Vision에 두 가지만 질문:
+    - text_end_pct   : 문제 텍스트가 끝나는 % (그림 상단)
+    - choices_start_pct : 선택지 ①②③④⑤가 시작하는 % (그림 하단)
     """
-    # 1차: 밀도 분석
-    result = find_figure_by_density(crop_png, problem_no, output_dir)
-    if result:
-        return result
-
-    # 2차: Vision 폴백
     import anthropic
     from PIL import Image as PILImage
 
@@ -364,12 +372,12 @@ def detect_figure_in_crop(
     client = anthropic.Anthropic(api_key=key)
 
     b64 = base64.standard_b64encode(crop_png.read_bytes()).decode()
-    prompt = _CROP_VISION_PROMPT.replace("{num}", problem_no)
+    prompt = _BOUNDARY_PROMPT.replace("{num}", problem_no)
 
     try:
         resp = client.messages.create(
             model="claude-sonnet-4-6",
-            max_tokens=256,
+            max_tokens=128,
             messages=[{
                 "role": "user",
                 "content": [
@@ -378,7 +386,8 @@ def detect_figure_in_crop(
                 ],
             }],
         )
-    except Exception:
+    except Exception as e:
+        print(f"  [vision_boundary] {problem_no}번 API 오류: {e}")
         return None
 
     raw = resp.content[0].text.strip()
@@ -386,28 +395,24 @@ def detect_figure_in_crop(
         m = re.search(r'\{.*\}', raw, re.DOTALL)
         data = json.loads(m.group(0)) if m else {}
     except Exception:
+        print(f"  [vision_boundary] {problem_no}번 파싱 실패: {raw[:80]}")
         return None
 
-    if not data.get("has_figure"):
-        return None
-
-    bbox = data.get("bbox", [])
-    if not bbox or len(bbox) != 4:
-        return None
+    text_end   = data.get("text_end_pct", 20)
+    choices_st = data.get("choices_start_pct", 80)
 
     img = PILImage.open(crop_png)
     W, H = img.size
-    _TOP_M = 10
-    x0 = max(0, int(bbox[0] / 100 * W))
-    y0 = max(0, int((bbox[1] - _TOP_M) / 100 * H))
-    x1 = min(W, int(bbox[2] / 100 * W))
-    y1 = min(H, int(bbox[3] / 100 * H))
-    if x1 <= x0 or y1 <= y0:
+    y0 = max(0,  int(text_end   / 100 * H))
+    y1 = min(H,  int(choices_st / 100 * H))
+
+    if y1 <= y0 or (y1 - y0) < int(H * 0.05):
+        print(f"  [vision_boundary] {problem_no}번 유효 범위 없음 ({text_end}%~{choices_st}%)")
         return None
 
-    out_path = output_dir / f"fig_crop_{problem_no}.png"
-    img.crop((x0, y0, x1, y1)).save(str(out_path))
-    print(f"  [vision_fig] {problem_no}번 Vision 폴백: bbox={bbox} → {out_path.name}")
+    out_path = output_dir / f"fig_boundary_{problem_no}.png"
+    img.crop((0, y0, W, y1)).save(str(out_path))
+    print(f"  [boundary_fig] {problem_no}번: {text_end}%~{choices_st}% → {out_path.name}")
     return out_path
 
 
