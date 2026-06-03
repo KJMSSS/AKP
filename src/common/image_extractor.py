@@ -182,8 +182,8 @@ def extract_figures_by_vision(
         print(f"  [vision_fig] JSON 파싱 실패: {raw[:200]}")
         return {}
 
-    # 상단 추가 여백 (Vision이 top을 약간 낮게 잡는 경향 보정)
-    _TOP_MARGIN_PCT = 3
+    # 상단 추가 여백 (Vision이 top을 낮게 잡는 경향 보정)
+    _TOP_MARGIN_PCT = 8
 
     result: dict[str, Path] = {}
     for fig in figures_json:
@@ -216,25 +216,28 @@ def extract_figures_by_vision(
 
 
 _CROP_VISION_PROMPT = """\
-이 이미지는 한국 수학 시험지의 문제 {num}번 영역 크롭입니다.
+이 이미지는 수학 시험지에서 문제 {num}번만 크롭한 것입니다.
 
-이 이미지 안에 인쇄된 수학 그래프·좌표평면·기하 도형이 있는지 판단하세요.
+이미지 구조 (위→아래 순서):
+  [상단] 문제 번호 + 문제 설명 텍스트 (이미지 상위 약 15~30%)
+  [중간] 수학 그래프·도형 (있는 경우)
+  [하단] 선택지 ①②③④⑤ 또는 답 기입란 (이미지 하위 약 25~40%)
 
-[그림으로 인정]
-• 좌표축(x축·y축)이 그려진 그래프
-• 기하 도형 (삼각형·원·포물선 등)
-• 벡터·선분 다이어그램
+판단: 이 이미지에 인쇄된 수학 그래프·좌표평면·기하 도형이 있는가?
 
-[그림 아님 — 이 경우 has_figure: false]
-• 텍스트, 수식만 있는 경우
-• 학생 손글씨 풀이
-• 빈 칸(답 기입란)
+[그림 아님 → has_figure: false]
+• 텍스트·수식만 있는 경우
+• 학생 손글씨
 • 선택지 ①②③④⑤만 있는 경우
 
-그림이 있으면: 그래프·도형 자체만 타이트하게 감싸는 bbox를 픽셀 백분율로 주세요.
-그림 상단이 잘리지 않도록 실제 그림 위쪽보다 3~5% 더 올려서 시작하세요.
+[그림 있음 → has_figure: true + bbox]
+bbox 규칙:
+• left%, right%: 그래프·도형의 좌우 경계 (여백 5~10% 포함)
+• top%: 실제 그림 시작점보다 **10% 더 위** (문제 텍스트 끝 직후라도 좋음)
+• bottom%: 선택지 ①②③ 첫 글자가 보이는 줄의 **바로 위** (선택지 포함 금지)
+  선택지가 없으면 이미지 높이의 90%를 넘지 말 것
 
-JSON만 출력 (설명 없이):
+JSON만 출력 (마크다운·설명 없이):
 {"has_figure": true, "bbox": [left%, top%, right%, bottom%]}
 또는
 {"has_figure": false}\
@@ -293,8 +296,9 @@ def detect_figure_in_crop(
 
     img = PILImage.open(crop_png)
     W, H = img.size
+    _TOP_M = 10  # top 추가 여백 (Vision이 top을 낮게 잡는 경향 보정)
     x0 = max(0, int(bbox[0] / 100 * W))
-    y0 = max(0, int(bbox[1] / 100 * H))
+    y0 = max(0, int((bbox[1] - _TOP_M) / 100 * H))
     x1 = min(W, int(bbox[2] / 100 * W))
     y1 = min(H, int(bbox[3] / 100 * H))
     if x1 <= x0 or y1 <= y0:
@@ -302,7 +306,7 @@ def detect_figure_in_crop(
 
     out_path = output_dir / f"fig_crop_{problem_no}.png"
     img.crop((x0, y0, x1, y1)).save(str(out_path))
-    print(f"  [vision_fig] {problem_no}번 크롭: bbox={bbox} → {out_path.name}")
+    print(f"  [vision_fig] {problem_no}번 크롭: bbox={bbox} (top-{_TOP_M}%) → {out_path.name}")
     return out_path
 
 
