@@ -15,6 +15,8 @@ PDF → 빈 HWPX 직접 타이핑 변환 (템플릿 불필요)
 출력:
     samples/output_text_{파일명}.hwpx
 """
+import os
+import re
 import sys
 import time
 from pathlib import Path
@@ -28,7 +30,7 @@ from src.text_only.text_builder import build_from_markdown
 from src.text_only.handwriting_filter import filter_handwriting
 from src.text_only.ocr_fallback import apply_fallback, reinforce_placeholders
 from src.text_only.problem_segmenter import parse_problems, rebuild_markdown
-from src.common.image_extractor import extract_images
+from src.common.image_extractor import extract_images, extract_figures_by_vision
 from src.common.hwpx_image_inserter import insert_figure_placeholder
 from src.common.hwpx_table_inserter import replace_condition_tables, replace_boilerplate_tables
 from src.common.hwpx_namespace_fixer import fix_hwpx_namespaces
@@ -90,15 +92,54 @@ def convert(pdf_path: Path, filter_hw: bool = False, ocr_engine: str = "mathpix"
     header, segments = parse_problems(md)
     fig_dir = ROOT / "log" / "figures_tmp"
     fig_dir.mkdir(parents=True, exist_ok=True)
+
+    # Claude OCR이 출력한 【★ 그림:N번】 마커 감지
+    figure_items_from_claude: set[str] = set()
+    if ocr_engine == "claude":
+        for seg in segments:
+            m = re.search(r'【★ 그림:(\d+)번】', seg.problem_text)
+            if m:
+                figure_items_from_claude.add(m.group(1))
+
+    # PyMuPDF 그림 추출
+    figure_map: dict[str, Path] = {}
     try:
-        figures    = extract_images(pdf_path, fig_dir, dpi=150)
-        figure_map = {f.item_no: f for f in figures if f.item_no}
+        figures = extract_images(pdf_path, fig_dir, dpi=150)
+        for f in figures:
+            if f.item_no:
+                figure_map[f.item_no] = f.image_path
         if figure_map:
-            print(f"  그림 감지: {len(figure_map)}건 ({', '.join(sorted(figure_map))}번)")
+            print(f"  그림 감지(PyMuPDF): {len(figure_map)}건 ({', '.join(sorted(figure_map))}번)")
     except Exception as e:
         print(f"  그림 감지 실패 (무시): {e}")
-        figure_map = {}
-    md = rebuild_markdown(header, segments, figure_items=set(figure_map) or None)
+
+    # Vision 폴백: Claude 마커 있는데 PyMuPDF가 못 찾은 경우
+    unresolved = figure_items_from_claude - set(figure_map)
+    if unresolved:
+        print(f"  그림 Vision 폴백 ({len(unresolved)}건): {sorted(unresolved)}")
+        # 렌더링된 페이지 이미지 생성 (Vision용)
+        import fitz as _fitz
+        render_dir = fig_dir / "pages"
+        render_dir.mkdir(exist_ok=True)
+        doc = _fitz.open(str(pdf_path))
+        page_pngs: list[Path] = []
+        for i, page in enumerate(doc):
+            p = render_dir / f"page{i}.png"
+            if not p.exists():
+                page.get_pixmap(dpi=150).save(str(p))
+            page_pngs.append(p)
+        doc.close()
+        try:
+            vision_map = extract_figures_by_vision(
+                page_pngs, fig_dir, api_key=os.environ.get("ANTHROPIC_API_KEY", "")
+            )
+            figure_map.update(vision_map)
+        except Exception as e:
+            print(f"  Vision 그림 실패: {e}")
+
+    # rebuild: Claude 마커는 problem_text에 이미 있으므로 중복 방지
+    figure_items_extra = set(figure_map) - figure_items_from_claude
+    md = rebuild_markdown(header, segments, figure_items=figure_items_extra or None)
 
     if filter_hw:
         print()
@@ -141,15 +182,19 @@ def convert(pdf_path: Path, filter_hw: bool = False, ocr_engine: str = "mathpix"
     print(f"  생성 시간: {build_time:.1f}s")
     print(f"  파일 크기: {out_hwpx.stat().st_size:,} bytes")
 
-    # 그림 삽입
-    if figure_map:
+    # 그림 삽입 (Claude 마커 + PyMuPDF/Vision 합집합)
+    all_fig_nos = figure_items_from_claude | set(figure_map)
+    if all_fig_nos:
         print()
         print("─" * 62)
         print("[ 2.3단계 ] 그림 삽입")
         print("─" * 62)
-        for item_no, fig in sorted(figure_map.items()):
+        for item_no in sorted(all_fig_nos, key=lambda x: int(x)):
+            if item_no not in figure_map:
+                print(f"  {item_no}번 PNG 없음 — 플레이스홀더 유지")
+                continue
             try:
-                insert_figure_placeholder(out_hwpx, item_no, fig.image_path)
+                insert_figure_placeholder(out_hwpx, item_no, figure_map[item_no])
                 print(f"  {item_no}번 그림 삽입 완료")
             except Exception as e:
                 print(f"  {item_no}번 그림 삽입 실패: {e}")
