@@ -30,7 +30,7 @@ from src.text_only.text_builder import build_from_markdown
 from src.text_only.handwriting_filter import filter_handwriting
 from src.text_only.ocr_fallback import apply_fallback, reinforce_placeholders
 from src.text_only.problem_segmenter import parse_problems, rebuild_markdown
-from src.common.image_extractor import extract_images, extract_figures_by_vision
+from src.common.image_extractor import extract_images, extract_figures_with_bbox_detection
 from src.common.hwpx_image_inserter import insert_figure_placeholder
 from src.common.hwpx_table_inserter import replace_condition_tables, replace_boilerplate_tables
 from src.common.hwpx_namespace_fixer import fix_hwpx_namespaces
@@ -113,30 +113,17 @@ def convert(pdf_path: Path, filter_hw: bool = False, ocr_engine: str = "mathpix"
     except Exception as e:
         print(f"  그림 감지 실패 (무시): {e}")
 
-    # Vision 폴백: Claude 마커 있는데 PyMuPDF가 못 찾은 경우
-    # ★ Vision은 '추출'만 담당 — Claude가 마킹하지 않은 문제는 추가하지 않음
+    # Vision 폴백: BBoxDetector로 문제별 크롭 후 개별 Vision 판정 (정밀 추출)
+    # ★ Claude 마킹 문제만 처리 — false-positive 없음
     unresolved = figure_items_from_claude - set(figure_map)
     if unresolved:
         print(f"  그림 Vision 폴백 ({len(unresolved)}건): {sorted(unresolved)}")
-        import fitz as _fitz
-        render_dir = fig_dir / "pages"
-        render_dir.mkdir(exist_ok=True)
-        doc = _fitz.open(str(pdf_path))
-        page_pngs: list[Path] = []
-        for i, page in enumerate(doc):
-            p = render_dir / f"page{i}.png"
-            if not p.exists():
-                page.get_pixmap(dpi=150).save(str(p))
-            page_pngs.append(p)
-        doc.close()
         try:
-            vision_map = extract_figures_by_vision(
-                page_pngs, fig_dir, api_key=os.environ.get("ANTHROPIC_API_KEY", "")
+            vision_map = extract_figures_with_bbox_detection(
+                pdf_path, unresolved, fig_dir,
+                api_key=os.environ.get("ANTHROPIC_API_KEY", ""),
             )
-            # Claude 마커 있는 문제만 figure_map에 추가 (false-positive 차단)
-            for no, path in vision_map.items():
-                if no in figure_items_from_claude:
-                    figure_map[no] = path
+            figure_map.update(vision_map)
         except Exception as e:
             print(f"  Vision 그림 실패: {e}")
 
