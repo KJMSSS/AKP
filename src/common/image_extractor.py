@@ -362,6 +362,100 @@ def find_figure_by_density(
     return out_path
 
 
+def extract_figure_by_tesseract(
+    crop_png: Path,
+    problem_no: str,
+    output_dir: Path,
+    min_conf: int = 20,
+    pad_px: int = 8,
+) -> Path | None:
+    """
+    Tesseract로 텍스트 bbox 감지 → 마스킹 → 남은 영역 = 그림.
+
+    1. Tesseract image_to_data() → 단어별 (x,y,w,h,conf)
+    2. conf >= min_conf 인 bbox를 흰색으로 덮음 (글자 제거)
+    3. 마스킹 후 남은 어두운 픽셀 집합 = 그래프·도형
+    4. 그 픽셀의 bbox → 원본 이미지에서 크롭
+    """
+    import numpy as np
+    from PIL import Image as PILImage
+
+    try:
+        import pytesseract
+    except ImportError:
+        raise RuntimeError("pytesseract 미설치: pip install pytesseract")
+
+    # Windows 기본 경로 자동 설정
+    tess_cmd = os.environ.get("TESSERACT_CMD", "")
+    if tess_cmd:
+        pytesseract.pytesseract.tesseract_cmd = tess_cmd
+    elif os.name == "nt":
+        default = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+        if Path(default).exists():
+            pytesseract.pytesseract.tesseract_cmd = default
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    img_gray = PILImage.open(crop_png).convert("L")
+    arr = np.array(img_gray)
+    H, W = arr.shape
+
+    # 텍스트 bbox 감지 (kor+eng, PSM 6 = 균일 블록 가정)
+    data = pytesseract.image_to_data(
+        img_gray,
+        lang="kor+eng",
+        output_type=pytesseract.Output.DICT,
+        config="--oem 3 --psm 6",
+    )
+
+    # 텍스트 마스크 생성
+    text_mask = np.zeros((H, W), dtype=bool)
+    n_boxes = 0
+    for i in range(len(data["conf"])):
+        conf = int(data["conf"][i])
+        if conf < min_conf:
+            continue
+        x, y, w, h = data["left"][i], data["top"][i], data["width"][i], data["height"][i]
+        if w <= 0 or h <= 0:
+            continue
+        r0 = max(0, y - pad_px);  r1 = min(H, y + h + pad_px)
+        c0 = max(0, x - pad_px);  c1 = min(W, x + w + pad_px)
+        text_mask[r0:r1, c0:c1] = True
+        n_boxes += 1
+
+    if n_boxes == 0:
+        print(f"  [tesseract] {problem_no}번: 텍스트 미감지")
+        return None
+
+    # 텍스트 영역 흰색으로 덮기
+    masked = arr.copy()
+    masked[text_mask] = 255
+
+    # 남은 어두운 픽셀 = 그림
+    dark = masked < 180
+    if dark.sum() < 200:
+        print(f"  [tesseract] {problem_no}번: 마스킹 후 그림 없음")
+        return None
+
+    rows = np.where(dark.any(axis=1))[0]
+    cols = np.where(dark.any(axis=0))[0]
+    margin = 15
+    y0 = max(0, rows[0] - margin);  y1 = min(H, rows[-1] + margin)
+    x0 = max(0, cols[0] - margin);  x1 = min(W, cols[-1] + margin)
+
+    # 원본(마스킹 전) 이미지에서 크롭
+    figure_img = PILImage.fromarray(arr[y0:y1, x0:x1])
+    out_path = output_dir / f"fig_tess_{problem_no}.png"
+    figure_img.save(str(out_path))
+
+    pct = lambda v, total: round(v / total * 100)
+    print(
+        f"  [tesseract] {problem_no}번: "
+        f"y={pct(y0,H)}%~{pct(y1,H)}% x={pct(x0,W)}%~{pct(x1,W)}%"
+        f" (텍스트 {n_boxes}블록 제거) → {out_path.name}"
+    )
+    return out_path
+
+
 def detect_figure_in_crop(
     crop_png: Path,
     problem_no: str,
@@ -371,10 +465,20 @@ def detect_figure_in_crop(
     """
     단일 문제 크롭에서 그림 추출.
 
-    Vision에 두 가지만 질문:
-    - text_end_pct   : 문제 텍스트가 끝나는 % (그림 상단)
-    - choices_start_pct : 선택지 ①②③④⑤가 시작하는 % (그림 하단)
+    1차: Tesseract 텍스트 마스킹 (설치된 경우, API 비용 0)
+    2차: Vision 경계 탐색 폴백 (Tesseract 미설치 또는 실패 시)
     """
+    # 1차: Tesseract
+    try:
+        result = extract_figure_by_tesseract(crop_png, problem_no, output_dir)
+        if result:
+            return result
+    except RuntimeError as e:
+        print(f"  [tesseract] 미설치 → Vision 폴백")
+    except Exception as e:
+        print(f"  [tesseract] 오류 ({e}) → Vision 폴백")
+
+    # 2차: Vision 경계 탐색
     import anthropic
     from PIL import Image as PILImage
 
@@ -384,7 +488,6 @@ def detect_figure_in_crop(
 
     output_dir.mkdir(parents=True, exist_ok=True)
     client = anthropic.Anthropic(api_key=key)
-
     b64 = base64.standard_b64encode(crop_png.read_bytes()).decode()
     prompt = _BOUNDARY_PROMPT.replace("{num}", problem_no)
 
@@ -392,13 +495,10 @@ def detect_figure_in_crop(
         resp = client.messages.create(
             model="claude-sonnet-4-6",
             max_tokens=128,
-            messages=[{
-                "role": "user",
-                "content": [
-                    {"type": "image", "source": {"type": "base64", "media_type": "image/png", "data": b64}},
-                    {"type": "text", "text": prompt},
-                ],
-            }],
+            messages=[{"role": "user", "content": [
+                {"type": "image", "source": {"type": "base64", "media_type": "image/png", "data": b64}},
+                {"type": "text", "text": prompt},
+            ]}],
         )
     except Exception as e:
         print(f"  [vision_boundary] {problem_no}번 API 오류: {e}")
@@ -409,32 +509,25 @@ def detect_figure_in_crop(
         m = re.search(r'\{.*\}', raw, re.DOTALL)
         data = json.loads(m.group(0)) if m else {}
     except Exception:
-        print(f"  [vision_boundary] {problem_no}번 파싱 실패: {raw[:80]}")
         return None
 
     if data.get("no_figure"):
-        print(f"  [boundary_fig] {problem_no}번: 그림 없음")
         return None
 
-    top_pct    = data.get("top_pct",    20)
-    bottom_pct = data.get("bottom_pct", 80)
-    left_pct   = data.get("left_pct",    0)
-    right_pct  = data.get("right_pct", 100)
-
+    from PIL import Image as PILImage
     img = PILImage.open(crop_png)
     W, H = img.size
-    y0 = max(0, int(top_pct    / 100 * H))
-    y1 = min(H, int(bottom_pct / 100 * H))
-    x0 = max(0, int(left_pct   / 100 * W))
-    x1 = min(W, int(right_pct  / 100 * W))
+    y0 = max(0, int(data.get("top_pct",    20) / 100 * H))
+    y1 = min(H, int(data.get("bottom_pct", 80) / 100 * H))
+    x0 = max(0, int(data.get("left_pct",    0) / 100 * W))
+    x1 = min(W, int(data.get("right_pct", 100) / 100 * W))
 
-    if y1 <= y0 or x1 <= x0 or (y1 - y0) < int(H * 0.05):
-        print(f"  [vision_boundary] {problem_no}번 유효 범위 없음")
+    if y1 <= y0 or x1 <= x0:
         return None
 
-    out_path = output_dir / f"fig_boundary_{problem_no}.png"
+    out_path = output_dir / f"fig_vision_{problem_no}.png"
     img.crop((x0, y0, x1, y1)).save(str(out_path))
-    print(f"  [boundary_fig] {problem_no}번: y={top_pct}%~{bottom_pct}% x={left_pct}%~{right_pct}% → {out_path.name}")
+    print(f"  [vision] {problem_no}번: y={data.get('top_pct')}%~{data.get('bottom_pct')}% → {out_path.name}")
     return out_path
 
 
