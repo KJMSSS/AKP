@@ -217,20 +217,29 @@ def extract_figures_by_vision(
 
 _BOUNDARY_PROMPT = """\
 이 이미지는 한국 수학 시험지 문제 {num}번의 크롭입니다.
-(위→아래 순서: 문제 텍스트 → 수학 그림(그래프·도형) → 선택지 ①②③④⑤)
 
-수학 그림(그래프·도형)만을 담는 직사각형 경계를 %로 알려주세요.
+인쇄된 수학 그래프·도형(좌표축, 곡선, 기하 도형)의 경계를 %로 알려주세요.
 
-- text_end_pct     : 문제 설명 텍스트 마지막 줄 **하단** (그림 위쪽 경계)
-- choices_start_pct: 선택지 ①②③④⑤ 첫 줄 **상단** (그림 아래쪽 경계)
-  선택지가 없으면 95
-- left_pct  : 그림의 왼쪽 경계 (이미지 폭 대비 %)
-- right_pct : 그림의 오른쪽 경계 (이미지 폭 대비 %)
+[포함]
+• 좌표축(x·y축), 그 위의 곡선·점
+• 기하 도형(삼각형, 타원, 포물선 등)
+• 도형에 인쇄된 치수·레이블(cm, 결석, 전극 등)
 
-그림이 없으면: {"no_figure": true}
+[절대 제외]
+• 한국어 문제 설명 텍스트 → top_pct를 더 크게
+• 선택지 ①②③④⑤ → bottom_pct를 더 작게
+• 학생 손글씨(연필·볼펜 필기) → bottom_pct를 더 작게
+
+경계 필드:
+- top_pct    : 그래프·도형의 **최상단** (이미지 높이 대비 %)
+- bottom_pct : 그래프·도형의 **최하단** (선택지·손글씨 시작 전)
+- left_pct   : 그래프·도형의 왼쪽 경계
+- right_pct  : 그래프·도형의 오른쪽 경계
+
+그래프·도형이 없으면: {"no_figure": true}
 
 JSON만 출력:
-{"text_end_pct": 18, "choices_start_pct": 72, "left_pct": 10, "right_pct": 90}\
+{"top_pct": 35, "bottom_pct": 78, "left_pct": 10, "right_pct": 90}\
 """
 
 _CROP_VISION_PROMPT = """\
@@ -407,15 +416,15 @@ def detect_figure_in_crop(
         print(f"  [boundary_fig] {problem_no}번: 그림 없음")
         return None
 
-    text_end   = data.get("text_end_pct",      20)
-    choices_st = data.get("choices_start_pct", 80)
-    left_pct   = data.get("left_pct",           0)
-    right_pct  = data.get("right_pct",         100)
+    top_pct    = data.get("top_pct",    20)
+    bottom_pct = data.get("bottom_pct", 80)
+    left_pct   = data.get("left_pct",    0)
+    right_pct  = data.get("right_pct", 100)
 
     img = PILImage.open(crop_png)
     W, H = img.size
-    y0 = max(0, int(text_end   / 100 * H))
-    y1 = min(H, int(choices_st / 100 * H))
+    y0 = max(0, int(top_pct    / 100 * H))
+    y1 = min(H, int(bottom_pct / 100 * H))
     x0 = max(0, int(left_pct   / 100 * W))
     x1 = min(W, int(right_pct  / 100 * W))
 
@@ -425,7 +434,7 @@ def detect_figure_in_crop(
 
     out_path = output_dir / f"fig_boundary_{problem_no}.png"
     img.crop((x0, y0, x1, y1)).save(str(out_path))
-    print(f"  [boundary_fig] {problem_no}번: y={text_end}%~{choices_st}% x={left_pct}%~{right_pct}% → {out_path.name}")
+    print(f"  [boundary_fig] {problem_no}번: y={top_pct}%~{bottom_pct}% x={left_pct}%~{right_pct}% → {out_path.name}")
     return out_path
 
 
