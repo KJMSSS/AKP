@@ -244,6 +244,85 @@ JSON만 출력 (마크다운·설명 없이):
 """
 
 
+def find_figure_by_density(
+    crop_png: Path,
+    problem_no: str,
+    output_dir: Path,
+    text_threshold: float = 0.04,
+    smooth_window: int = 20,
+    min_fig_height_pct: float = 0.10,
+) -> Path | None:
+    """
+    행별 픽셀 밀도 분석으로 그림 영역 추출 (API 불필요).
+
+    원리: 텍스트 행(고밀도) 사이의 최대 갭 = 그림 구간
+      - 문제 설명 텍스트: 다크픽셀 비율 15~30% (매우 고밀도)
+      - 그림 (좌표축·곡선): 비율 0.3~4% (저밀도)
+      - 선택지: 비율 4~8% (중밀도)
+    """
+    import numpy as np
+    from PIL import Image as PILImage
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    img = PILImage.open(crop_png).convert("L")
+    arr = np.array(img)
+    H, W = arr.shape
+
+    dark = (arr < 180)
+    row_density = dark.sum(axis=1) / W
+
+    kernel = np.ones(smooth_window) / smooth_window
+    smooth = np.convolve(row_density, kernel, mode="same")
+    is_text = smooth > text_threshold
+
+    # 텍스트 행을 클러스터(블록)로 묶기
+    text_rows = list(np.where(is_text)[0])
+    if len(text_rows) < 2:
+        return None
+
+    blocks: list[tuple[int, int]] = []  # (block_start, block_end)
+    cur_start = cur_end = text_rows[0]
+    for r in text_rows[1:]:
+        if r - cur_end <= smooth_window:
+            cur_end = r
+        else:
+            blocks.append((cur_start, cur_end))
+            cur_start = cur_end = r
+    blocks.append((cur_start, cur_end))
+
+    # 하단 빈 여백 블록 제거: 상위 85% 이내 블록만 유효
+    content_limit = int(H * 0.85)
+    real_blocks = [(s, e) for s, e in blocks if s < content_limit]
+
+    if len(real_blocks) < 2:
+        return None
+
+    # 첫 블록(문제 텍스트)과 마지막 블록(선택지) 사이의 갭 = 그림
+    first_block_end   = real_blocks[0][1]
+    last_block_start  = real_blocks[-1][0]
+
+    if last_block_start <= first_block_end:
+        return None
+
+    gap_size = last_block_start - first_block_end
+    if gap_size < int(H * min_fig_height_pct):
+        return None
+
+    margin = smooth_window
+    fig_top = max(0, first_block_end - margin)
+    fig_bot = min(H, last_block_start + margin)
+
+    if dark[fig_top:fig_bot].sum() < 50:
+        return None
+
+    out_path = output_dir / f"fig_density_{problem_no}.png"
+    PILImage.fromarray(arr[fig_top:fig_bot, :]).save(str(out_path))
+    pct_top = round(fig_top / H * 100)
+    pct_bot = round(fig_bot / H * 100)
+    print(f"  [density_fig] {problem_no}번: {pct_top}%~{pct_bot}% (높이={fig_bot-fig_top}행) → {out_path.name}")
+    return out_path
+
+
 def detect_figure_in_crop(
     crop_png: Path,
     problem_no: str,
@@ -251,16 +330,23 @@ def detect_figure_in_crop(
     api_key: str | None = None,
 ) -> Path | None:
     """
-    단일 문제 크롭 이미지에서 그림을 감지·추출.
+    단일 문제 크롭에서 그림 추출.
 
-    반환: 그림 PNG 경로 (없으면 None)
+    1차: 밀도 분석 (API 불필요) — 텍스트 고밀도 행 제외 후 중간 구간 크롭
+    2차: 밀도 분석 실패 시 Vision 폴백 (API 사용)
     """
+    # 1차: 밀도 분석
+    result = find_figure_by_density(crop_png, problem_no, output_dir)
+    if result:
+        return result
+
+    # 2차: Vision 폴백
     import anthropic
     from PIL import Image as PILImage
 
     key = api_key or os.environ.get("ANTHROPIC_API_KEY", "")
     if not key:
-        raise RuntimeError("ANTHROPIC_API_KEY 환경변수 없음")
+        return None
 
     output_dir.mkdir(parents=True, exist_ok=True)
     client = anthropic.Anthropic(api_key=key)
@@ -268,19 +354,22 @@ def detect_figure_in_crop(
     b64 = base64.standard_b64encode(crop_png.read_bytes()).decode()
     prompt = _CROP_VISION_PROMPT.replace("{num}", problem_no)
 
-    resp = client.messages.create(
-        model="claude-sonnet-4-6",
-        max_tokens=256,
-        messages=[{
-            "role": "user",
-            "content": [
-                {"type": "image", "source": {"type": "base64", "media_type": "image/png", "data": b64}},
-                {"type": "text", "text": prompt},
-            ],
-        }],
-    )
-    raw = resp.content[0].text.strip()
+    try:
+        resp = client.messages.create(
+            model="claude-sonnet-4-6",
+            max_tokens=256,
+            messages=[{
+                "role": "user",
+                "content": [
+                    {"type": "image", "source": {"type": "base64", "media_type": "image/png", "data": b64}},
+                    {"type": "text", "text": prompt},
+                ],
+            }],
+        )
+    except Exception:
+        return None
 
+    raw = resp.content[0].text.strip()
     try:
         m = re.search(r'\{.*\}', raw, re.DOTALL)
         data = json.loads(m.group(0)) if m else {}
@@ -296,7 +385,7 @@ def detect_figure_in_crop(
 
     img = PILImage.open(crop_png)
     W, H = img.size
-    _TOP_M = 10  # top 추가 여백 (Vision이 top을 낮게 잡는 경향 보정)
+    _TOP_M = 10
     x0 = max(0, int(bbox[0] / 100 * W))
     y0 = max(0, int((bbox[1] - _TOP_M) / 100 * H))
     x1 = min(W, int(bbox[2] / 100 * W))
@@ -306,7 +395,7 @@ def detect_figure_in_crop(
 
     out_path = output_dir / f"fig_crop_{problem_no}.png"
     img.crop((x0, y0, x1, y1)).save(str(out_path))
-    print(f"  [vision_fig] {problem_no}번 크롭: bbox={bbox} (top-{_TOP_M}%) → {out_path.name}")
+    print(f"  [vision_fig] {problem_no}번 Vision 폴백: bbox={bbox} → {out_path.name}")
     return out_path
 
 
@@ -349,10 +438,7 @@ def extract_figures_with_bbox_detection(
     반환: {item_no: figure_png_path}
     """
     from src.pipeline.bbox_detector import BBoxDetector, THUMB_DPI
-    from src.pipeline.crop_ocr_builder import (
-        _crop_problem, _adjust_bboxes, CROP_SCALE, THUMB_SCALE,
-        TOP_MARGIN, BOT_MARGIN,
-    )
+    from src.pipeline.crop_ocr_builder import CROP_SCALE, THUMB_SCALE
 
     output_dir.mkdir(parents=True, exist_ok=True)
     thumb_dir = output_dir / "thumbs"
@@ -360,7 +446,15 @@ def extract_figures_with_bbox_detection(
     print(f"  [bbox] 문제 위치 감지 중...")
     detector = BBoxDetector()
     bboxes = detector.detect_all(pdf_path, thumb_dir, verbose=False)
-    bboxes = _adjust_bboxes(bboxes, pdf_path)
+    # _adjust_bboxes 사용 안 함 — 원본 bbox + 고정 여백으로 타이트하게 크롭
+
+    doc = fitz.open(str(pdf_path))
+    mat = fitz.Matrix(CROP_SCALE, CROP_SCALE)
+
+    # 여백 (thumb px 단위): 위 5px, 아래 50px
+    # BBoxDetector가 전체 문제(선택지 포함)를 감지하므로 패딩은 작게
+    TOP_PAD  = 5
+    BOT_PAD  = 50
 
     crop_pngs: dict[str, Path] = {}
     for num_str in problem_numbers:
@@ -371,10 +465,28 @@ def extract_figures_with_bbox_detection(
         if num not in bboxes:
             print(f"  [bbox] {num_str}번 위치 미감지")
             continue
-        crop_bytes = _crop_problem(pdf_path, bboxes[num]["page"], bboxes[num])
+        bbox = bboxes[num]
+        page = doc[bbox["page"]]
+        pix_full = page.get_pixmap(matrix=mat)
+        W_full, H_full = pix_full.width, pix_full.height
+        mid = W_full // 2
+
+        # thumb → crop px 변환
+        scale = CROP_SCALE / THUMB_SCALE
+        y_top = max(0, int((bbox["y_top"] - TOP_PAD) * scale))
+        y_bot = min(H_full, int((bbox["y_bottom"] + BOT_PAD) * scale))
+
+        col = bbox.get("col", "left")
+        x0, x1 = (0, mid - 20) if col == "left" else (mid + 20, W_full)
+
+        clip = fitz.Rect(x0 / CROP_SCALE, y_top / CROP_SCALE,
+                         x1 / CROP_SCALE, y_bot / CROP_SCALE)
+        pix = page.get_pixmap(matrix=mat, clip=clip)
         crop_path = output_dir / f"prob_crop_{num_str}.png"
-        crop_path.write_bytes(crop_bytes)
+        pix.save(str(crop_path))
         crop_pngs[num_str] = crop_path
+
+    doc.close()
 
     if not crop_pngs:
         return {}
