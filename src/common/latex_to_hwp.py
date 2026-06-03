@@ -9,7 +9,7 @@ HWP 수식 표기는 LaTeX와 유사하지만 몇 가지 핵심 차이가 있다
   \\sum_{k=1}^{n}       ->  sum from {k=1} to {n}
   \\overline{z}         ->  bar {z}
   \\alpha               ->  alpha
-  \\leq / \\geq          ->  <= / >=
+  \\leq / \\geq          ->  le / ge  (ss.hwp 통일표 기준)
   x^{2}, a_{n}          ->  그대로 (동일 문법)
 """
 import re
@@ -131,16 +131,16 @@ _SYMBOLS: list[tuple[str, str]] = [
     (r'\\cot(?![a-zA-Z])',    'cot '),    (r'\\sec(?![a-zA-Z])',    'sec '),    (r'\\csc(?![a-zA-Z])',    'csc '),
     (r'\\ln(?![a-zA-Z])',     'ln '),     (r'\\log(?![a-zA-Z])',    'log '),    (r'\\exp(?![a-zA-Z])',    'exp '),
     (r'\\max(?![a-zA-Z])',    'max '),    (r'\\min(?![a-zA-Z])',    'min '),
-    # 화살표 · 논리
+    # 화살표 · 논리 (ss.hwp: 화살표 앞뒤 ``로 간격)
     (r'\\Leftrightarrow\b', '<=>'),
     (r'\\Rightarrow\b',     '=>'),
     (r'\\Leftarrow\b',      '<='),
-    (r'\\rightarrow\b|\\to\b', '->'),
-    (r'\\leftarrow\b',      '<-'),
-    (r'\\longrightarrow\b', '->'),
-    # 부등호
-    (r'\\leq\b|\\le\b',     ' LEQ '),
-    (r'\\geq\b|\\ge\b',     ' GEQ '),
+    (r'\\rightarrow\b|\\to\b', '``->``'),
+    (r'\\leftarrow\b',      '``<-``'),
+    (r'\\longrightarrow\b', '``->``'),
+    # 부등호 (ss.hwp 통일: le / ge, LEQ/GEQ 사용 금지)
+    (r'\\leq\b|\\le\b',     ' le '),
+    (r'\\geq\b|\\ge\b',     ' ge '),
     (r'\\neq\b|\\ne\b',     ' ne '),
     (r'\\ll\b',             'll'),
     (r'\\gg\b',             'gg'),
@@ -161,16 +161,16 @@ _SYMBOLS: list[tuple[str, str]] = [
     (r'\\cdots\b|\\dots\b', 'CDOTS'),
     (r'\\ldots\b',          'LDOTS'),
     # 논리/집합
-    (r'\\because\b',        'because'),
-    (r'\\therefore\b',      'therefore'),
+    (r'\\because\b',        'because~'),
+    (r'\\therefore\b',      'therefore~'),  # ss.hwp: therefore~x=1 (tilde 간격)
     (r'\\notin\b',          'notin'),
     (r'\\in\b',             'in'),
     (r'\\subseteq\b',       'subseteq'),
     (r'\\supseteq\b',       'supseteq'),
     (r'\\subset\b',         'subset'),
     (r'\\supset\b',         'supset'),
-    (r'\\cup\b',            'CUP'),
-    (r'\\cap\b',            'CAP'),
+    (r'\\cup\b',            'cup'),   # ss.hwp: 소문자
+    (r'\\cap\b',            'cap'),   # ss.hwp: 소문자
     (r'\\emptyset\b|\\varnothing\b', 'emptyset'),
     (r'\\forall\b',         'for all'),
     (r'\\exists\b',         'exists'),
@@ -179,12 +179,14 @@ _SYMBOLS: list[tuple[str, str]] = [
     (r'\\nabla\b',          'nabla'),
     # 기하
     (r'\\parallel\b',       '//'),
-    (r'\\perp\b',           'perp'),
+    (r'\\perp\b',           'BOT'),      # ss.hwp: l BOT alpha
     (r'\\angle\b',          'angle'),
     (r'\\triangle\b',       'triangle'),
-    # 각도 기호
-    (r'\\degree\b|\\circ\b', 'DEG'),
+    # 각도 기호 (ss.hwp: 60DEG, not 60^{DEG})
+    # ^{\circ} → DEG 는 convert()에서 먼저 처리 (superscript 제거)
+    (r'\\degree\b',         'DEG'),
     (r'°',                   'DEG'),
+    (r'\\circ\b',           'CIRC'),     # 합성함수: g CIRC f (ss.hwp)
     # 공백 명령
     (r'\\,|\\;|\\!|\\quad\b|\\qquad\b', '~'),
     (r'\\ ',                '~'),
@@ -252,11 +254,15 @@ def _sub_env(m: re.Match) -> str:
         return ' atop '.join(cleaned) if cleaned else ''
 
     elif env == 'cases':
+        # ss.hwp 통일: 식&&&조건 (앰퍼샌드 3개로 간격)
         cleaned = []
         for row in rows:
-            row = re.sub(r'\s*&+\s*', ' ', row).strip()
-            if row:
-                cleaned.append(row)
+            parts = re.split(r'\s*&+\s*', row.strip(), maxsplit=1)
+            if len(parts) == 2:
+                expr, cond = parts[0].strip(), parts[1].strip()
+                cleaned.append(f'{expr}&&&{cond}' if cond else expr)
+            elif parts[0].strip():
+                cleaned.append(parts[0].strip())
         return 'cases{ ' + ' # '.join(cleaned) + ' }'
 
     else:  # array, matrix, pmatrix, bmatrix, vmatrix
@@ -288,6 +294,9 @@ def _sub_env(m: re.Match) -> str:
 def convert(latex: str) -> str:
     """LaTeX 수식 문자열을 HWP hp:script 표기로 변환한다."""
     s = latex.strip()
+    # ^{\circ} → DEG (ss.hwp: 60DEG not 60^{DEG})
+    # 다른 변환보다 먼저 처리해야 \circ → CIRC 규칙과 충돌하지 않음
+    s = re.sub(r'\^\s*\{\s*\\circ\s*\}', 'DEG', s)
     # \left\{...\begin{array}...\right. → \begin{cases}...\end{cases} 정규화
     s = _LBRACE_ARRAY_RE.sub(_normalize_lbrace_array, s)
     # 환경 블록을 먼저 처리 (내부 수식은 이후 패스가 담당)
@@ -310,8 +319,8 @@ def convert(latex: str) -> str:
         s = _GREEK_RE.sub(_sub_greek, s)
         if s == prev:
             break
-    # raw 부등호 → HWP 키워드 (<=> 는 lookbehind/lookahead로 보호)
-    s = re.sub(r'(?<![=<>])<=(?![>=])', ' LEQ ', s)
-    s = re.sub(r'(?<![=<>])>=(?!>)',    ' GEQ ', s)
+    # raw 부등호 → HWP 키워드 (ss.hwp: le/ge)
+    s = re.sub(r'(?<![=<>!`])<=(?![>=])', ' le ', s)
+    s = re.sub(r'(?<![=<>!`])>=(?!>)',    ' ge ', s)
     # 중복 공백 정리 (삼각함수 변환 시 생길 수 있는 연속 공백)
     return re.sub(r' {2,}', ' ', s).strip()

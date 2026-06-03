@@ -250,11 +250,11 @@ md_raw = md_raw.replace('사열하는', '나열하는')
 # 11번 (가)(나) 공란 → 박스 수식 처리
 md_raw = md_raw.replace(
     '는 (가) $\\times{ }_{8}',
-    '는 $box{~(가)~}$ $\\times{ }_{8}',
+    '는 $box{~~(가)~~}$ $\\times{ }_{8}',
 )
 md_raw = md_raw.replace(
     '$k(k-1) \\times$ (나) 이다',
-    '$k(k-1) \\times$ $box{~(나)~}$ 이다',
+    '$k(k-1) \\times$ $box{~~(나)~~}$ 이다',
 )
 # 11번 OCR 손상 수식 복원 (분수 오인식된 (가)/(나) 포함 equation 교체)
 md_raw = md_raw.replace(
@@ -263,7 +263,7 @@ md_raw = md_raw.replace(
     ' \\times{ }_{8} \\mathrm{P}_{k-1}+k(k-1) \\times \\text { (나) } \\\\\n'
     '& \\text { 이다. }',
     '{ }_{10}\\mathrm{P}_{k}={ }_{8}\\mathrm{P}_{k}'
-    '+box{~(가)~}\\times{ }_{8}\\mathrm{P}_{k-1}+k(k-1)\\times box{~(나)~}',
+    '+box{~~(가)~~}\\times{ }_{8}\\mathrm{P}_{k-1}+k(k-1)\\times box{~~(나)~~}',
 )
 
 # P. 12번: 선택지 정리 (분수 형식 오염)

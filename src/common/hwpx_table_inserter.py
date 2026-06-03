@@ -24,6 +24,19 @@ import zipfile
 from dataclasses import dataclass, field
 from pathlib import Path
 
+# 표 템플릿 빌더 (samples/templates/table_templates.json 있으면 자동 적용)
+try:
+    from src.common.table_template_builder import (
+        build_condition_box as _tpl_condition_box,
+        build_boilerplate_box as _tpl_boilerplate_box,
+        build_data_table as _tpl_data_table,
+        get_default_templates as _get_templates,
+        DataTableSpec as _DataTableSpec,
+    )
+    _TEMPLATE_SUPPORT = True
+except ImportError:
+    _TEMPLATE_SUPPORT = False
+
 
 # ── XML 템플릿 ─────────────────────────────────────────────────────────────
 
@@ -197,8 +210,21 @@ def _build_condition_table_xml(
     tbl_id: int,
     zo: int,
     label: str,
+    kind: str = "조건",
 ) -> tuple[str, int]:
-    """1×1 박스 표 XML 생성. (tbl_xml, height) 반환."""
+    """1×1 박스 표 XML 생성. (tbl_xml, height) 반환.
+    템플릿 있으면 우선 사용, 없으면 하드코딩 fallback.
+    """
+    if _TEMPLATE_SUPPORT:
+        templates = _get_templates()
+        if kind == "보기":
+            tbl_xml, height = _tpl_boilerplate_box(templates, content_paras, tbl_id, zo)
+        else:
+            tbl_xml, height = _tpl_condition_box(templates, content_paras, tbl_id, zo)
+        if tbl_xml:
+            return tbl_xml, height
+
+    # fallback: 기존 하드코딩 XML
     height = _compute_box_height(content_paras)
     inner = "".join(content_paras)
     tbl_xml = (
@@ -214,7 +240,21 @@ def _build_data_table_xml(
     tbl_id: int,
     zo: int,
 ) -> tuple[str, int]:
-    """N×M 데이터 표 XML 생성. (tbl_xml, total_height) 반환."""
+    """N×M 데이터 표 XML 생성. (tbl_xml, total_height) 반환.
+    템플릿 있으면 우선 사용, 없으면 하드코딩 fallback.
+    """
+    if _TEMPLATE_SUPPORT:
+        templates = _get_templates()
+        dspec = _DataTableSpec(
+            item=spec.item,
+            headers=spec.headers,
+            rows=spec.rows,
+            col_widths=spec.col_widths,
+            row_height=spec.row_height,
+        )
+        tbl_xml, total_h = _tpl_data_table(templates, dspec, tbl_id, zo)
+        if tbl_xml:
+            return tbl_xml, total_h
     all_rows: list[list[str]] = []
     header_flag: list[bool] = []
     if spec.headers:
@@ -341,7 +381,7 @@ def _replace_box_tables(
         zo     = max_zo + 1
         pid    = max_pid + 1
 
-        tbl_xml, height = _build_condition_table_xml(content_paras, tbl_id, zo, kind)
+        tbl_xml, height = _build_condition_table_xml(content_paras, tbl_id, zo, kind, kind=kind)
         bl = round(height * 0.85)
 
         # 기존 단락 스타일 (시작 마커 단락에서 추출)
