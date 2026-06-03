@@ -884,7 +884,8 @@ def _run_conversion(
         except Exception as e:
             print(f"  [그림] PyMuPDF 감지 실패: {e}")
 
-        # Vision 폴백: PyMuPDF가 못 찾은 Claude 마커 문제들 처리
+        # Vision 폴백: Claude 마커가 있는데 PyMuPDF가 못 찾은 경우만 실행
+        # ★ Vision은 추출 전용 — Claude 미마킹 문제를 새로 추가하지 않음
         unresolved = figure_items_from_claude - set(figure_map)
         if unresolved:
             print(f"  [그림] Vision 폴백 ({len(unresolved)}건): {sorted(unresolved)}")
@@ -895,15 +896,15 @@ def _run_conversion(
             try:
                 api_key = os.environ.get("ANTHROPIC_API_KEY", "")
                 vision_map = extract_figures_by_vision(page_pngs, fig_dir, api_key=api_key)
-                figure_map.update(vision_map)
+                # Claude 마킹된 문제만 수용 (false-positive 차단)
+                for no, path in vision_map.items():
+                    if no in figure_items_from_claude:
+                        figure_map[no] = path
             except Exception as e:
                 print(f"  [그림] Vision 감지 실패: {e}")
 
-        # rebuild_markdown:
-        # - Claude 마커는 problem_text에 이미 있으므로 중복 추가하지 않음
-        # - PyMuPDF/Vision이 찾았지만 Claude가 안 넣은 문제만 figure_items로 추가
-        figure_items_extra = set(figure_map) - figure_items_from_claude
-        md = rebuild_markdown(header, segments, figure_items=figure_items_extra or None)
+        # Claude 마커는 problem_text에 이미 있으므로 rebuild_markdown에 추가 전달 없음
+        md = rebuild_markdown(header, segments)
 
         out_hwpx = _TMP_DIR / f"{job_id}.hwpx"
         if not _TEMPLATE:
@@ -917,9 +918,8 @@ def _run_conversion(
         if errs:
             raise RuntimeError(f"HWPX 검증 실패: {errs[0]}")
 
-        # 그림 삽입: Claude 마커 기준 + figure_map에서 PNG 조달
-        all_fig_nos = figure_items_from_claude | set(figure_map)
-        for item_no in sorted(all_fig_nos, key=lambda x: int(x)):
+        # 그림 삽입: Claude 마커 기준만 (Vision 감지 추가분 배제)
+        for item_no in sorted(figure_items_from_claude, key=lambda x: int(x)):
             if item_no not in figure_map:
                 print(f"  [그림] {item_no}번 PNG 없음 — 플레이스홀더 유지")
                 continue

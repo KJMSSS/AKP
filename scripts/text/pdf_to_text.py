@@ -114,10 +114,10 @@ def convert(pdf_path: Path, filter_hw: bool = False, ocr_engine: str = "mathpix"
         print(f"  그림 감지 실패 (무시): {e}")
 
     # Vision 폴백: Claude 마커 있는데 PyMuPDF가 못 찾은 경우
+    # ★ Vision은 '추출'만 담당 — Claude가 마킹하지 않은 문제는 추가하지 않음
     unresolved = figure_items_from_claude - set(figure_map)
     if unresolved:
         print(f"  그림 Vision 폴백 ({len(unresolved)}건): {sorted(unresolved)}")
-        # 렌더링된 페이지 이미지 생성 (Vision용)
         import fitz as _fitz
         render_dir = fig_dir / "pages"
         render_dir.mkdir(exist_ok=True)
@@ -133,13 +133,15 @@ def convert(pdf_path: Path, filter_hw: bool = False, ocr_engine: str = "mathpix"
             vision_map = extract_figures_by_vision(
                 page_pngs, fig_dir, api_key=os.environ.get("ANTHROPIC_API_KEY", "")
             )
-            figure_map.update(vision_map)
+            # Claude 마커 있는 문제만 figure_map에 추가 (false-positive 차단)
+            for no, path in vision_map.items():
+                if no in figure_items_from_claude:
+                    figure_map[no] = path
         except Exception as e:
             print(f"  Vision 그림 실패: {e}")
 
-    # rebuild: Claude 마커는 problem_text에 이미 있으므로 중복 방지
-    figure_items_extra = set(figure_map) - figure_items_from_claude
-    md = rebuild_markdown(header, segments, figure_items=figure_items_extra or None)
+    # rebuild: Claude 마커는 problem_text에 이미 있으므로 figure_items 추가 없음
+    md = rebuild_markdown(header, segments)
 
     if filter_hw:
         print()
@@ -182,14 +184,13 @@ def convert(pdf_path: Path, filter_hw: bool = False, ocr_engine: str = "mathpix"
     print(f"  생성 시간: {build_time:.1f}s")
     print(f"  파일 크기: {out_hwpx.stat().st_size:,} bytes")
 
-    # 그림 삽입 (Claude 마커 + PyMuPDF/Vision 합집합)
-    all_fig_nos = figure_items_from_claude | set(figure_map)
-    if all_fig_nos:
+    # 그림 삽입: Claude 마커 기준만 (Vision 감지 추가분 배제)
+    if figure_items_from_claude:
         print()
         print("─" * 62)
         print("[ 2.3단계 ] 그림 삽입")
         print("─" * 62)
-        for item_no in sorted(all_fig_nos, key=lambda x: int(x)):
+        for item_no in sorted(figure_items_from_claude, key=lambda x: int(x)):
             if item_no not in figure_map:
                 print(f"  {item_no}번 PNG 없음 — 플레이스홀더 유지")
                 continue
