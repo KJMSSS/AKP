@@ -275,42 +275,54 @@ def find_figure_by_density(
     smooth = np.convolve(row_density, kernel, mode="same")
     is_text = smooth > text_threshold
 
-    # 텍스트 행을 클러스터(블록)로 묶기
+    # ── 상단: 문제 텍스트 끝 찾기 ────────────────────────────────────────
+    # 첫 연속 고밀도 블록이 끝나는 지점 → 그림 시작
     text_rows = list(np.where(is_text)[0])
-    if len(text_rows) < 2:
+    if not text_rows:
         return None
 
-    blocks: list[tuple[int, int]] = []  # (block_start, block_end)
-    cur_start = cur_end = text_rows[0]
-    for r in text_rows[1:]:
-        if r - cur_end <= smooth_window:
-            cur_end = r
+    # 첫 텍스트 블록 끝 (첫 번째 큰 갭 직전)
+    first_block_end = text_rows[0]
+    for i in range(len(text_rows) - 1):
+        if text_rows[i + 1] - text_rows[i] > smooth_window:
+            first_block_end = text_rows[i]
+            break
+    else:
+        first_block_end = text_rows[-1]
+
+    # fig_top = 첫 블록 끝 + 작은 버퍼 (텍스트 끝 직후부터)
+    fig_top = min(H - 1, first_block_end + smooth_window // 2)
+
+    # ── 하단: 선택지 시작 찾기 (고밀도 블록 역방향 탐색) ──────────────────
+    # 선택지는 문제 하단에 있으며 밀도가 높음 (> HIGH_TH)
+    HIGH_TH = 0.06
+    choices_start = int(H * 0.85)  # 기본값: 보수적 85%
+
+    # 크롭 하단 70%→30% 구간에서 위로 탐색
+    scan_lo = int(H * 0.70)
+    scan_hi = int(H * 0.30)
+    in_dense = False
+    last_dense = scan_lo
+
+    for i in range(scan_lo, scan_hi, -1):
+        if smooth[i] > HIGH_TH:
+            if not in_dense:
+                in_dense = True
+                last_dense = i
         else:
-            blocks.append((cur_start, cur_end))
-            cur_start = cur_end = r
-    blocks.append((cur_start, cur_end))
+            if in_dense:
+                # 고밀도 블록 상단 직전 = 선택지 위
+                choices_start = last_dense
+                break
+            in_dense = False
 
-    # 하단 빈 여백 블록 제거: 상위 85% 이내 블록만 유효
-    content_limit = int(H * 0.85)
-    real_blocks = [(s, e) for s, e in blocks if s < content_limit]
+    fig_bot = min(H, choices_start)
 
-    if len(real_blocks) < 2:
+    # ── 유효성 검사 ───────────────────────────────────────────────────────
+    if fig_bot <= fig_top:
         return None
-
-    # 첫 블록(문제 텍스트)과 마지막 블록(선택지) 사이의 갭 = 그림
-    first_block_end   = real_blocks[0][1]
-    last_block_start  = real_blocks[-1][0]
-
-    if last_block_start <= first_block_end:
+    if (fig_bot - fig_top) < int(H * min_fig_height_pct):
         return None
-
-    gap_size = last_block_start - first_block_end
-    if gap_size < int(H * min_fig_height_pct):
-        return None
-
-    margin = smooth_window
-    fig_top = max(0, first_block_end - margin)
-    fig_bot = min(H, last_block_start + margin)
 
     if dark[fig_top:fig_bot].sum() < 50:
         return None
