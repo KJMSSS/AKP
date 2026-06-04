@@ -387,11 +387,76 @@ body {
   .period-select { font-size: 0.78rem; padding: 4px 6px; }
   #main { padding: 16px 12px; }
 }
+/* ── PDF 미리보기 모달 ─────────────────────────────────── */
+#pdf-preview-modal {
+  display: none; position: fixed; inset: 0;
+  background: rgba(15,23,42,.65); z-index: 500;
+  align-items: center; justify-content: center;
+}
+#pdf-preview-modal.open { display: flex; }
+#pdf-preview-box {
+  background: #fff; border-radius: 12px; padding: 24px;
+  max-width: 480px; width: 90%; box-shadow: 0 8px 32px rgba(0,0,0,.25);
+  display: flex; flex-direction: column; gap: 14px;
+}
+#pdf-preview-box h3 { font-size: 1rem; color: #1e293b; }
+#pdf-preview-filename {
+  font-size: 0.82rem; color: #475569;
+  word-break: break-all; background: #f1f5f9;
+  padding: 6px 10px; border-radius: 6px;
+}
+#pdf-preview-img-wrap {
+  display: flex; justify-content: center; align-items: center;
+  min-height: 80px; background: #f8f9fa; border-radius: 6px;
+  overflow: hidden;
+}
+#pdf-preview-img { max-width: 100%; max-height: 340px; display: block; }
+#pdf-preview-spinner { color: #94a3b8; font-size: 0.9rem; }
+#pdf-preview-info { font-size: 0.85rem; color: #475569; }
+#pdf-preview-warn {
+  background: #fff7ed; border: 1px solid #fdba74;
+  border-radius: 6px; padding: 8px 12px;
+  font-size: 0.85rem; color: #92400e; display: none;
+}
+#pdf-preview-warn.show { display: block; }
+#pdf-preview-ok-wrap {
+  background: #f0fdf4; border: 1px solid #86efac;
+  border-radius: 6px; padding: 8px 12px;
+  font-size: 0.85rem; color: #166534; display: none;
+}
+#pdf-preview-ok-wrap.show { display: block; }
+.pdf-preview-btns { display: flex; gap: 10px; justify-content: flex-end; margin-top: 4px; }
+.pdf-preview-btns button { padding: 8px 20px; border-radius: 6px; border: none; cursor: pointer; font-size: 0.9rem; }
+#btn-preview-confirm { background: #2563eb; color: #fff; }
+#btn-preview-confirm:disabled { background: #93c5fd; cursor: not-allowed; }
+#btn-preview-cancel  { background: #f1f5f9; color: #475569; }
+/* PDF 이름 표시 */
+.pdf-name-row { font-size: 0.72rem; color: #64748b; margin-top: 3px;
+  word-break: break-all; line-height: 1.3; }
 </style>
 </head>
 <body>
 
 <div id="toast-container"></div>
+
+<!-- PDF 미리보기 모달 -->
+<div id="pdf-preview-modal">
+  <div id="pdf-preview-box">
+    <h3>업로드 전 확인</h3>
+    <div id="pdf-preview-filename"></div>
+    <div id="pdf-preview-img-wrap">
+      <span id="pdf-preview-spinner">미리보기 생성 중...</span>
+      <img id="pdf-preview-img" src="" alt="미리보기" style="display:none">
+    </div>
+    <div id="pdf-preview-info"></div>
+    <div id="pdf-preview-warn">⚠ 회전된 페이지가 감지되었습니다. 변환 시 자동으로 보정됩니다.</div>
+    <div id="pdf-preview-ok-wrap">✓ 정상 방향</div>
+    <div class="pdf-preview-btns">
+      <button id="btn-preview-cancel">취소</button>
+      <button id="btn-preview-confirm" disabled>변환 시작</button>
+    </div>
+  </div>
+</div>
 
 <input type="file" id="global-file-input" class="hidden-input" accept=".pdf,application/pdf">
 <input type="file" id="stage-file-input" class="hidden-input">
@@ -783,9 +848,10 @@ function renderStageCard(key, entry, stage) {
     if (hasPdf) {
       cardClass += ' s-done';
       const pdfName = entry.pdf_name || '';
-      const label   = pdfName ? pdfName : '있음';
-      const short   = label.length > 18 ? label.slice(0, 16) + '…' : label;
-      badgeHtml = `<span class="stage-status-badge sb-done" title="${escHtml(label)}">${escHtml(short)}</span>`;
+      const nameRow = pdfName
+        ? `<div class="pdf-name-row" title="${escHtml(pdfName)}">${escHtml(pdfName)}</div>`
+        : '';
+      badgeHtml = `<span class="stage-status-badge sb-done">있음</span>${nameRow}`;
       actionsHtml = `<button class="s-btn s-upload" data-action="pdf-upload" data-key="${escHtml(key)}">재업로드</button>`;
     } else {
       badgeHtml = `<span class="stage-status-badge sb-none">없음</span>`;
@@ -1161,11 +1227,75 @@ async function deleteJob(key, jobId) {
   }
 }
 
+function showPdfPreviewModal(file) {
+  return new Promise(resolve => {
+    const modal    = $('pdf-preview-modal');
+    const img      = $('pdf-preview-img');
+    const spinner  = $('pdf-preview-spinner');
+    const info     = $('pdf-preview-info');
+    const warn     = $('pdf-preview-warn');
+    const okDiv    = $('pdf-preview-ok-wrap');
+    const fnDiv    = $('pdf-preview-filename');
+    const btnOk    = $('btn-preview-confirm');
+    const btnCancel= $('btn-preview-cancel');
+
+    // 초기 상태
+    fnDiv.textContent  = file.name;
+    info.textContent   = '';
+    img.style.display  = 'none';
+    spinner.style.display = '';
+    warn.classList.remove('show');
+    okDiv.classList.remove('show');
+    btnOk.disabled = true;
+    modal.classList.add('open');
+
+    let settled = false;
+    function finish(ok) {
+      if (settled) return;
+      settled = true;
+      modal.classList.remove('open');
+      btnOk.onclick = null;
+      btnCancel.onclick = null;
+      resolve(ok);
+    }
+    btnCancel.onclick = () => finish(false);
+    btnOk.onclick     = () => finish(true);
+
+    // 서버에 미리보기 요청
+    const fd = new FormData();
+    fd.append('file', file);
+    apiFetch('/api/pdf/preview', { method: 'POST', body: fd })
+      .then(r => r.ok ? r.json() : Promise.reject(r.status))
+      .then(data => {
+        spinner.style.display = 'none';
+        img.src = data.preview;
+        img.style.display = 'block';
+        info.textContent = `${data.pages}페이지`;
+        if (data.needs_fix) {
+          warn.classList.add('show');
+        } else {
+          okDiv.classList.add('show');
+        }
+        btnOk.disabled = false;
+      })
+      .catch(() => {
+        // 미리보기 실패 시 그냥 진행 허용
+        spinner.textContent = '미리보기를 불러올 수 없습니다.';
+        info.textContent = '';
+        btnOk.disabled = false;
+      });
+  });
+}
+
 async function handleFile(file, school, registryKey) {
   if (!file.name.toLowerCase().endsWith('.pdf') && file.type !== 'application/pdf') {
     showToast('PDF 파일만 업로드할 수 있습니다.', 'err');
     return;
   }
+
+  // 업로드 전 미리보기 확인
+  const confirmed = await showPdfPreviewModal(file);
+  if (!confirmed) return;
 
   gRegistry[registryKey] = { status: 'converting', _lastLog: '업로드 중...', pdf_name: file.name };
   refreshCell(registryKey);

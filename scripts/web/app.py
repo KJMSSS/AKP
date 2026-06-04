@@ -282,6 +282,32 @@ async def api_usage(request: Request):
     return JSONResponse({"summary": today_summary(), "recent": read_entries(days=7)[:10]})
 
 
+@app.post("/api/pdf/preview")
+async def api_pdf_preview(request: Request, file: UploadFile = File(...)):
+    """PDF 첫 페이지 미리보기 + 회전 감지. 업로드 확인 전 호출용."""
+    _require_login(request)
+    data = await file.read()
+    try:
+        import base64
+        doc = fitz.open(stream=data, filetype="pdf")
+        n   = doc.page_count
+        page = doc[0]
+        rotation = page.rotation
+        # 첫 페이지를 400px 폭으로 축소 렌더링
+        scale = min(400 / page.rect.width, 1.5)
+        pix   = page.get_pixmap(matrix=fitz.Matrix(scale, scale))
+        b64   = base64.b64encode(pix.tobytes("png")).decode()
+        doc.close()
+        return JSONResponse({
+            "pages":    n,
+            "rotation": rotation,
+            "needs_fix": rotation != 0,
+            "preview":  f"data:image/png;base64,{b64}",
+        })
+    except Exception as e:
+        raise HTTPException(400, f"PDF 읽기 실패: {e}")
+
+
 @app.get("/api/drive/status")
 async def api_drive_status(request: Request):
     _require_login(request)
