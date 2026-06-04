@@ -116,6 +116,9 @@ from scripts.web.users import (                                     # noqa: E402
     is_admin, is_allowed, get_user, add_user, update_user,
     remove_user, list_users, user_today_cost, ADMIN_EMAIL,
 )
+from scripts.web.gdrive_uploader import (                           # noqa: E402
+    save_refresh_token, upload_hwpx, is_configured, TOKEN_FILE,
+)
 
 # ── 템플릿 HWPX ───────────────────────────────────────────────────────
 _SAMPLES = _ROOT / "samples"
@@ -138,7 +141,9 @@ oauth.register(
     client_id=GOOGLE_CLIENT_ID,
     client_secret=GOOGLE_CLIENT_SECRET,
     server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
-    client_kwargs={"scope": "openid email profile"},
+    client_kwargs={
+        "scope": "openid email profile https://www.googleapis.com/auth/drive.file",
+    },
 )
 
 # ── FastAPI 앱 ────────────────────────────────────────────────────────
@@ -178,7 +183,10 @@ def _require_admin(request: Request) -> str:
 @app.get("/auth/login")
 async def auth_login(request: Request):
     redirect_uri = str(request.url_for("auth_callback"))
-    return await oauth.google.authorize_redirect(request, redirect_uri)
+    params: dict = {"access_type": "offline"}
+    if not is_configured():
+        params["prompt"] = "consent"   # 첫 로그인: Drive 동의 화면 표시
+    return await oauth.google.authorize_redirect(request, redirect_uri, **params)
 
 
 @app.get("/auth/callback")
@@ -191,6 +199,11 @@ async def auth_callback(request: Request):
     user_info = token.get("userinfo") or {}
     email = user_info.get("email", "")
     name  = user_info.get("name", email)
+
+    # Drive 업로드용 refresh_token 저장 (처음 consent 동의 때만 포함됨)
+    refresh_token = token.get("refresh_token", "")
+    if refresh_token:
+        save_refresh_token(refresh_token)
 
     if not email:
         return RedirectResponse("/auth/login")
@@ -931,6 +944,20 @@ def _run_conversion(
                 print(f"  [그림] {item_no}번 삽입 완료")
             except Exception as e:
                 print(f"  [그림] {item_no}번 삽입 실패: {e}")
+
+        # ── Google Drive 업로드 ──────────────────────────────────────────
+        if custom_filename:
+            parts = Path(custom_filename).stem.split("_")
+            if len(parts) >= 5:
+                _year, _subj = parts[0], parts[4]
+                try:
+                    file_id = upload_hwpx(out_hwpx, _year, _subj)
+                    if file_id:
+                        print(f"  [Drive] AKP/{_year}/{_subj}/{out_hwpx.name} 저장 완료")
+                    elif is_configured():
+                        print("  [Drive] 업로드 실패 (계속 진행)")
+                except Exception as _e:
+                    print(f"  [Drive] 업로드 오류 (무시): {_e}")
 
         print("  [검수] 문제 파싱 및 검수 데이터 저장 중...")
         _save_review_data(job_id, original_name, md, n_pages, custom_filename)
