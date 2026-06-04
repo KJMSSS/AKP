@@ -366,6 +366,10 @@ body {
 .s-review:hover { background: #1d4ed8; }
 .s-del   { background: #fff; border-color: #f1aeb5; color: #dc3545; }
 .s-del:hover { background: #fee2e2; }
+.s-auto  { background: #fff; border-color: #0891b2; color: #0891b2; }
+.s-auto:hover { background: #ecfeff; }
+.s-auto:disabled { opacity: .55; cursor: not-allowed; }
+.stage-card.s-auto-done { border-color: #0891b2; }
 .s-inprog { background: #fff3cd; color: #856404; border: none; cursor: default; font-size: 0.75rem; }
 
 .hidden-input { display: none; }
@@ -809,15 +813,22 @@ function renderStageCard(key, entry, stage) {
   } else if (manual) {
     const stageData = entry?.stages?.[id];
     if (stageData) {
-      cardClass += ' s-done';
+      cardClass += stageData.auto ? ' s-auto-done' : ' s-done';
       const label = stageData.filename || '있음';
       badgeHtml = `<span class="stage-status-badge sb-done" title="${escHtml(label)}">${escHtml(label.length > 14 ? label.slice(0,12)+'…' : label)}</span>`;
+      const regenBtn = id === 'typer'
+        ? `<button class="s-btn s-auto" data-action="typer-generate" data-key="${escHtml(key)}" title="1단 HWPX를 2단 타이퍼 양식으로 재변환">재생성</button>`
+        : '';
       actionsHtml = `<a class="s-btn s-dl" href="/api/pipeline/${encodeURIComponent(key)}/stages/${id}/download" target="_blank">다운로드</a>
+        ${regenBtn}
         <button class="s-btn s-upload" data-action="stage-upload" data-key="${escHtml(key)}" data-stage="${id}">교체</button>
         <button class="s-btn s-del" data-action="stage-delete" data-key="${escHtml(key)}" data-stage="${id}">삭제</button>`;
     } else {
       badgeHtml = `<span class="stage-status-badge sb-none">없음</span>`;
-      actionsHtml = `<button class="s-btn s-upload" data-action="stage-upload" data-key="${escHtml(key)}" data-stage="${id}">업로드</button>`;
+      const autoBtn = id === 'typer'
+        ? `<button class="s-btn s-auto" data-action="typer-generate" data-key="${escHtml(key)}" title="1단 HWPX를 2단 타이퍼 양식으로 자동 변환">자동 생성</button>`
+        : '';
+      actionsHtml = `${autoBtn}<button class="s-btn s-upload" data-action="stage-upload" data-key="${escHtml(key)}" data-stage="${id}">업로드</button>`;
     }
   }
 
@@ -917,6 +928,8 @@ function bindMatrixEvents(tbody) {
         deleteStageFile(key, el.dataset.stage);
       } else if (action === 'delete-job') {
         deleteJob(key, el.dataset.jobId);
+      } else if (action === 'typer-generate') {
+        generateTyperFile(key);
       }
     });
   });
@@ -1035,6 +1048,30 @@ $('global-file-input').addEventListener('change', e => {
 
 let _pendingStageKey   = '';
 let _pendingStageId    = '';
+
+async function generateTyperFile(key) {
+  const btn = document.querySelector(`[data-action="typer-generate"][data-key="${CSS.escape(key)}"]`);
+  const origText = btn?.textContent || '자동 생성';
+  if (btn) { btn.disabled = true; btn.textContent = '생성중…'; }
+  try {
+    const res = await apiFetch(`/api/pipeline/${encodeURIComponent(key)}/typer/generate`, {
+      method: 'POST',
+    });
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      throw new Error(d.detail || `HTTP ${res.status}`);
+    }
+    const data = await res.json();
+    if (!gRegistry[key]) gRegistry[key] = {};
+    if (!gRegistry[key].stages) gRegistry[key].stages = {};
+    gRegistry[key].stages.typer = { filename: data.filename, auto: true };
+    refreshCell(key);
+    showToast('타이퍼 양식 생성 완료', 'ok');
+  } catch(e) {
+    if (e.message !== 'unauthenticated') showToast(`생성 실패: ${e.message}`, 'err');
+    if (btn) { btn.disabled = false; btn.textContent = origText; }
+  }
+}
 
 function uploadStageFile(key, stage) {
   _pendingStageKey = key;

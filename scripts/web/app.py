@@ -97,6 +97,7 @@ sys.path.insert(0, str(_ROOT))
 from src.ocr.claude_pdf_reader import read_pdf_as_markdown          # noqa: E402
 from src.ocr.cost_guard import CostGuard, CostCapError              # noqa: E402
 from src.text_only.text_builder import build_from_markdown           # noqa: E402
+from src.text_only.typer_builder import build_typer_hwpx             # noqa: E402
 from src.text_only.ocr_fallback import apply_fallback               # noqa: E402
 from src.text_only.problem_segmenter import parse_problems, rebuild_markdown  # noqa: E402
 from src.common.image_extractor import extract_images, extract_figures_by_vision  # noqa: E402
@@ -532,6 +533,59 @@ async def pipeline_stage_delete(key: str, stage: str, request: Request):
     reg[key] = entry
     _save_registry(reg)
     return JSONResponse({"ok": True})
+
+
+@app.post("/api/pipeline/{key}/typer/generate")
+async def pipeline_typer_generate(key: str, request: Request):
+    """
+    1단 HWPX(검수완 > 검수전)를 2단 타이퍼 양식으로 자동 변환.
+    변환 결과는 _UPLOADS_DIR/key/typer/ 에 저장하고 registry에 반영.
+    """
+    _require_login(request)
+    reg   = _load_registry()
+    entry = reg.get(key)
+    if not entry:
+        raise HTTPException(404, "등록된 키가 없습니다.")
+    job_id = entry.get("job_id", "")
+    if not job_id:
+        raise HTTPException(400, "job_id가 없습니다. 먼저 PDF 변환을 완료하세요.")
+
+    # 1단 HWPX 파일 결정: 검수완 우선, 없으면 검수전
+    reviewed = _TMP_DIR / f"{job_id}_reviewed.hwpx"
+    original = _TMP_DIR / f"{job_id}.hwpx"
+    one_dan = reviewed if reviewed.exists() else original if original.exists() else None
+    if not one_dan:
+        raise HTTPException(404, "1단 HWPX 파일을 찾을 수 없습니다.")
+
+    stage_dir = _UPLOADS_DIR / key / "typer"
+    stage_dir.mkdir(parents=True, exist_ok=True)
+    for old in stage_dir.iterdir():
+        old.unlink(missing_ok=True)
+
+    out_name = f"{key.strip('[]')}_타이퍼양식.hwpx"
+    out_path = stage_dir / out_name
+
+    try:
+        loop = asyncio.get_event_loop()
+        await loop.run_in_executor(
+            None,
+            lambda: build_typer_hwpx(
+                one_dan_path=one_dan,
+                registry_key=key,
+                out_path=out_path,
+            ),
+        )
+    except Exception as e:
+        raise HTTPException(500, f"타이퍼 양식 생성 실패: {e}")
+
+    entry.setdefault("stages", {})["typer"] = {
+        "filename":    out_path.name,
+        "uploaded_at": datetime.now().isoformat(timespec="seconds"),
+        "auto":        True,
+    }
+    reg[key] = entry
+    _save_registry(reg)
+    return JSONResponse({"ok": True, "filename": out_path.name})
 
 
 # ══════════════════════════════════════════════════════════════════════
