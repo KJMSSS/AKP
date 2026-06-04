@@ -102,6 +102,8 @@ from src.common.hwpx_table_inserter import (                        # noqa: E402
 )
 from src.common.hwpx_namespace_fixer import fix_hwpx_namespaces    # noqa: E402
 from src.common.hwpx_validator import validate_hwpx                 # noqa: E402
+from src.common.pdf_utils import normalize_pdf_rotation             # noqa: E402
+from src.pipeline.bbox_detector import BBoxDetector                 # noqa: E402
 from scripts.web.usage_log import (                                 # noqa: E402
     append_entry, read_entries, today_summary, DAILY_CAP_USD,
 )
@@ -659,6 +661,15 @@ async def page_image(job_id: str, page_num: int, request: Request):
     return FileResponse(str(img), media_type="image/png")
 
 
+@app.get("/crop/{job_id}/{prob_num}")
+async def crop_image(job_id: str, prob_num: int, request: Request):
+    _require_login(request)
+    img = _TMP_DIR / f"{job_id}_crop_{prob_num}.png"
+    if not img.exists():
+        raise HTTPException(404)
+    return FileResponse(str(img), media_type="image/png")
+
+
 @app.post("/api/review/{job_id}/corrections")
 async def save_corrections(job_id: str, request: Request):
     email = _require_login(request)
@@ -790,6 +801,40 @@ class _QueueWriter(io.TextIOBase):
         pass
 
 
+def _generate_problem_crops(
+    job_id: str, pdf_path: Path, bboxes: dict[int, dict]
+) -> set[int]:
+    """BBoxDetector 결과로 문제별 크롭 PNG 저장. 성공한 problem_no set 반환."""
+    SCALE  = 72 / 100   # thumb pixel (100 DPI) → pt
+    RENDER = 150 / 72   # pt → 150 DPI pixel
+
+    doc = fitz.open(str(pdf_path))
+    done: set[int] = set()
+
+    for prob_no, bb in bboxes.items():
+        pg_idx = bb["page"]
+        if pg_idx >= len(doc):
+            continue
+        page = doc[pg_idx]
+        W = page.mediabox.width
+        H = page.mediabox.height
+
+        y0 = max(0.0, bb["y_top"]    * SCALE - 5)
+        y1 = min(H,   bb["y_bottom"] * SCALE + 10)
+        x0 = W / 2 if bb.get("col") == "right" else 0.0
+        x1 = W     if bb.get("col") == "right" else W / 2
+
+        pix = page.get_pixmap(
+            matrix=fitz.Matrix(RENDER, RENDER),
+            clip=fitz.Rect(x0, y0, x1, y1),
+        )
+        pix.save(str(_TMP_DIR / f"{job_id}_crop_{prob_no}.png"))
+        done.add(prob_no)
+
+    doc.close()
+    return done
+
+
 def _render_pdf_pages(pdf_path: Path, job_id: str) -> int:
     doc = fitz.open(str(pdf_path))
     for i, page in enumerate(doc):
@@ -802,8 +847,9 @@ def _render_pdf_pages(pdf_path: Path, job_id: str) -> int:
 
 def _save_review_data(
     job_id: str, original_name: str, md: str, n_pages: int,
-    custom_filename: str = "",
+    custom_filename: str = "", crop_keys: set[int] | None = None,
 ) -> None:
+    crop_keys = crop_keys or set()
     header, segments = parse_problems(md)
     data = {
         "job_id":          job_id,
@@ -812,8 +858,13 @@ def _save_review_data(
         "header":          header,
         "pages":           n_pages,
         "problems": [
-            {"number": seg.number, "full_text": seg.raw_block,
-             "is_subjective": seg.is_subjective, "status": "pending"}
+            {
+                "number":        seg.number,
+                "full_text":     seg.raw_block,
+                "is_subjective": seg.is_subjective,
+                "status":        "pending",
+                "has_crop":      seg.number in crop_keys,
+            }
             for seg in segments
         ],
     }
@@ -839,6 +890,8 @@ def _run_conversion(
     t0          = time.time()
 
     try:
+        pdf_path = normalize_pdf_rotation(pdf_path)
+
         guard = CostGuard(cap_usd=DAILY_CAP_USD)
         guard.check_or_raise("web")
 
@@ -929,8 +982,22 @@ def _run_conversion(
             except Exception as e:
                 print(f"  [그림] {item_no}번 삽입 실패: {e}")
 
+        # ── 크롭 이미지 생성 (검수용, 실패해도 계속 진행) ──────────────
+        crop_keys: set[int] = set()
+        try:
+            print("  [크롭] 문제별 bbox 감지 중...")
+            thumb_dir = _TMP_DIR / f"{job_id}_thumbs"
+            thumb_dir.mkdir(exist_ok=True)
+            bboxes = BBoxDetector(model="claude-haiku-4-5-20251001").detect_all(
+                pdf_path, thumb_dir, verbose=False
+            )
+            crop_keys = _generate_problem_crops(job_id, pdf_path, bboxes)
+            print(f"  [크롭] {len(crop_keys)}건 생성 완료")
+        except Exception as _crop_err:
+            print(f"  [크롭] 건너뜀: {_crop_err}")
+
         print("  [검수] 문제 파싱 및 검수 데이터 저장 중...")
-        _save_review_data(job_id, original_name, md, n_pages, custom_filename)
+        _save_review_data(job_id, original_name, md, n_pages, custom_filename, crop_keys)
 
         duration = round(time.time() - t0, 1)
         cost_usd = round(guard.total_today() - cost_before, 4)
