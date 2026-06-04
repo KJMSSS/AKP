@@ -433,11 +433,59 @@ body {
 /* PDF 이름 표시 */
 .pdf-name-row { font-size: 0.72rem; color: #64748b; margin-top: 3px;
   word-break: break-all; line-height: 1.3; }
+
+/* ── 잡 이동 모달 ──────────────────────────────────────── */
+#move-modal {
+  display: none; position: fixed; inset: 0;
+  background: rgba(15,23,42,.65); z-index: 500;
+  align-items: center; justify-content: center;
+}
+#move-modal.open { display: flex; }
+#move-modal-box {
+  background: #fff; border-radius: 12px; padding: 24px;
+  max-width: 400px; width: 90%; box-shadow: 0 8px 32px rgba(0,0,0,.25);
+  display: flex; flex-direction: column; gap: 14px;
+}
+#move-modal-box h3 { font-size: 1rem; color: #1e293b; }
+.move-label { font-size: 0.78rem; color: #64748b; margin-bottom: 2px; }
+.move-from-name {
+  font-size: 0.88rem; font-weight: 600; color: #475569;
+  background: #f1f5f9; padding: 6px 10px; border-radius: 6px;
+}
+#move-to-select {
+  width: 100%; padding: 8px 10px; border: 1px solid #cbd5e1;
+  border-radius: 6px; font-size: 0.9rem; background: #fff;
+}
+.move-modal-btns { display: flex; gap: 10px; justify-content: flex-end; margin-top: 4px; }
+.move-modal-btns button { padding: 8px 20px; border-radius: 6px; border: none; cursor: pointer; font-size: 0.9rem; }
+#btn-move-confirm { background: #2563eb; color: #fff; }
+#btn-move-confirm:disabled { background: #93c5fd; cursor: not-allowed; }
+#btn-move-cancel  { background: #f1f5f9; color: #475569; }
 </style>
 </head>
 <body>
 
 <div id="toast-container"></div>
+
+<!-- 잡 이동 모달 -->
+<div id="move-modal">
+  <div id="move-modal-box">
+    <h3>잡 이동</h3>
+    <p style="font-size:0.85rem;color:#64748b;">업로드된 PDF와 변환 결과를 다른 학교 행으로 이동합니다.</p>
+    <div>
+      <div class="move-label">현재 위치</div>
+      <div class="move-from-name" id="move-from-name"></div>
+    </div>
+    <div>
+      <div class="move-label">이동할 위치</div>
+      <select id="move-to-select"><option value="">-- 학교 선택 --</option></select>
+    </div>
+    <div class="move-modal-btns">
+      <button id="btn-move-cancel">취소</button>
+      <button id="btn-move-confirm" disabled>이동</button>
+    </div>
+  </div>
+</div>
 
 <!-- PDF 미리보기 모달 -->
 <div id="pdf-preview-modal">
@@ -852,7 +900,8 @@ function renderStageCard(key, entry, stage) {
         ? `<div class="pdf-name-row" title="${escHtml(pdfName)}">${escHtml(pdfName)}</div>`
         : '';
       badgeHtml = `<span class="stage-status-badge sb-done">있음</span>${nameRow}`;
-      actionsHtml = `<button class="s-btn s-upload" data-action="pdf-upload" data-key="${escHtml(key)}">재업로드</button>`;
+      actionsHtml = `<button class="s-btn s-upload" data-action="pdf-upload" data-key="${escHtml(key)}">재업로드</button>
+        <button class="s-btn s-del" data-action="pdf-move" data-key="${escHtml(key)}" title="이 잡을 다른 학교 행으로 이동">이동</button>`;
     } else {
       badgeHtml = `<span class="stage-status-badge sb-none">없음</span>`;
       actionsHtml = `<button class="s-btn s-upload" data-action="pdf-upload" data-key="${escHtml(key)}">PDF 업로드</button>`;
@@ -1078,6 +1127,8 @@ function bindDetailEvents(detailTr, key) {
       const k = el.dataset.key;
       if (action === 'pdf-upload') {
         triggerUpload(keyToSchool(k), k);
+      } else if (action === 'pdf-move') {
+        showMoveModal(k);
       } else if (action === 'stage-upload') {
         uploadStageFile(k, el.dataset.stage);
       } else if (action === 'stage-delete') {
@@ -1225,6 +1276,83 @@ async function deleteJob(key, jobId) {
   } catch(e) {
     if (e.message !== 'unauthenticated') showToast(`삭제 실패: ${e.message}`, 'err');
   }
+}
+
+async function showMoveModal(fromKey) {
+  const modal    = $('move-modal');
+  const fromName = $('move-from-name');
+  const toSel    = $('move-to-select');
+  const btnOk    = $('btn-move-confirm');
+  const btnCancel= $('btn-move-cancel');
+
+  const fromSchool = keyToSchool(fromKey);
+  fromName.textContent = fromSchool;
+
+  // 이동 가능한 학교 목록: 현재 과목+기간 기준, 잡 없는 행
+  toSel.innerHTML = '<option value="">-- 학교 선택 --</option>';
+  const allSchools = [...(gConfig.schools || [])].sort((a,b) => a.localeCompare(b,'ko'));
+  allSchools.forEach(school => {
+    if (school === fromSchool) return;
+    const k = buildRegistryKey(school, gCurrentSubject);
+    if (gRegistry[k]?.job_id) return; // 이미 잡 있는 행은 제외
+    const opt = document.createElement('option');
+    opt.value = k;
+    opt.textContent = school;
+    toSel.appendChild(opt);
+  });
+
+  if (toSel.options.length <= 1) {
+    showToast('이동 가능한 빈 행이 없습니다.', 'warn');
+    return;
+  }
+
+  btnOk.disabled = true;
+  toSel.onchange = () => { btnOk.disabled = !toSel.value; };
+
+  modal.classList.add('open');
+
+  await new Promise(resolve => {
+    let settled = false;
+    function close(ok) {
+      if (settled) return;
+      settled = true;
+      modal.classList.remove('open');
+      btnOk.onclick = null;
+      btnCancel.onclick = null;
+      toSel.onchange = null;
+      resolve(ok);
+    }
+    btnCancel.onclick = () => close(false);
+    btnOk.onclick = async () => {
+      const toKey = toSel.value;
+      if (!toKey) return;
+      btnOk.disabled = true;
+      btnOk.textContent = '이동중…';
+      try {
+        const res = await apiFetch('/api/registry/move', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ from_key: fromKey, to_key: toKey }),
+        });
+        if (!res.ok) {
+          const d = await res.json().catch(() => ({}));
+          throw new Error(d.detail || `HTTP ${res.status}`);
+        }
+        const data = await res.json();
+        // 로컬 레지스트리 업데이트
+        gRegistry[toKey] = data.entry;
+        delete gRegistry[fromKey];
+        gExpandedRows.delete(fromKey);
+        renderMatrix();
+        showToast(`${fromSchool} → ${keyToSchool(toKey)} 이동 완료`, 'ok');
+        close(true);
+      } catch(e) {
+        if (e.message !== 'unauthenticated') showToast(`이동 실패: ${e.message}`, 'err');
+        btnOk.disabled = false;
+        btnOk.textContent = '이동';
+      }
+    };
+  });
 }
 
 function showPdfPreviewModal(file) {

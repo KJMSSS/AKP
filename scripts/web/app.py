@@ -874,6 +874,41 @@ async def api_registry_register(request: Request):
     return JSONResponse(entry)
 
 
+@app.post("/api/registry/move")
+async def api_registry_move(request: Request):
+    """잡(PDF + 변환결과)을 다른 레지스트리 키로 이동."""
+    _require_login(request)
+    body     = await request.json()
+    from_key = body.get("from_key", "").strip()
+    to_key   = body.get("to_key", "").strip()
+    if not from_key or not to_key:
+        raise HTTPException(400, "from_key와 to_key는 필수입니다.")
+    if from_key == to_key:
+        raise HTTPException(400, "같은 위치입니다.")
+
+    reg = _load_registry()
+    if from_key not in reg:
+        raise HTTPException(404, f"원본 키에 잡이 없습니다: {from_key}")
+    if to_key in reg and reg[to_key].get("job_id"):
+        raise HTTPException(409, "대상 위치에 이미 잡이 있습니다. 먼저 삭제하세요.")
+
+    entry = reg.pop(from_key)
+    entry["updated_at"] = datetime.now().isoformat(timespec="seconds")
+    reg[to_key] = entry
+    _save_registry(reg)
+
+    # stages 디렉토리 이동 (업로드된 한글완성본·타이퍼·해설)
+    from_stage_dir = _UPLOADS_DIR / from_key
+    to_stage_dir   = _UPLOADS_DIR / to_key
+    if from_stage_dir.exists():
+        import shutil
+        if to_stage_dir.exists():
+            shutil.rmtree(to_stage_dir)
+        shutil.move(str(from_stage_dir), str(to_stage_dir))
+
+    return JSONResponse({"ok": True, "from": from_key, "to": to_key, "entry": entry})
+
+
 # 검수 라우트
 # ══════════════════════════════════════════════════════════════════════
 
