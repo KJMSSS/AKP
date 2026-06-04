@@ -274,6 +274,44 @@ async def api_drive_status(request: Request):
     })
 
 
+@app.get("/auth/gdrive")
+async def auth_gdrive(request: Request):
+    """Drive refresh_token 강제 재취득 — 항상 consent 화면 표시."""
+    _require_login(request)
+    redirect_uri = str(request.url_for("auth_gdrive_callback"))
+    return await oauth.google.authorize_redirect(
+        request, redirect_uri,
+        access_type="offline",
+        prompt="consent",
+        scope="openid email profile https://www.googleapis.com/auth/drive.file",
+    )
+
+
+@app.get("/auth/gdrive/callback")
+async def auth_gdrive_callback(request: Request):
+    _require_login(request)
+    try:
+        token = await oauth.google.authorize_access_token(request)
+    except Exception as e:
+        return HTMLResponse(f"<p>오류: {e}</p><a href='/auth/gdrive'>다시 시도</a>")
+
+    refresh_token = token.get("refresh_token", "")
+    if refresh_token:
+        save_refresh_token(refresh_token)
+        return HTMLResponse(
+            "<p style='font-family:sans-serif;padding:40px;color:green'>"
+            "✓ Google Drive 연동 완료</p>"
+            "<script>setTimeout(()=>location.href='/',1500)</script>"
+        )
+    return HTMLResponse(
+        "<p style='font-family:sans-serif;padding:40px;color:red'>"
+        "refresh_token을 받지 못했습니다.<br>"
+        "<a href='https://myaccount.google.com/permissions'>Google 계정 → 앱 권한</a>에서 "
+        "akp 앱 접근을 취소한 후 다시 시도하세요.</p>"
+        "<a href='/auth/gdrive'>다시 시도</a>"
+    )
+
+
 @app.get("/api/me")
 async def api_me(request: Request):
     email = _current_email(request)
