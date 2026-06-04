@@ -488,6 +488,10 @@ body {
     </div>
     <div class="move-grid">
       <div>
+        <div class="move-label">연도</div>
+        <select id="mv-year" class="mv-sel"></select>
+      </div>
+      <div>
         <div class="move-label">학교</div>
         <select id="mv-school" class="mv-sel"></select>
       </div>
@@ -516,8 +520,8 @@ body {
         <div class="move-label">중간/기말</div>
         <select id="mv-exam" class="mv-sel">
           <option value="">-</option>
-          <option value="중간">중간</option>
-          <option value="기말">기말</option>
+          <option value="a">중간 (a)</option>
+          <option value="b">기말 (b)</option>
         </select>
       </div>
     </div>
@@ -554,10 +558,6 @@ body {
 <div id="topbar">
   <h1>AKP 변환기</h1>
   <select id="sel-year" class="period-select"></select>
-  <select id="sel-round" class="period-select">
-    <option value="a">1차 (a)</option>
-    <option value="b">2차 (b)</option>
-  </select>
   <div id="topbar-spacer"></div>
   <span id="user-name"></span>
   <a href="/admin" id="admin-link">관리자</a>
@@ -676,7 +676,7 @@ const STAGES = [
   { id: 'solution',    name: '해설',         step: 6, manual: true  },
 ];
 
-const PERIOD_KEYS = ['sel-year', 'sel-round'];
+const PERIOD_KEYS = ['sel-year'];
 
 function initYearSelect() {
   const sel = $('sel-year');
@@ -706,18 +706,19 @@ function savePeriodToStorage() {
 }
 
 function getPeriod() {
-  return { year: $('sel-year').value, round: $('sel-round').value };
+  return { year: $('sel-year').value };
 }
 
 function getSubjectMeta(subjectId) {
   const subj = gConfig.subjects.find(s => s.id === subjectId) || {};
-  return { grade: subj.grade || '', sem: subj.sem || '' };
+  return { grade: subj.grade || '', sem: subj.sem || '', exam_type: subj.exam_type || '' };
 }
 
 function buildRegistryKey(school, subjectId) {
-  const p = getPeriod();
-  const m = getSubjectMeta(subjectId);
-  return `${p.year}_${m.grade}_${m.sem}_${p.round}_${subjectId}_${school}`;
+  const p     = getPeriod();
+  const m     = getSubjectMeta(subjectId);
+  const round = m.exam_type === '기말' ? 'b' : 'a';
+  return `${p.year}_${m.grade}_${m.sem}_${round}_${subjectId}_${school}`;
 }
 
 function keyToSchool(key) {
@@ -1341,6 +1342,7 @@ async function showMoveModal(fromKey) {
   const btnOk    = $('btn-move-confirm');
   const btnCancel= $('btn-move-cancel');
   const preview  = $('mv-target-preview');
+  const selYear   = $('mv-year');
   const selSchool = $('mv-school');
   const selSubj   = $('mv-subject');
   const selGrade  = $('mv-grade');
@@ -1353,7 +1355,18 @@ async function showMoveModal(fromKey) {
   const fromSubj   = fromParts[4] || gCurrentSubject;
   const fromSubjObj = gConfig.subjects.find(s => s.id === fromSubj) || {};
 
-  fromName.textContent = `${fromSchool} / ${fromSubjObj.name || fromSubj} / ${fromParts[1] || '-'}학년 ${fromParts[2] || '-'}학기 / ${fromSubjObj.exam_type || '-'}`;
+  const fromExamLabel = fromParts[3] === 'b' ? '기말' : '중간';
+  fromName.textContent = `${fromParts[0]}년 / ${fromSchool} / ${fromSubjObj.name || fromSubj} / ${fromParts[1] || '-'}학년 ${fromParts[2] || '-'}학기 / ${fromExamLabel}`;
+
+  // 연도 목록
+  selYear.innerHTML = '';
+  const fromYear = fromParts[0] || String(new Date().getFullYear());
+  for (let y = 2020; y <= 2030; y++) {
+    const o = document.createElement('option');
+    o.value = String(y); o.textContent = `${y}년`;
+    if (String(y) === fromYear) o.selected = true;
+    selYear.appendChild(o);
+  }
 
   // 학교 목록
   selSchool.innerHTML = '';
@@ -1373,12 +1386,12 @@ async function showMoveModal(fromKey) {
     selSubj.appendChild(o);
   });
 
-  // 과목 선택 시 학년/학기/중간기말 자동 채움 + gConfig.subjects 로컬 업데이트
+  // 과목 선택 시 학년/학기 자동 채움
   function fillFromSubject(subjId) {
     const s = gConfig.subjects.find(x => x.id === subjId) || {};
-    selGrade.value = s.grade     || '';
-    selSem.value   = s.sem       || '';
-    selExam.value  = s.exam_type || '';
+    selGrade.value = s.grade || '';
+    selSem.value   = s.sem   || '';
+    selExam.value  = s.exam_type === '기말' ? 'b' : 'a';
     updatePreview();
   }
   selSubj.onchange = () => fillFromSubject(selSubj.value);
@@ -1389,7 +1402,7 @@ async function showMoveModal(fromKey) {
     if (subj) {
       subj.grade     = selGrade.value;
       subj.sem       = selSem.value;
-      subj.exam_type = selExam.value;
+      subj.exam_type = selExam.value === 'a' ? '중간' : selExam.value === 'b' ? '기말' : '';
     }
     updatePreview();
   }
@@ -1397,14 +1410,15 @@ async function showMoveModal(fromKey) {
 
   // 현재 과목 값으로 초기화
   fillFromSubject(fromSubj);
+  selExam.value = fromParts[3] || 'a';  // 원본 키의 a/b 값으로 덮어씀
 
-  // 대상 키 계산 — renderMatrix와 동일한 로직(getSubjectMeta) 사용
+  // 대상 키 계산
   function computeTargetKey() {
-    const p = getPeriod();
-    const school  = selSchool.value;
-    const subjId  = selSubj.value;
-    const m = getSubjectMeta(subjId);  // gConfig.subjects에서 읽음 (syncSubjectMeta로 갱신됨)
-    return `${p.year}_${m.grade}_${m.sem}_${p.round}_${subjId}_${school}`;
+    const school = selSchool.value;
+    const subjId = selSubj.value;
+    const m      = getSubjectMeta(subjId);  // syncSubjectMeta로 grade/sem 최신값 반영됨
+    const round  = selExam.value || 'a';
+    return `${selYear.value}_${m.grade}_${m.sem}_${round}_${subjId}_${school}`;
   }
 
   function updatePreview() {
@@ -1415,9 +1429,9 @@ async function showMoveModal(fromKey) {
     const subjId  = selSubj.value;
     const subjObj = gConfig.subjects.find(s => s.id === subjId) || {};
     const m       = getSubjectMeta(subjId);
-    const grade   = m.grade || '-';
-    const sem     = m.sem   || '-';
-    const exam    = subjObj.exam_type || '-';
+    const grade     = m.grade || '-';
+    const sem       = m.sem   || '-';
+    const examLabel = selExam.value === 'b' ? '기말' : '중간';
 
     preview.className = '';
     if (isSame) {
@@ -1429,13 +1443,14 @@ async function showMoveModal(fromKey) {
       preview.className = 'conflict';
       btnOk.disabled = true;
     } else {
-      preview.textContent = `→ ${school} / ${subjObj.name || subjId} / ${grade}학년 ${sem}학기 / ${exam}`;
+      preview.textContent = `→ ${selYear.value}년 / ${school} / ${subjObj.name || subjId} / ${grade}학년 ${sem}학기 / ${examLabel}`;
       preview.className = 'ok';
       btnOk.disabled = false;
     }
   }
 
   selSchool.onchange = updatePreview;
+  selYear.onchange   = updatePreview;
 
   btnOk.textContent = '이동';
   btnOk.disabled = true;
@@ -1450,7 +1465,7 @@ async function showMoveModal(fromKey) {
       modal.classList.remove('open');
       btnOk.onclick = null;
       btnCancel.onclick = null;
-      [selSchool, selSubj, selGrade, selSem, selExam].forEach(el => { el.onchange = null; });
+      [selYear, selSchool, selSubj, selGrade, selSem, selExam].forEach(el => { el.onchange = null; });
       resolve(ok);
     }
     btnCancel.onclick = () => close(false);
@@ -1485,19 +1500,20 @@ async function showMoveModal(fromKey) {
           renderSubjectMeta();
         }
 
-        // 이동 시 변경된 과목 학년/학기 서버 저장
+        // 이동 시 변경된 과목 학년/학기/중간기말 서버 저장
         apiFetch(`/api/config/subjects/${encodeURIComponent(targetSubj)}`, {
           method: 'PATCH',
           headers: {'Content-Type':'application/json'},
           body: JSON.stringify({
             grade:     selGrade.value,
             sem:       selSem.value,
-            exam_type: selExam.value,
+            exam_type: selExam.value === 'b' ? '기말' : '중간',
           }),
         }).catch(() => {});
 
         renderMatrix();
-        showToast(`이동 완료 → ${selSchool.value}`, 'ok');
+        const examLbl = selExam.value === 'b' ? '기말' : '중간';
+        showToast(`이동 완료 → ${selYear.value}년 ${selSchool.value} / ${examLbl}`, 'ok');
         close(true);
       } catch(e) {
         if (e.message !== 'unauthenticated') showToast(`이동 실패: ${e.message}`, 'err');

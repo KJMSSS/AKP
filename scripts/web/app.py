@@ -79,6 +79,13 @@ def _save_mconfig(cfg: dict) -> None:
     with _config_lock:
         _CONFIG_FILE.write_text(json.dumps(cfg, ensure_ascii=False, indent=2), encoding="utf-8")
 
+
+def _validate_safe_key(key: str) -> str:
+    """레지스트리 키/잡ID에 경로 탈출 문자가 없는지 확인."""
+    if ".." in key or "/" in key or "\\" in key:
+        raise HTTPException(400, "잘못된 키 값입니다.")
+    return key
+
 def _load_registry() -> dict:
     with _registry_lock:
         if _REGISTRY_FILE.exists():
@@ -414,7 +421,9 @@ async def stream(job_id: str):
 
 
 @app.get("/download/{job_id}")
-async def download(job_id: str):
+async def download(job_id: str, request: Request):
+    _require_login(request)
+    _validate_safe_key(job_id)
     # 메모리에 있으면 바로 사용
     job = _jobs.get(job_id)
     if job and job.get("hwpx") and job["hwpx"].exists():
@@ -543,6 +552,7 @@ async def pipeline_stage_upload(
     file: UploadFile = File(...),
 ):
     _require_login(request)
+    _validate_safe_key(key)
     if stage not in _MANUAL_STAGES:
         raise HTTPException(400, f"지원하지 않는 단계: {stage}")
 
@@ -568,6 +578,7 @@ async def pipeline_stage_upload(
 @app.get("/api/pipeline/{key}/stages/{stage}/download")
 async def pipeline_stage_download(key: str, stage: str, request: Request):
     _require_login(request)
+    _validate_safe_key(key)
     if stage not in _MANUAL_STAGES:
         raise HTTPException(400)
     stage_dir = _UPLOADS_DIR / key / stage
@@ -581,6 +592,7 @@ async def pipeline_stage_download(key: str, stage: str, request: Request):
 @app.delete("/api/pipeline/{key}/stages/{stage}")
 async def pipeline_stage_delete(key: str, stage: str, request: Request):
     _require_login(request)
+    _validate_safe_key(key)
     if stage not in _MANUAL_STAGES:
         raise HTTPException(400)
     stage_dir = _UPLOADS_DIR / key / stage
@@ -602,6 +614,7 @@ async def pipeline_typer_generate(key: str, request: Request):
     변환 결과는 _UPLOADS_DIR/key/typer/ 에 저장하고 registry에 반영.
     """
     _require_login(request)
+    _validate_safe_key(key)
     reg   = _load_registry()
     entry = reg.get(key)
     if not entry:
@@ -884,6 +897,8 @@ async def api_registry_move(request: Request):
     to_key   = body.get("to_key", "").strip()
     if not from_key or not to_key:
         raise HTTPException(400, "from_key와 to_key는 필수입니다.")
+    _validate_safe_key(from_key)
+    _validate_safe_key(to_key)
     if from_key == to_key:
         raise HTTPException(400, "같은 위치입니다.")
 
@@ -897,6 +912,20 @@ async def api_registry_move(request: Request):
     entry["updated_at"] = datetime.now().isoformat(timespec="seconds")
     reg[to_key] = entry
     _save_registry(reg)
+
+    # custom_filename 갱신 (_review.json 파일명 업데이트)
+    job_id = entry.get("job_id", "")
+    if job_id:
+        review_file = _TMP_DIR / f"{job_id}_review.json"
+        if review_file.exists():
+            try:
+                rv = json.loads(review_file.read_text(encoding="utf-8"))
+                rv["custom_filename"] = to_key + ".hwpx"
+                review_file.write_text(
+                    json.dumps(rv, ensure_ascii=False, indent=2), encoding="utf-8"
+                )
+            except Exception:
+                pass
 
     # stages 디렉토리 이동 (업로드된 한글완성본·타이퍼·해설)
     from_stage_dir = _UPLOADS_DIR / from_key
