@@ -683,7 +683,10 @@ async function registerJob(registryKey, jobId, subjectId, school) {
     const res = await apiFetch('/api/registry/register', {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ registry_key: registryKey, job_id: jobId, subject: subjectId, school }),
+      body: JSON.stringify({
+        registry_key: registryKey, job_id: jobId, subject: subjectId, school,
+        pdf_name: gRegistry[registryKey]?.pdf_name || '',
+      }),
     });
     if (!res.ok) {
       const d = await res.json().catch(() => ({}));
@@ -779,7 +782,10 @@ function renderStageCard(key, entry, stage) {
     const hasPdf = !!entry;
     if (hasPdf) {
       cardClass += ' s-done';
-      badgeHtml = `<span class="stage-status-badge sb-done">있음</span>`;
+      const pdfName = entry.pdf_name || '';
+      const label   = pdfName ? pdfName : '있음';
+      const short   = label.length > 18 ? label.slice(0, 16) + '…' : label;
+      badgeHtml = `<span class="stage-status-badge sb-done" title="${escHtml(label)}">${escHtml(short)}</span>`;
       actionsHtml = `<button class="s-btn s-upload" data-action="pdf-upload" data-key="${escHtml(key)}">재업로드</button>`;
     } else {
       badgeHtml = `<span class="stage-status-badge sb-none">없음</span>`;
@@ -1161,7 +1167,7 @@ async function handleFile(file, school, registryKey) {
     return;
   }
 
-  gRegistry[registryKey] = { status: 'converting', _lastLog: '업로드 중...' };
+  gRegistry[registryKey] = { status: 'converting', _lastLog: '업로드 중...', pdf_name: file.name };
   refreshCell(registryKey);
 
   const customFilename = registryKey + '.hwpx';
@@ -1230,6 +1236,7 @@ function subscribeSSE(registryKey, jobId) {
         job_id: entry.job_id,
         subject: gCurrentSubject,
         school: keyToSchool(registryKey),
+        pdf_name: entry.pdf_name || '',
         status: 'done',
       }),
     }).catch(() => {});

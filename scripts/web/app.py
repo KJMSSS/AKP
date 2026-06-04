@@ -814,6 +814,7 @@ async def api_registry_register(request: Request):
     job_id       = body.get("job_id", "").strip()
     subject      = body.get("subject", "")
     school       = body.get("school", "")
+    pdf_name     = body.get("pdf_name", "")
     status       = body.get("status", "converting")
     if not registry_key or not job_id:
         raise HTTPException(400, "registry_key와 job_id는 필수입니다.")
@@ -838,6 +839,7 @@ async def api_registry_register(request: Request):
         "review_status": review_status,
         "reviewer_name": reviewer_name, "reviewed_at": reviewed_at,
         "subject": subject, "school": school,
+        "pdf_name": pdf_name or existing.get("pdf_name", ""),
         "created_at": existing.get("created_at", datetime.now().isoformat(timespec="seconds")),
         "updated_at": datetime.now().isoformat(timespec="seconds"),
     }
