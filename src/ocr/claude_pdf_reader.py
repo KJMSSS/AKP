@@ -26,7 +26,8 @@ _COST_PER_M_INPUT  = 3.0    # USD / 1M input tokens
 _COST_PER_M_OUTPUT = 15.0   # USD / 1M output tokens
 _MAX_TOKENS      = 8192
 _MAX_TOKENS_FULL = 16000  # 정답·해설 포함 시 더 긴 출력 필요
-_PAGE_CHUNK = 15             # 청크당 최대 페이지 수
+_PAGE_CHUNK    = 10          # 청크당 최대 페이지 수
+_MAX_PDF_BYTES = 18 * 1024 * 1024  # 단일 호출 최대 PDF 크기 (18MB, base64 후 ~24MB)
 
 # ── 시스템 프롬프트 (문제만) ────────────────────────────────────────────
 _SYSTEM = """\
@@ -158,7 +159,8 @@ def read_pdf_as_markdown(
     pat_label = f"  패턴 {n_pat}건 주입" if n_pat else ""
     print(f"  [claude_pdf] {pdf_path.name}  ({n_pages}p)  {mode_label}{pat_label}")
 
-    if n_pages == 0 or n_pages <= _PAGE_CHUNK:
+    needs_chunk = (n_pages > _PAGE_CHUNK) or (len(pdf_bytes) > _MAX_PDF_BYTES)
+    if n_pages == 0 or not needs_chunk:
         md, cost = _call_api(pdf_bytes, api_key, max_tokens, system, user_prompt)
     else:
         md, cost = _call_api_chunked(pdf_bytes, n_pages, api_key, max_tokens, system, user_prompt)
@@ -223,6 +225,16 @@ def _call_api(
     return resp.content[0].text, cost
 
 
+def _extract_chunk_bytes(doc, start: int, end: int) -> bytes:
+    sub = doc.open()  # type: ignore
+    import fitz
+    sub = fitz.open()
+    sub.insert_pdf(doc, from_page=start, to_page=end - 1)
+    data = sub.tobytes()
+    sub.close()
+    return data
+
+
 def _call_api_chunked(
     pdf_bytes: bytes,
     n_pages: int,
@@ -231,25 +243,36 @@ def _call_api_chunked(
     system: str,
     user_prompt: str,
 ) -> tuple[str, float]:
-    """20페이지 초과 PDF를 청크로 나눠 처리."""
-    import fitz  # PyMuPDF
+    """페이지 수 또는 크기 초과 PDF를 청크로 나눠 처리."""
+    import fitz
 
     doc = fitz.open(stream=pdf_bytes, filetype="pdf")
     parts: list[str] = []
     total_cost = 0.0
+    chunk_size = _PAGE_CHUNK
 
-    for start in range(0, n_pages, _PAGE_CHUNK):
-        end = min(start + _PAGE_CHUNK, n_pages)
-        print(f"  [claude_pdf] 청크 {start + 1}~{end}p ...")
+    start = 0
+    while start < n_pages:
+        end = min(start + chunk_size, n_pages)
 
         sub = fitz.open()
         sub.insert_pdf(doc, from_page=start, to_page=end - 1)
         chunk_bytes = sub.tobytes()
         sub.close()
 
+        # 청크 자체가 너무 크면 절반씩 줄여서 재시도
+        while len(chunk_bytes) > _MAX_PDF_BYTES and end - start > 1:
+            end = start + max(1, (end - start) // 2)
+            sub = fitz.open()
+            sub.insert_pdf(doc, from_page=start, to_page=end - 1)
+            chunk_bytes = sub.tobytes()
+            sub.close()
+
+        print(f"  [claude_pdf] 청크 {start + 1}~{end}p ({len(chunk_bytes) / 1024 / 1024:.1f}MB) ...")
         chunk_md, cost = _call_api(chunk_bytes, api_key, max_tokens, system, user_prompt)
         parts.append(chunk_md)
         total_cost += cost
+        start = end
 
     doc.close()
     return "\n\n".join(parts), total_cost
