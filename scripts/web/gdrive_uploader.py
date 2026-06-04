@@ -94,6 +94,22 @@ def _find_or_create_folder(token: str, name: str, parent_id: str) -> str:
     return r.json()["id"]
 
 
+def delete_file(file_id: str) -> bool:
+    """Drive 파일 삭제. 성공 시 True."""
+    token = _get_access_token()
+    if not token:
+        return False
+    try:
+        r = httpx.delete(
+            f"{_FILES_URL}/{file_id}",
+            headers={"Authorization": f"Bearer {token}"},
+            timeout=10,
+        )
+        return r.status_code == 204
+    except Exception:
+        return False
+
+
 def upload_hwpx(hwpx_path: Path, year: str, subject: str) -> str | None:
     """
     HWPX를 AKP/{year}/{subject}/ 에 업로드.

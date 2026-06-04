@@ -613,6 +613,22 @@
   </div>
 </div>
 
+<!-- 삭제 확인 모달 -->
+<div id="delete-modal" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.6);z-index:400;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:12px;padding:32px 36px;max-width:360px;width:90%;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,.25);">
+    <div style="font-size:36px;margin-bottom:12px;">🗑️</div>
+    <h3 style="font-size:16px;color:#1e293b;margin-bottom:8px;">이 변환 결과를 삭제할까요?</h3>
+    <p style="font-size:13px;color:#64748b;margin-bottom:20px;">로컬 파일과 구글 드라이브 파일이 모두 삭제됩니다.<br>삭제 후 다시 업로드해야 합니다.</p>
+    <div style="display:flex;gap:10px;justify-content:center;">
+      <button id="delete-confirm"
+        style="padding:8px 24px;border:none;border-radius:7px;background:#ef4444;color:#fff;font-size:13px;font-weight:700;cursor:pointer;">삭제</button>
+      <button id="delete-cancel"
+        style="padding:8px 20px;border:1.5px solid #cbd5e1;border-radius:7px;background:#fff;color:#475569;font-size:13px;cursor:pointer;">취소</button>
+    </div>
+    <p id="delete-status" style="font-size:12px;color:#94a3b8;margin-top:10px;min-height:16px;"></p>
+  </div>
+</div>
+
 <!-- 상단 바 -->
 <div id="topbar">
   <a href="/" class="back-link">&#8592; 변환기로</a>
@@ -628,6 +644,13 @@
       오류: <span id="cnt-err" class="cnt-err">0</span>건
     </span>
   </span>
+  <button id="btn-delete-job"
+    title="이 변환 결과 삭제 후 재업로드"
+    style="margin-left:8px;padding:4px 12px;border:1.5px solid #ef4444;border-radius:6px;background:transparent;color:#ef4444;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;transition:all .15s;"
+    onmouseover="this.style.background='#ef4444';this.style.color='#fff'"
+    onmouseout="this.style.background='transparent';this.style.color='#ef4444'">
+    삭제
+  </button>
 </div>
 
 <!-- 메인 -->
@@ -1176,6 +1199,39 @@
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;');
   }
+
+  /* ─── 삭제 ─── */
+  (function () {
+    const modal       = $('delete-modal');
+    const btnDel      = $('btn-delete-job');
+    const btnConfirm  = $('delete-confirm');
+    const btnCancel   = $('delete-cancel');
+    const statusEl    = $('delete-status');
+
+    btnDel.addEventListener('click', () => {
+      statusEl.textContent = '';
+      modal.style.display = 'flex';
+    });
+    btnCancel.addEventListener('click', () => {
+      modal.style.display = 'none';
+    });
+    btnConfirm.addEventListener('click', async () => {
+      btnConfirm.disabled = true;
+      statusEl.textContent = '삭제 중...';
+      try {
+        const res = await fetch(`/api/jobs/${state.jobId}`, {
+          method: 'DELETE',
+          credentials: 'include',
+        });
+        if (!res.ok) throw new Error(`서버 오류 ${res.status}`);
+        statusEl.textContent = '삭제 완료. 업로드 페이지로 이동합니다...';
+        setTimeout(() => { window.location.href = '/upload'; }, 1200);
+      } catch (e) {
+        statusEl.textContent = `삭제 실패: ${e.message}`;
+        btnConfirm.disabled = false;
+      }
+    });
+  })();
 
   /* ─── 이벤트 ─── */
   btnSubmit.addEventListener('click', handleSubmit);

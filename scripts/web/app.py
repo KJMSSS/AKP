@@ -117,7 +117,8 @@ from scripts.web.users import (                                     # noqa: E402
     remove_user, list_users, user_today_cost, ADMIN_EMAIL,
 )
 from scripts.web.gdrive_uploader import (                           # noqa: E402
-    save_refresh_token, upload_hwpx, is_configured, TOKEN_FILE,
+    save_refresh_token, upload_hwpx, delete_file as drive_delete_file,
+    is_configured, TOKEN_FILE,
 )
 
 # ── 템플릿 HWPX ───────────────────────────────────────────────────────
@@ -418,6 +419,53 @@ async def api_job_info(job_id: str, request: Request):
                         else f"/download/{job_id}",
         "review_url": f"/review/{job_id}" if has_review else None,
     })
+
+
+@app.delete("/api/jobs/{job_id}")
+async def api_delete_job(job_id: str, request: Request):
+    """잡 삭제 — 로컬 임시파일 + Drive 파일 + 레지스트리 항목 제거."""
+    _require_login(request)
+    base_id = job_id.removesuffix("_reviewed")
+
+    # Drive 파일 삭제
+    review_file = _TMP_DIR / f"{base_id}_review.json"
+    if review_file.exists():
+        try:
+            meta = json.loads(review_file.read_text(encoding="utf-8"))
+            fid  = meta.get("drive_file_id", "")
+            if fid:
+                ok = drive_delete_file(fid)
+                if not ok:
+                    print(f"  [Drive] {fid} 삭제 실패 (계속 진행)")
+        except Exception:
+            pass
+
+    # 로컬 임시 파일 전체 삭제
+    patterns = [
+        f"{base_id}.pdf", f"{base_id}.hwpx", f"{base_id}_reviewed.hwpx",
+        f"{base_id}_review.json", f"{base_id}_rotfix.pdf",
+    ]
+    for name in patterns:
+        (_TMP_DIR / name).unlink(missing_ok=True)
+    for p in _TMP_DIR.glob(f"{base_id}_page*.png"):
+        p.unlink(missing_ok=True)
+    for p in _TMP_DIR.glob(f"{base_id}_figs"):
+        import shutil
+        shutil.rmtree(p, ignore_errors=True)
+
+    # 메모리 잡 제거
+    _jobs.pop(base_id, None)
+    _jobs.pop(f"{base_id}_reviewed", None)
+
+    # 레지스트리에서 제거
+    reg = _load_registry()
+    keys_to_del = [k for k, v in reg.items() if v.get("job_id") == base_id]
+    for k in keys_to_del:
+        del reg[k]
+    if keys_to_del:
+        _save_registry(reg)
+
+    return JSONResponse({"ok": True, "deleted_keys": keys_to_del})
 
 
 # ══════════════════════════════════════════════════════════════════════
@@ -817,12 +865,14 @@ def _render_pdf_pages(pdf_path: Path, job_id: str) -> int:
 def _save_review_data(
     job_id: str, original_name: str, md: str, n_pages: int,
     custom_filename: str = "",
+    drive_file_id: str = "",
 ) -> None:
     header, segments = parse_problems(md)
     data = {
         "job_id":          job_id,
         "pdf_name":        original_name,
         "custom_filename": custom_filename,
+        "drive_file_id":   drive_file_id,
         "header":          header,
         "pages":           n_pages,
         "problems": [
@@ -946,13 +996,14 @@ def _run_conversion(
                 print(f"  [그림] {item_no}번 삽입 실패: {e}")
 
         # ── Google Drive 업로드 ──────────────────────────────────────────
+        _drive_file_id = ""
         if custom_filename:
             parts = Path(custom_filename).stem.split("_")
             if len(parts) >= 5:
                 _year, _subj = parts[0], parts[4]
                 try:
-                    file_id = upload_hwpx(out_hwpx, _year, _subj)
-                    if file_id:
+                    _drive_file_id = upload_hwpx(out_hwpx, _year, _subj) or ""
+                    if _drive_file_id:
                         print(f"  [Drive] AKP/{_year}/{_subj}/{out_hwpx.name} 저장 완료")
                     elif is_configured():
                         print("  [Drive] 업로드 실패 (계속 진행)")
@@ -960,7 +1011,7 @@ def _run_conversion(
                     print(f"  [Drive] 업로드 오류 (무시): {_e}")
 
         print("  [검수] 문제 파싱 및 검수 데이터 저장 중...")
-        _save_review_data(job_id, original_name, md, n_pages, custom_filename)
+        _save_review_data(job_id, original_name, md, n_pages, custom_filename, _drive_file_id)
 
         duration = round(time.time() - t0, 1)
         cost_usd = round(guard.total_today() - cost_before, 4)
