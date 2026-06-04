@@ -47,6 +47,10 @@ _DATA_DIR = Path(os.environ.get("DATA_DIR", str(_HERE / "data")))
 _DATA_DIR.mkdir(exist_ok=True, parents=True)
 _CONFIG_FILE   = _DATA_DIR / "matrix_config.json"
 _REGISTRY_FILE = _DATA_DIR / "matrix_registry.json"
+_UPLOADS_DIR   = _DATA_DIR / "uploads"
+_UPLOADS_DIR.mkdir(exist_ok=True, parents=True)
+
+_MANUAL_STAGES = {"hangeul", "typer", "solution"}
 _config_lock   = threading.Lock()
 _registry_lock = threading.Lock()
 
@@ -466,6 +470,68 @@ async def api_delete_job(job_id: str, request: Request):
         _save_registry(reg)
 
     return JSONResponse({"ok": True, "deleted_keys": keys_to_del})
+
+
+# ══════════════════════════════════════════════════════════════════════
+# 파이프라인 수동 단계 (한글완성본·타이퍼·해설)
+# ══════════════════════════════════════════════════════════════════════
+
+@app.post("/api/pipeline/{key}/stages/{stage}")
+async def pipeline_stage_upload(
+    key: str, stage: str, request: Request,
+    file: UploadFile = File(...),
+):
+    _require_login(request)
+    if stage not in _MANUAL_STAGES:
+        raise HTTPException(400, f"지원하지 않는 단계: {stage}")
+
+    stage_dir = _UPLOADS_DIR / key / stage
+    stage_dir.mkdir(parents=True, exist_ok=True)
+    for old in stage_dir.iterdir():
+        old.unlink(missing_ok=True)
+
+    dest = stage_dir / (file.filename or f"{stage}.hwpx")
+    dest.write_bytes(await file.read())
+
+    reg   = _load_registry()
+    entry = reg.get(key, {})
+    entry.setdefault("stages", {})[stage] = {
+        "filename":    dest.name,
+        "uploaded_at": datetime.now().isoformat(timespec="seconds"),
+    }
+    reg[key] = entry
+    _save_registry(reg)
+    return JSONResponse({"ok": True, "filename": dest.name})
+
+
+@app.get("/api/pipeline/{key}/stages/{stage}/download")
+async def pipeline_stage_download(key: str, stage: str, request: Request):
+    _require_login(request)
+    if stage not in _MANUAL_STAGES:
+        raise HTTPException(400)
+    stage_dir = _UPLOADS_DIR / key / stage
+    files = list(stage_dir.iterdir()) if stage_dir.exists() else []
+    if not files:
+        raise HTTPException(404, "파일 없음")
+    f = files[0]
+    return FileResponse(str(f), media_type="application/octet-stream", filename=f.name)
+
+
+@app.delete("/api/pipeline/{key}/stages/{stage}")
+async def pipeline_stage_delete(key: str, stage: str, request: Request):
+    _require_login(request)
+    if stage not in _MANUAL_STAGES:
+        raise HTTPException(400)
+    stage_dir = _UPLOADS_DIR / key / stage
+    if stage_dir.exists():
+        import shutil
+        shutil.rmtree(stage_dir)
+    reg   = _load_registry()
+    entry = reg.get(key, {})
+    entry.get("stages", {}).pop(stage, None)
+    reg[key] = entry
+    _save_registry(reg)
+    return JSONResponse({"ok": True})
 
 
 # ══════════════════════════════════════════════════════════════════════

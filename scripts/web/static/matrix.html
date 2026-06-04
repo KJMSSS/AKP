@@ -14,7 +14,6 @@ body {
   min-height: 100vh;
 }
 
-/* ── 토스트 ── */
 #toast-container {
   position: fixed;
   bottom: 24px;
@@ -43,7 +42,6 @@ body {
 .toast.toast-err  { border-left: 4px solid #dc3545; }
 .toast.toast-warn { border-left: 4px solid #fd7e14; }
 
-/* ── 상단바 ── */
 #topbar {
   background: #fff;
   border-bottom: 1px solid #dee2e6;
@@ -76,27 +74,12 @@ body {
 }
 .period-select:focus { border-color: #0d6efd; }
 #topbar-spacer { flex: 1; }
-#user-name {
-  font-size: 0.83rem;
-  color: #6c757d;
-  white-space: nowrap;
-}
-#admin-link {
-  font-size: 0.83rem;
-  color: #6b7280;
-  text-decoration: none;
-  display: none;
-}
+#user-name { font-size: 0.83rem; color: #6c757d; white-space: nowrap; }
+#admin-link { font-size: 0.83rem; color: #6b7280; text-decoration: none; display: none; }
 #admin-link:hover { text-decoration: underline; }
-#logout-link {
-  font-size: 0.83rem;
-  color: #6b7280;
-  text-decoration: none;
-  white-space: nowrap;
-}
+#logout-link { font-size: 0.83rem; color: #6b7280; text-decoration: none; white-space: nowrap; }
 #logout-link:hover { color: #343a40; text-decoration: underline; }
 
-/* ── 과목 탭 바 ── */
 #subject-bar {
   background: #fff;
   border-bottom: 1px solid #dee2e6;
@@ -108,7 +91,6 @@ body {
   scrollbar-width: none;
 }
 #subject-bar::-webkit-scrollbar { display: none; }
-
 .subj-tab {
   padding: 12px 18px;
   font-size: 0.88rem;
@@ -123,11 +105,7 @@ body {
   margin-bottom: -1px;
 }
 .subj-tab:hover { color: #343a40; }
-.subj-tab.active {
-  color: #0d6efd;
-  border-bottom-color: #0d6efd;
-  font-weight: 600;
-}
+.subj-tab.active { color: #0d6efd; border-bottom-color: #0d6efd; font-weight: 600; }
 #add-subject-btn {
   padding: 8px 14px;
   font-size: 0.83rem;
@@ -142,14 +120,12 @@ body {
 }
 #add-subject-btn:hover { color: #0d6efd; border-color: #0d6efd; background: #f0f7ff; }
 
-/* ── 메인 컨텐츠 ── */
 #main {
   max-width: 1200px;
   margin: 0 auto;
   padding: 24px 20px;
 }
 
-/* ── 학교 추가 행 ── */
 #add-school-row {
   display: flex;
   align-items: center;
@@ -167,11 +143,7 @@ body {
   transition: all 0.15s;
 }
 #add-school-btn:hover { background: #f0f7ff; }
-#school-input-wrap {
-  display: none;
-  align-items: center;
-  gap: 8px;
-}
+#school-input-wrap { display: none; align-items: center; gap: 8px; }
 #school-input-wrap.show { display: flex; }
 #new-school-input {
   border: 1.5px solid #0d6efd;
@@ -181,21 +153,12 @@ body {
   outline: none;
   width: 180px;
 }
-.btn-sm {
-  padding: 6px 14px;
-  font-size: 0.83rem;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: 500;
-  transition: background 0.15s;
-}
+.btn-sm { padding: 6px 14px; font-size: 0.83rem; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; transition: background 0.15s; }
 .btn-primary { background: #0d6efd; color: #fff; }
 .btn-primary:hover { background: #0b5ed7; }
 .btn-secondary { background: #6c757d; color: #fff; }
 .btn-secondary:hover { background: #5a6268; }
 
-/* ── 매트릭스 테이블 ── */
 #matrix-wrap {
   overflow-x: auto;
   border-radius: 10px;
@@ -217,14 +180,9 @@ body {
   white-space: nowrap;
   text-align: left;
 }
-#matrix-table thead th:first-child {
-  width: 140px;
-  min-width: 120px;
-}
-#matrix-table thead th:nth-child(2) { min-width: 200px; }
-#matrix-table thead th:nth-child(3) { min-width: 180px; }
+#matrix-table thead th:first-child { width: 140px; min-width: 120px; }
+#matrix-table thead th:nth-child(2) { min-width: 260px; }
 
-#matrix-table tbody tr:hover { background: #f1f8ff; }
 #matrix-table tbody td {
   padding: 10px 14px;
   border-bottom: 1px solid #e9ecef;
@@ -233,7 +191,9 @@ body {
 }
 #matrix-table tbody tr:last-child td { border-bottom: none; }
 
-/* 학교명 셀 */
+.summary-row { cursor: default; }
+.summary-row:hover { background: #f1f8ff; }
+
 .school-cell {
   font-weight: 600;
   color: #343a40;
@@ -252,41 +212,9 @@ body {
   line-height: 1;
   display: none;
 }
-tr:hover .del-school-btn { display: inline; }
+.summary-row:hover .del-school-btn { display: inline; }
 .del-school-btn:hover { color: #dc3545; background: #fff0f0; }
 
-/* 상태 셀 */
-.status-cell { min-width: 180px; }
-
-/* 상태 배지 */
-.badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 3px 10px;
-  border-radius: 100px;
-  font-size: 0.78rem;
-  font-weight: 600;
-  white-space: nowrap;
-}
-.badge-empty    { background: #f1f3f5; color: #6c757d; }
-.badge-done     { background: #d1fae5; color: #065f46; }
-.badge-reviewed { background: #ede9fe; color: #5b21b6; }
-.badge-error    { background: #fee2e2; color: #991b1b; }
-
-/* 로그 미니 */
-.cell-log {
-  font-size: 0.76rem;
-  color: #6c757d;
-  font-family: 'Consolas', 'Courier New', monospace;
-  margin-top: 4px;
-  max-height: 48px;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-
-/* 업로드 버튼 */
 .upload-btn {
   display: inline-flex;
   align-items: center;
@@ -304,36 +232,43 @@ tr:hover .del-school-btn { display: inline; }
 .upload-btn:hover { border-color: #0d6efd; color: #0d6efd; background: #f0f7ff; }
 .upload-btn.drag-over { border-color: #0d6efd; background: #e8f0fe; }
 
-/* 액션 버튼들 */
-.action-cell {
+.pipe-summary {
   display: flex;
-  gap: 6px;
   align-items: center;
-  flex-wrap: wrap;
-}
-.act-btn {
-  padding: 4px 12px;
-  font-size: 0.80rem;
-  border-radius: 6px;
-  border: 1px solid transparent;
+  gap: 10px;
   cursor: pointer;
-  font-weight: 500;
-  text-decoration: none;
-  display: inline-block;
-  transition: all 0.15s;
-  white-space: nowrap;
+  user-select: none;
 }
-.act-dl  { background: #198754; color: #fff; }
-.act-dl:hover  { background: #157347; }
-.act-rev { background: #2563eb; color: #fff; }
-.act-rev:hover { background: #1d4ed8; }
+.pipe-dots { display: flex; align-items: center; gap: 5px; }
+.pipe-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.pipe-dot-none     { background: #dee2e6; }
+.pipe-dot-progress { background: #fd7e14; }
+.pipe-dot-done     { background: #198754; }
+.pipe-dot-error    { background: #dc3545; }
+.pipe-dot-reviewed { background: #6f42c1; }
 
-/* 스피너 */
-@keyframes spin {
-  to { transform: rotate(360deg); }
+.pipe-status-text {
+  font-size: 0.82rem;
+  color: #6c757d;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
+.pipe-toggle-icon {
+  margin-left: auto;
+  font-size: 0.75rem;
+  color: #adb5bd;
+  flex-shrink: 0;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
 .spinner {
-  width: 14px; height: 14px;
+  width: 13px; height: 13px;
   border: 2px solid #e9ecef;
   border-top-color: #fd7e14;
   border-radius: 50%;
@@ -342,10 +277,99 @@ tr:hover .del-school-btn { display: inline; }
   vertical-align: middle;
 }
 
-/* 숨긴 파일 입력 */
+.pipeline-expand-row { display: none; }
+.pipeline-expand-row.open { display: table-row; }
+.pipeline-expand-td {
+  padding: 0 !important;
+  border-bottom: 2px solid #dee2e6 !important;
+  background: #f8f9fa;
+}
+
+.stage-cards {
+  display: flex;
+  gap: 10px;
+  padding: 14px 16px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+.stage-cards::-webkit-scrollbar { height: 4px; }
+.stage-cards::-webkit-scrollbar-thumb { background: #ced4da; border-radius: 2px; }
+
+.stage-card {
+  min-width: 150px;
+  flex-shrink: 0;
+  background: #fff;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.stage-card.s-done    { border-color: #198754; }
+.stage-card.s-progress { border-color: #fd7e14; }
+.stage-card.s-error   { border-color: #dc3545; }
+.stage-card.s-reviewed { border-color: #6f42c1; }
+
+.stage-num {
+  font-size: 0.70rem;
+  font-weight: 700;
+  color: #adb5bd;
+  letter-spacing: 0.04em;
+}
+.stage-name {
+  font-size: 0.83rem;
+  font-weight: 600;
+  color: #343a40;
+}
+.stage-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 100px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+  align-self: flex-start;
+}
+.sb-none     { background: #f1f3f5; color: #6c757d; }
+.sb-done     { background: #d1fae5; color: #065f46; }
+.sb-reviewed { background: #ede9fe; color: #5b21b6; }
+.sb-progress { background: #fff3cd; color: #856404; }
+.sb-error    { background: #fee2e2; color: #991b1b; }
+
+.stage-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-top: auto;
+}
+.s-btn {
+  padding: 4px 10px;
+  font-size: 0.78rem;
+  border-radius: 5px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  font-weight: 500;
+  text-decoration: none;
+  display: inline-block;
+  transition: all 0.15s;
+  white-space: nowrap;
+  text-align: center;
+}
+.s-upload { background: #fff; border-color: #ced4da; color: #495057; }
+.s-upload:hover { border-color: #0d6efd; color: #0d6efd; }
+.s-dl    { background: #198754; color: #fff; }
+.s-dl:hover { background: #157347; }
+.s-review { background: #2563eb; color: #fff; }
+.s-review:hover { background: #1d4ed8; }
+.s-del   { background: #fff; border-color: #f1aeb5; color: #dc3545; }
+.s-del:hover { background: #fee2e2; }
+.s-inprog { background: #fff3cd; color: #856404; border: none; cursor: default; font-size: 0.75rem; }
+
 .hidden-input { display: none; }
 
-/* 빈 상태 */
 #matrix-empty {
   text-align: center;
   padding: 48px 20px;
@@ -353,7 +377,6 @@ tr:hover .del-school-btn { display: inline; }
   font-size: 0.9rem;
 }
 
-/* 반응형 */
 @media (max-width: 600px) {
   #topbar { gap: 8px; padding: 0 12px; }
   #topbar h1 { font-size: 0.9rem; }
@@ -364,35 +387,28 @@ tr:hover .del-school-btn { display: inline; }
 </head>
 <body>
 
-<!-- ── 토스트 컨테이너 ── -->
 <div id="toast-container"></div>
 
-<!-- ── 숨긴 파일 입력 (동적 생성용 템플릿) ── -->
 <input type="file" id="global-file-input" class="hidden-input" accept=".pdf,application/pdf">
+<input type="file" id="stage-file-input" class="hidden-input">
 
-<!-- ── 상단바 ── -->
 <div id="topbar">
   <h1>AKP 변환기</h1>
-
-  <select id="sel-year"  class="period-select"></select>
+  <select id="sel-year" class="period-select"></select>
   <select id="sel-round" class="period-select">
     <option value="a">1차 (a)</option>
     <option value="b">2차 (b)</option>
   </select>
-
   <div id="topbar-spacer"></div>
   <span id="user-name"></span>
   <a href="/admin" id="admin-link">관리자</a>
   <a href="/auth/logout" id="logout-link">로그아웃</a>
 </div>
 
-<!-- ── 과목 탭 바 ── -->
 <div id="subject-bar">
-  <!-- 탭은 JS로 동적 생성 -->
   <button id="add-subject-btn">+ 과목 추가</button>
 </div>
 
-<!-- ── 과목별 학년/학기 ── -->
 <div id="subject-meta-bar" style="background:#f8f9fa;border-bottom:1px solid #dee2e6;padding:6px 20px;display:flex;align-items:center;gap:10px;font-size:0.83rem;color:#495057;">
   <span id="subj-meta-name" style="font-weight:600;color:#343a40;"></span>
   <span style="color:#ced4da;">|</span>
@@ -416,10 +432,7 @@ tr:hover .del-school-btn { display: inline; }
   <span id="subj-meta-hint" style="color:#adb5bd;font-size:0.78rem;">← 이 과목의 학년·학기 설정 (과목마다 다르게 설정 가능)</span>
 </div>
 
-<!-- ── 메인 ── -->
 <div id="main">
-
-  <!-- 학교 추가 행 -->
   <div id="add-school-row">
     <button id="add-school-btn">+ 학교 추가</button>
     <div id="school-input-wrap">
@@ -429,34 +442,28 @@ tr:hover .del-school-btn { display: inline; }
     </div>
   </div>
 
-  <!-- 매트릭스 테이블 -->
   <div id="matrix-wrap">
     <table id="matrix-table">
       <thead>
         <tr>
           <th>학교명</th>
-          <th>상태 / 업로드</th>
-          <th>작업</th>
+          <th>파이프라인</th>
         </tr>
       </thead>
       <tbody id="matrix-tbody">
         <tr>
-          <td colspan="3">
+          <td colspan="2">
             <div id="matrix-empty">학교를 추가해 변환을 시작하세요.</div>
           </td>
         </tr>
       </tbody>
     </table>
   </div>
-
-</div><!-- /main -->
+</div>
 
 <script>
 "use strict";
 
-/* ══════════════════════════════════════════════════════
-   유틸
-══════════════════════════════════════════════════════ */
 const $ = id => document.getElementById(id);
 
 function escHtml(s) {
@@ -471,9 +478,7 @@ function showToast(msg, type = 'ok') {
   el.className = `toast toast-${type}`;
   el.textContent = msg;
   container.appendChild(el);
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => el.classList.add('show'));
-  });
+  requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add('show')));
   setTimeout(() => {
     el.classList.remove('show');
     setTimeout(() => el.remove(), 300);
@@ -489,24 +494,21 @@ async function apiFetch(url, opts = {}) {
   return res;
 }
 
-/* ══════════════════════════════════════════════════════
-   상태 저장소
-══════════════════════════════════════════════════════ */
-// config: { subjects:[{id,name}], schools:[string] }
 let gConfig = { subjects: [], schools: [] };
-
-// registry: { [key]: {job_id, status, review_status, ...} }
 let gRegistry = {};
-
-// 현재 선택된 과목 id
 let gCurrentSubject = '';
-
-// 진행 중인 SSE 연결: { [registryKey]: EventSource }
 const gActiveSse = {};
+const gExpandedRows = new Set();
 
-/* ══════════════════════════════════════════════════════
-   기간 선택 (상단바 셀렉트)
-══════════════════════════════════════════════════════ */
+const STAGES = [
+  { id: 'pdf',         name: 'PDF',        step: 1, manual: false },
+  { id: 'hwpx_draft',  name: 'HWPX 검수전', step: 2, manual: false },
+  { id: 'hwpx_review', name: 'HWPX 검수완', step: 3, manual: false },
+  { id: 'hangeul',     name: '한글완성본',   step: 4, manual: true  },
+  { id: 'typer',       name: '타이퍼 양식',  step: 5, manual: true  },
+  { id: 'solution',    name: '해설',         step: 6, manual: true  },
+];
+
 const PERIOD_KEYS = ['sel-year', 'sel-round'];
 
 function initYearSelect() {
@@ -537,10 +539,7 @@ function savePeriodToStorage() {
 }
 
 function getPeriod() {
-  return {
-    year:  $('sel-year').value,
-    round: $('sel-round').value,
-  };
+  return { year: $('sel-year').value, round: $('sel-round').value };
 }
 
 function getSubjectMeta(subjectId) {
@@ -554,7 +553,10 @@ function buildRegistryKey(school, subjectId) {
   return `${p.year}_${m.grade}_${m.sem}_${p.round}_${subjectId}_${school}`;
 }
 
-/* 과목 메타 바 렌더 */
+function keyToSchool(key) {
+  return key.split('_').slice(5).join('_');
+}
+
 function renderSubjectMeta() {
   const subj = gConfig.subjects.find(s => s.id === gCurrentSubject);
   if (!subj) return;
@@ -587,15 +589,9 @@ $('subj-sem-sel').addEventListener('change', () =>
 
 PERIOD_KEYS.forEach(id => {
   const el = $(id);
-  if (el) el.addEventListener('change', () => {
-    savePeriodToStorage();
-    renderMatrix();
-  });
+  if (el) el.addEventListener('change', () => { savePeriodToStorage(); renderMatrix(); });
 });
 
-/* ══════════════════════════════════════════════════════
-   API — config
-══════════════════════════════════════════════════════ */
 async function loadConfig() {
   try {
     const res = await apiFetch('/api/config');
@@ -631,9 +627,7 @@ async function addSchool(name) {
 async function deleteSchool(name) {
   if (!confirm(`"${name}" 학교를 삭제할까요?\n이 학교의 변환 기록은 유지됩니다.`)) return;
   try {
-    const res = await apiFetch(`/api/config/schools/${encodeURIComponent(name)}`, {
-      method: 'DELETE',
-    });
+    const res = await apiFetch(`/api/config/schools/${encodeURIComponent(name)}`, { method: 'DELETE' });
     if (!res.ok) {
       const d = await res.json().catch(() => ({}));
       throw new Error(d.detail || `HTTP ${res.status}`);
@@ -669,9 +663,6 @@ async function addSubject(id, name) {
   }
 }
 
-/* ══════════════════════════════════════════════════════
-   API — registry
-══════════════════════════════════════════════════════ */
 async function loadRegistry() {
   try {
     const res = await apiFetch('/api/registry');
@@ -679,7 +670,6 @@ async function loadRegistry() {
     gRegistry = await res.json();
   } catch(e) {
     if (e.message === 'unauthenticated') return;
-    // registry 오류는 조용히 처리
     console.warn('registry 로드 실패:', e);
   }
 }
@@ -689,35 +679,23 @@ async function registerJob(registryKey, jobId, subjectId, school) {
     const res = await apiFetch('/api/registry/register', {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({
-        registry_key: registryKey,
-        job_id: jobId,
-        subject: subjectId,
-        school,
-      }),
+      body: JSON.stringify({ registry_key: registryKey, job_id: jobId, subject: subjectId, school }),
     });
     if (!res.ok) {
       const d = await res.json().catch(() => ({}));
       console.warn('registry 등록 실패:', d.detail);
     } else {
-      const entry = await res.json();
-      gRegistry[registryKey] = entry;
+      gRegistry[registryKey] = await res.json();
     }
   } catch(e) {
     if (e.message !== 'unauthenticated') console.warn('registry 등록 오류:', e);
   }
 }
 
-/* ══════════════════════════════════════════════════════
-   과목 탭 렌더
-══════════════════════════════════════════════════════ */
 function renderSubjectTabs() {
   const bar = $('subject-bar');
-  // 기존 탭 제거 (add-subject-btn 유지)
   Array.from(bar.querySelectorAll('.subj-tab')).forEach(el => el.remove());
-
   const btn = $('add-subject-btn');
-
   gConfig.subjects.forEach(subj => {
     const tab = document.createElement('button');
     tab.className = 'subj-tab' + (subj.id === gCurrentSubject ? ' active' : '');
@@ -731,8 +709,6 @@ function renderSubjectTabs() {
     });
     bar.insertBefore(tab, btn);
   });
-
-  // 기본 선택
   if (gConfig.subjects.length && !gConfig.subjects.find(s => s.id === gCurrentSubject)) {
     gCurrentSubject = gConfig.subjects[0].id;
     renderSubjectTabs();
@@ -741,49 +717,174 @@ function renderSubjectTabs() {
   renderSubjectMeta();
 }
 
-/* ══════════════════════════════════════════════════════
-   매트릭스 테이블 렌더
-══════════════════════════════════════════════════════ */
+function stageColorClass(stageId, entry) {
+  if (!entry) return 'pipe-dot-none';
+  if (stageId === 'pdf') return entry ? 'pipe-dot-done' : 'pipe-dot-none';
+  if (stageId === 'hwpx_draft') {
+    if (entry.status === 'converting') return 'pipe-dot-progress';
+    if (entry.status === 'done') return 'pipe-dot-done';
+    if (entry.status === 'error') return 'pipe-dot-error';
+    return 'pipe-dot-none';
+  }
+  if (stageId === 'hwpx_review') {
+    if (!entry || entry.status !== 'done') return 'pipe-dot-none';
+    if (entry.review_status === 'completed') return 'pipe-dot-reviewed';
+    return 'pipe-dot-done';
+  }
+  const s = entry.stages?.[stageId];
+  if (!s) return 'pipe-dot-none';
+  return 'pipe-dot-done';
+}
+
+function renderPipeSummary(key, entry) {
+  const dots = STAGES.map(st =>
+    `<span class="pipe-dot ${stageColorClass(st.id, entry)}" title="${escHtml(st.name)}"></span>`
+  ).join('');
+
+  let statusText = '';
+  if (entry) {
+    if (entry.status === 'converting') {
+      statusText = `<span class="spinner"></span> 변환 중`;
+    } else if (entry.status === 'done') {
+      if (entry.review_status === 'completed') statusText = '검수완료';
+      else statusText = '변환완료';
+    } else if (entry.status === 'error') {
+      statusText = '오류';
+    }
+  }
+
+  const school = keyToSchool(key);
+  if (!entry) {
+    return `<button class="upload-btn" data-key="${escHtml(key)}" data-school="${escHtml(school)}">📄 PDF 업로드</button>`;
+  }
+
+  return `<div class="pipe-summary" data-key="${escHtml(key)}">
+    <div class="pipe-dots">${dots}</div>
+    <div class="pipe-status-text">${statusText}</div>
+    <span class="pipe-toggle-icon">${gExpandedRows.has(key) ? '▲' : '▼'}</span>
+  </div>`;
+}
+
+function renderStageCard(key, entry, stage) {
+  const { id, name, step, manual } = stage;
+  let cardClass = 'stage-card';
+  let badgeHtml = '';
+  let actionsHtml = '';
+
+  if (id === 'pdf') {
+    const hasPdf = !!entry;
+    if (hasPdf) {
+      cardClass += ' s-done';
+      badgeHtml = `<span class="stage-status-badge sb-done">있음</span>`;
+      actionsHtml = `<button class="s-btn s-upload" data-action="pdf-upload" data-key="${escHtml(key)}">재업로드</button>`;
+    } else {
+      badgeHtml = `<span class="stage-status-badge sb-none">없음</span>`;
+      actionsHtml = `<button class="s-btn s-upload" data-action="pdf-upload" data-key="${escHtml(key)}">PDF 업로드</button>`;
+    }
+  } else if (id === 'hwpx_draft') {
+    if (!entry || entry.status === 'error') {
+      badgeHtml = `<span class="stage-status-badge sb-${entry?.status === 'error' ? 'error' : 'none'}">${entry?.status === 'error' ? '오류' : '없음'}</span>`;
+    } else if (entry.status === 'converting') {
+      cardClass += ' s-progress';
+      badgeHtml = `<span class="stage-status-badge sb-progress"><span class="spinner"></span> 변환중</span>`;
+      actionsHtml = `<span class="s-btn s-inprog">진행중...</span>`;
+    } else if (entry.status === 'done') {
+      cardClass += ' s-done';
+      badgeHtml = `<span class="stage-status-badge sb-done">완료</span>`;
+      actionsHtml = `<a class="s-btn s-dl" href="/download/${encodeURIComponent(entry.job_id)}" target="_blank">다운로드</a>
+        <button class="s-btn s-del" data-action="delete-job" data-key="${escHtml(key)}" data-job-id="${escHtml(entry.job_id)}">삭제</button>`;
+    }
+  } else if (id === 'hwpx_review') {
+    if (!entry || entry.status !== 'done') {
+      badgeHtml = `<span class="stage-status-badge sb-none">없음</span>`;
+    } else if (entry.review_status === 'completed') {
+      cardClass += ' s-reviewed';
+      badgeHtml = `<span class="stage-status-badge sb-reviewed">완료</span>`;
+      actionsHtml = `<a class="s-btn s-review" href="/review/${encodeURIComponent(entry.job_id)}" target="_blank">검수보기</a>
+        <a class="s-btn s-dl" href="/download/${encodeURIComponent(entry.job_id)}_reviewed" target="_blank">다운로드</a>`;
+    } else {
+      badgeHtml = `<span class="stage-status-badge sb-done">대기중</span>`;
+      actionsHtml = `<a class="s-btn s-review" href="/review/${encodeURIComponent(entry.job_id)}" target="_blank">검수하기</a>`;
+    }
+  } else if (manual) {
+    const stageData = entry?.stages?.[id];
+    if (stageData) {
+      cardClass += ' s-done';
+      const label = stageData.filename || '있음';
+      badgeHtml = `<span class="stage-status-badge sb-done" title="${escHtml(label)}">${escHtml(label.length > 14 ? label.slice(0,12)+'…' : label)}</span>`;
+      actionsHtml = `<a class="s-btn s-dl" href="/api/pipeline/${encodeURIComponent(key)}/stages/${id}/download" target="_blank">다운로드</a>
+        <button class="s-btn s-upload" data-action="stage-upload" data-key="${escHtml(key)}" data-stage="${id}">교체</button>
+        <button class="s-btn s-del" data-action="stage-delete" data-key="${escHtml(key)}" data-stage="${id}">삭제</button>`;
+    } else {
+      badgeHtml = `<span class="stage-status-badge sb-none">없음</span>`;
+      actionsHtml = `<button class="s-btn s-upload" data-action="stage-upload" data-key="${escHtml(key)}" data-stage="${id}">업로드</button>`;
+    }
+  }
+
+  return `<div class="${cardClass}">
+    <div class="stage-num">STEP ${step}</div>
+    <div class="stage-name">${escHtml(name)}</div>
+    ${badgeHtml}
+    <div class="stage-actions">${actionsHtml}</div>
+  </div>`;
+}
+
+function renderPipelineDetail(key, entry) {
+  const cards = STAGES.map(st => renderStageCard(key, entry, st)).join('');
+  return `<div class="stage-cards">${cards}</div>`;
+}
+
 function renderMatrix() {
   const tbody = $('matrix-tbody');
   const schools = [...gConfig.schools].sort((a, b) => a.localeCompare(b, 'ko'));
 
   if (!schools.length) {
-    tbody.innerHTML = `<tr><td colspan="3"><div id="matrix-empty">학교를 추가해 변환을 시작하세요.</div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="2"><div id="matrix-empty">학교를 추가해 변환을 시작하세요.</div></td></tr>`;
     return;
   }
 
   tbody.innerHTML = '';
   schools.forEach(school => {
-    const tr = document.createElement('tr');
     const key = buildRegistryKey(school, gCurrentSubject);
     const entry = gRegistry[key] || null;
 
-    tr.innerHTML = `
+    const summaryTr = document.createElement('tr');
+    summaryTr.className = 'summary-row';
+    summaryTr.dataset.key = key;
+
+    summaryTr.innerHTML = `
       <td>
         <div class="school-cell">
           <span>${escHtml(school)}</span>
           <button class="del-school-btn" title="학교 삭제" data-school="${escHtml(school)}">✕</button>
         </div>
       </td>
-      <td class="status-cell" id="status-${escHtml(key)}">
-        ${renderStatusCell(key, entry)}
-      </td>
-      <td class="action-cell" id="action-${escHtml(key)}">
-        ${renderActionCell(key, entry)}
-      </td>
+      <td class="summary-pipe-td">${renderPipeSummary(key, entry)}</td>
     `;
 
-    // 드래그&드롭 이벤트 (상태가 empty일 때)
-    if (!entry || entry.status === 'error') {
-      const statusTd = tr.querySelector('.status-cell');
-      setupDropTarget(statusTd, school, key);
-    }
+    const detailTr = document.createElement('tr');
+    detailTr.className = 'pipeline-expand-row' + (gExpandedRows.has(key) ? ' open' : '');
+    detailTr.dataset.key = key;
 
-    tbody.appendChild(tr);
+    const detailTd = document.createElement('td');
+    detailTd.className = 'pipeline-expand-td';
+    detailTd.setAttribute('colspan', '2');
+    detailTd.innerHTML = renderPipelineDetail(key, entry);
+    detailTr.appendChild(detailTd);
+
+    tbody.appendChild(summaryTr);
+    tbody.appendChild(detailTr);
+
+    if (!entry || entry.status === 'error') {
+      const pipeTd = summaryTr.querySelector('.summary-pipe-td');
+      setupDropTarget(pipeTd, school, key);
+    }
   });
 
-  // 학교 삭제 버튼
+  bindMatrixEvents(tbody);
+}
+
+function bindMatrixEvents(tbody) {
   tbody.querySelectorAll('.del-school-btn').forEach(btn => {
     btn.addEventListener('click', e => {
       e.stopPropagation();
@@ -791,68 +892,111 @@ function renderMatrix() {
     });
   });
 
-  // 업로드 버튼 클릭
   tbody.querySelectorAll('.upload-btn[data-key]').forEach(btn => {
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
       triggerUpload(btn.dataset.school, btn.dataset.key);
+    });
+  });
+
+  tbody.querySelectorAll('.pipe-summary[data-key]').forEach(el => {
+    el.addEventListener('click', () => togglePipeline(el.dataset.key));
+  });
+
+  tbody.querySelectorAll('[data-action]').forEach(el => {
+    el.addEventListener('click', e => {
+      e.stopPropagation();
+      const action = el.dataset.action;
+      const key = el.dataset.key;
+      if (action === 'pdf-upload') {
+        const school = keyToSchool(key);
+        triggerUpload(school, key);
+      } else if (action === 'stage-upload') {
+        uploadStageFile(key, el.dataset.stage);
+      } else if (action === 'stage-delete') {
+        deleteStageFile(key, el.dataset.stage);
+      } else if (action === 'delete-job') {
+        deleteJob(key, el.dataset.jobId);
+      }
     });
   });
 }
 
-function renderStatusCell(key, entry) {
-  if (!entry) {
-    const school = keyToSchool(key);
-    return `<button class="upload-btn" data-key="${escHtml(key)}" data-school="${escHtml(school)}">
-              📄 PDF 업로드
-            </button>`;
+function togglePipeline(key) {
+  if (gExpandedRows.has(key)) {
+    gExpandedRows.delete(key);
+  } else {
+    gExpandedRows.add(key);
   }
-  if (entry.status === 'converting') {
-    const log = entry._lastLog || '처리 중...';
-    return `<span class="badge" style="background:#fff3cd;color:#856404;">
-              <span class="spinner"></span> 변환 중
-            </span>
-            <div class="cell-log">${escHtml(log)}</div>`;
+  const summaryTr = document.querySelector(`.summary-row[data-key="${CSS.escape(key)}"]`);
+  const detailTr  = summaryTr?.nextElementSibling;
+  if (!summaryTr || !detailTr) return;
+
+  if (gExpandedRows.has(key)) {
+    detailTr.classList.add('open');
+  } else {
+    detailTr.classList.remove('open');
   }
-  if (entry.status === 'done') {
-    if (entry.review_status === 'completed') {
-      return `<span class="badge badge-reviewed">📝 검수완료</span>`;
+
+  const icon = summaryTr.querySelector('.pipe-toggle-icon');
+  if (icon) icon.textContent = gExpandedRows.has(key) ? '▲' : '▼';
+}
+
+function refreshCell(key) {
+  const summaryTr = document.querySelector(`.summary-row[data-key="${CSS.escape(key)}"]`);
+  if (!summaryTr) {
+    renderMatrix();
+    return;
+  }
+  const entry = gRegistry[key] || null;
+  const pipeTd = summaryTr.querySelector('.summary-pipe-td');
+  pipeTd.innerHTML = renderPipeSummary(key, entry);
+
+  if (gExpandedRows.has(key)) {
+    const detailTr = summaryTr.nextElementSibling;
+    if (detailTr) {
+      detailTr.querySelector('.pipeline-expand-td').innerHTML = renderPipelineDetail(key, entry);
+      bindDetailEvents(detailTr, key);
     }
-    return `<span class="badge badge-done">✅ 완료</span>`;
   }
-  if (entry.status === 'error') {
+
+  if (!entry || entry.status === 'error') {
     const school = keyToSchool(key);
-    return `<span class="badge badge-error" title="${escHtml(entry._errorMsg || '')}">⚠ 오류</span>
-            <button class="upload-btn" style="margin-top:6px;" data-key="${escHtml(key)}" data-school="${escHtml(school)}">
-              🔄 재업로드
-            </button>`;
+    setupDropTarget(pipeTd, school, key);
   }
-  return `<span class="badge badge-empty">—</span>`;
+
+  pipeTd.querySelectorAll('.upload-btn[data-key]').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      triggerUpload(btn.dataset.school, btn.dataset.key);
+    });
+  });
+
+  const pipeSummary = pipeTd.querySelector('.pipe-summary[data-key]');
+  if (pipeSummary) {
+    pipeSummary.addEventListener('click', () => togglePipeline(pipeSummary.dataset.key));
+  }
 }
 
-function renderActionCell(key, entry) {
-  if (!entry || entry.status === 'converting' || entry.status === 'error') {
-    return '—';
-  }
-  if (entry.status === 'done') {
-    return `<a class="act-btn act-dl" href="/download/${encodeURIComponent(entry.job_id)}" target="_blank">다운로드</a>
-            <a class="act-btn act-rev" href="/review/${encodeURIComponent(entry.job_id)}" target="_blank">검수보기</a>`;
-  }
-  return '—';
+function bindDetailEvents(detailTr, key) {
+  detailTr.querySelectorAll('[data-action]').forEach(el => {
+    el.addEventListener('click', e => {
+      e.stopPropagation();
+      const action = el.dataset.action;
+      const k = el.dataset.key;
+      if (action === 'pdf-upload') {
+        triggerUpload(keyToSchool(k), k);
+      } else if (action === 'stage-upload') {
+        uploadStageFile(k, el.dataset.stage);
+      } else if (action === 'stage-delete') {
+        deleteStageFile(k, el.dataset.stage);
+      } else if (action === 'delete-job') {
+        deleteJob(k, el.dataset.jobId);
+      }
+    });
+  });
 }
 
-function keyToSchool(key) {
-  // key = year_grade_sem_round_subjectId_school
-  const parts = key.split('_');
-  // subjectId도 _ 없는 값이므로 뒤에서 1번째가 school
-  // 형식: {year}_{grade}_{sem}_{round}_{subjectId}_{school}
-  // index:  0       1      2    3       4            5...
-  // school에 _ 포함될 수 있으므로 index 5 이후 전부
-  return parts.slice(5).join('_');
-}
-
-/* ══════════════════════════════════════════════════════
-   드래그&드롭 설정
-══════════════════════════════════════════════════════ */
 function setupDropTarget(el, school, key) {
   el.addEventListener('dragover', e => {
     e.preventDefault();
@@ -869,9 +1013,6 @@ function setupDropTarget(el, school, key) {
   });
 }
 
-/* ══════════════════════════════════════════════════════
-   파일 선택 트리거
-══════════════════════════════════════════════════════ */
 let _pendingUploadSchool = '';
 let _pendingUploadKey    = '';
 
@@ -892,23 +1033,92 @@ $('global-file-input').addEventListener('change', e => {
   _pendingUploadKey    = '';
 });
 
-/* ══════════════════════════════════════════════════════
-   파일 처리 → 업로드 → SSE
-══════════════════════════════════════════════════════ */
+let _pendingStageKey   = '';
+let _pendingStageId    = '';
+
+function uploadStageFile(key, stage) {
+  _pendingStageKey = key;
+  _pendingStageId  = stage;
+  const inp = $('stage-file-input');
+  inp.value = '';
+  inp.click();
+}
+
+$('stage-file-input').addEventListener('change', async e => {
+  const file = e.target.files[0];
+  const key   = _pendingStageKey;
+  const stage = _pendingStageId;
+  _pendingStageKey = '';
+  _pendingStageId  = '';
+  if (!file || !key || !stage) return;
+
+  try {
+    const fd = new FormData();
+    fd.append('file', file);
+    const res = await apiFetch(`/api/pipeline/${encodeURIComponent(key)}/stages/${stage}`, {
+      method: 'POST',
+      body: fd,
+    });
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      throw new Error(d.detail || `HTTP ${res.status}`);
+    }
+    const data = await res.json();
+    if (!gRegistry[key]) gRegistry[key] = {};
+    if (!gRegistry[key].stages) gRegistry[key].stages = {};
+    gRegistry[key].stages[stage] = data.stage || { filename: file.name };
+    refreshCell(key);
+    showToast(`${stage} 업로드 완료`, 'ok');
+  } catch(e) {
+    if (e.message !== 'unauthenticated') showToast(`업로드 실패: ${e.message}`, 'err');
+  }
+});
+
+async function deleteStageFile(key, stage) {
+  if (!confirm(`"${stage}" 파일을 삭제할까요?`)) return;
+  try {
+    const res = await apiFetch(`/api/pipeline/${encodeURIComponent(key)}/stages/${stage}`, {
+      method: 'DELETE',
+    });
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      throw new Error(d.detail || `HTTP ${res.status}`);
+    }
+    if (gRegistry[key]?.stages) delete gRegistry[key].stages[stage];
+    refreshCell(key);
+    showToast(`${stage} 삭제됨`, 'warn');
+  } catch(e) {
+    if (e.message !== 'unauthenticated') showToast(`삭제 실패: ${e.message}`, 'err');
+  }
+}
+
+async function deleteJob(key, jobId) {
+  if (!confirm('HWPX 변환 결과를 삭제할까요?')) return;
+  try {
+    const res = await apiFetch(`/api/jobs/${encodeURIComponent(jobId)}`, { method: 'DELETE' });
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      throw new Error(d.detail || `HTTP ${res.status}`);
+    }
+    delete gRegistry[key];
+    gExpandedRows.delete(key);
+    renderMatrix();
+    showToast('삭제됨', 'warn');
+  } catch(e) {
+    if (e.message !== 'unauthenticated') showToast(`삭제 실패: ${e.message}`, 'err');
+  }
+}
+
 async function handleFile(file, school, registryKey) {
   if (!file.name.toLowerCase().endsWith('.pdf') && file.type !== 'application/pdf') {
     showToast('PDF 파일만 업로드할 수 있습니다.', 'err');
     return;
   }
 
-  // 상태를 converting으로 즉시 업데이트
   gRegistry[registryKey] = { status: 'converting', _lastLog: '업로드 중...' };
   refreshCell(registryKey);
 
-  // custom_filename 구성
   const customFilename = registryKey + '.hwpx';
-
-  // POST /convert
   const fd = new FormData();
   fd.append('file', file);
   fd.append('full_content', 'false');
@@ -931,7 +1141,6 @@ async function handleFile(file, school, registryKey) {
     return;
   }
 
-  // registry 등록
   await registerJob(registryKey, jobId, gCurrentSubject, school);
   gRegistry[registryKey] = {
     ...(gRegistry[registryKey] || {}),
@@ -940,13 +1149,10 @@ async function handleFile(file, school, registryKey) {
     _lastLog: '변환 시작...',
   };
   refreshCell(registryKey);
-
-  // SSE 구독
   subscribeSSE(registryKey, jobId);
 }
 
 function subscribeSSE(registryKey, jobId) {
-  // 기존 SSE 닫기
   if (gActiveSse[registryKey]) {
     gActiveSse[registryKey].close();
     delete gActiveSse[registryKey];
@@ -963,14 +1169,13 @@ function subscribeSSE(registryKey, jobId) {
     refreshCell(registryKey);
   });
 
-  es.addEventListener('done', e => {
+  es.addEventListener('done', () => {
     es.close();
     delete gActiveSse[registryKey];
     const entry = gRegistry[registryKey] || {};
     entry.status   = 'done';
     entry._lastLog = '';
     gRegistry[registryKey] = entry;
-    // registry에 done 반영
     apiFetch('/api/registry/register', {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
@@ -999,36 +1204,6 @@ function subscribeSSE(registryKey, jobId) {
   });
 }
 
-/* 개별 셀만 갱신 (전체 리렌더 대신) */
-function refreshCell(registryKey) {
-  const safeKey = CSS.escape(registryKey);
-  const statusEl = document.getElementById(`status-${registryKey}`);
-  const actionEl = document.getElementById(`action-${registryKey}`);
-  if (!statusEl || !actionEl) {
-    renderMatrix();
-    return;
-  }
-  const entry = gRegistry[registryKey] || null;
-  statusEl.innerHTML = renderStatusCell(registryKey, entry);
-  actionEl.innerHTML = renderActionCell(registryKey, entry);
-
-  // 드래그&드롭 재설정
-  if (!entry || entry.status === 'error') {
-    const school = keyToSchool(registryKey);
-    setupDropTarget(statusEl, school, registryKey);
-  }
-
-  // 업로드 버튼 재연결
-  statusEl.querySelectorAll('.upload-btn[data-key]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      triggerUpload(btn.dataset.school, btn.dataset.key);
-    });
-  });
-}
-
-/* ══════════════════════════════════════════════════════
-   학교 추가 UI
-══════════════════════════════════════════════════════ */
 $('add-school-btn').addEventListener('click', () => {
   $('add-school-btn').style.display = 'none';
   $('school-input-wrap').classList.add('show');
@@ -1060,9 +1235,6 @@ $('new-school-input').addEventListener('keydown', e => {
   if (e.key === 'Escape') cancelAddSchool();
 });
 
-/* ══════════════════════════════════════════════════════
-   과목 추가 UI
-══════════════════════════════════════════════════════ */
 $('add-subject-btn').addEventListener('click', () => {
   const id = prompt('과목 ID를 입력하세요\n(예: 수1, 수2, 기하)\n짧게 4자 이내 권장');
   if (!id || !id.trim()) return;
@@ -1075,9 +1247,6 @@ $('add-subject-btn').addEventListener('click', () => {
   addSubject(tid, name.trim() || tid);
 });
 
-/* ══════════════════════════════════════════════════════
-   사용자 정보
-══════════════════════════════════════════════════════ */
 async function initUser() {
   try {
     const res = await apiFetch('/api/me');
@@ -1087,15 +1256,10 @@ async function initUser() {
     $('user-name').textContent = me.name || me.email;
     if (me.is_admin) $('admin-link').style.display = 'inline';
   } catch(e) {
-    if (e.message !== 'unauthenticated') {
-      window.location.href = '/auth/login';
-    }
+    if (e.message !== 'unauthenticated') window.location.href = '/auth/login';
   }
 }
 
-/* ══════════════════════════════════════════════════════
-   진행 중 SSE 복원 (페이지 새로고침 후)
-══════════════════════════════════════════════════════ */
 function restoreActiveSse() {
   Object.entries(gRegistry).forEach(([key, entry]) => {
     if (entry && entry.status === 'converting' && entry.job_id) {
@@ -1104,9 +1268,6 @@ function restoreActiveSse() {
   });
 }
 
-/* ══════════════════════════════════════════════════════
-   초기화
-══════════════════════════════════════════════════════ */
 async function init() {
   initYearSelect();
   loadPeriodFromStorage();
