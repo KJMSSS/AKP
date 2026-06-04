@@ -265,6 +265,15 @@ async def api_usage(request: Request):
     return JSONResponse({"summary": today_summary(), "recent": read_entries(days=7)[:10]})
 
 
+@app.get("/api/drive/status")
+async def api_drive_status(request: Request):
+    _require_login(request)
+    return JSONResponse({
+        "configured": is_configured(),
+        "token_path": str(TOKEN_FILE),
+    })
+
+
 @app.get("/api/me")
 async def api_me(request: Request):
     email = _current_email(request)
