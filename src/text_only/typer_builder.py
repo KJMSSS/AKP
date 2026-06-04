@@ -53,8 +53,9 @@ _TBL_W     = sum(_CELL_W)                           # 32397
 _1DAN_TW = 48189
 
 # 기본 참조 템플릿 (header.xml 소스)
+# samples/template.hwpx 는 git 추적 파일 — Railway 배포 환경에서도 항상 존재
 _ROOT_DIR  = Path(__file__).resolve().parent.parent.parent
-_REF_TYPER = _ROOT_DIR / 'samples' / '11b' / '[2025_1_1_b_공수1_경신여고].hwpx'
+_REF_TYPER = _ROOT_DIR / 'samples' / 'template.hwpx'
 
 
 # ── 보조 XML ─────────────────────────────────────────────────────────
