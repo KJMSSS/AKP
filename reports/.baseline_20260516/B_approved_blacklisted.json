@@ -1,0 +1,109 @@
+{
+  "approved_count": 18,
+  "blacklisted_count": 2,
+  "total": 316,
+  "approved": [
+    {
+      "old": "난원",
+      "new": "반원",
+      "type": "text"
+    },
+    {
+      "old": "을",
+      "new": "를",
+      "type": "text"
+    },
+    {
+      "old": "성 립하도록",
+      "new": "성립하도록",
+      "type": "text"
+    },
+    {
+      "old": "졉치지",
+      "new": "겹치지",
+      "type": "text"
+    },
+    {
+      "old": "울",
+      "new": "을",
+      "type": "text"
+    },
+    {
+      "old": "다 른",
+      "new": "다른",
+      "type": "text"
+    },
+    {
+      "old": "를",
+      "new": "을",
+      "type": "text"
+    },
+    {
+      "old": "k",
+      "new": "k`",
+      "type": "equation"
+    },
+    {
+      "old": "실근 을",
+      "new": "실근을",
+      "type": "text"
+    },
+    {
+      "old": "f(a)",
+      "new": "f left(a right)`",
+      "type": "equation"
+    },
+    {
+      "old": "있 다",
+      "new": "있다",
+      "type": "text"
+    },
+    {
+      "old": "경우 의",
+      "new": "경우의",
+      "type": "text"
+    },
+    {
+      "old": "같 은",
+      "new": "같은",
+      "type": "text"
+    },
+    {
+      "old": "방법 의",
+      "new": "방법의",
+      "type": "text"
+    },
+    {
+      "old": "조건 을",
+      "new": "조건을",
+      "type": "text"
+    },
+    {
+      "old": "부둥식",
+      "new": "부등식",
+      "type": "text"
+    },
+    {
+      "old": "이 때",
+      "new": "이때",
+      "type": "text"
+    },
+    {
+      "old": "만족시키 는",
+      "new": "만족시키는",
+      "type": "text"
+    }
+  ],
+  "blacklisted": [
+    {
+      "old": "학년도",
+      "new": "년 1 학년",
+      "type": "text"
+    },
+    {
+      "old": "학년도 제",
+      "new": "년 1 학년",
+      "type": "text"
+    }
+  ]
+}

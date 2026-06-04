@@ -1,0 +1,26 @@
+[
+  {
+    "num": "1",
+    "column": "left",
+    "y_start": 720,
+    "y_end": 1430
+  },
+  {
+    "num": "2",
+    "column": "left",
+    "y_start": 1430,
+    "y_end": 2400
+  },
+  {
+    "num": "3",
+    "column": "right",
+    "y_start": 280,
+    "y_end": 1080
+  },
+  {
+    "num": "4",
+    "column": "right",
+    "y_start": 1080,
+    "y_end": 2400
+  }
+]

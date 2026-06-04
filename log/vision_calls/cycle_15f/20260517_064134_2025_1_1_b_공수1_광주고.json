@@ -1,0 +1,317 @@
+{
+  "timestamp": "20260517_064134",
+  "pdf": "[2025_1_1_b_공수1_광주고].pdf",
+  "cost_usd": 0.050055,
+  "layout": {
+    "choice_order": [
+      {
+        "problem": 5,
+        "markers_in_order": [
+          "①",
+          "④",
+          "②",
+          "⑤",
+          "③"
+        ]
+      },
+      {
+        "problem": 13,
+        "markers_in_order": [
+          "①",
+          "④",
+          "②",
+          "⑤",
+          "③"
+        ]
+      },
+      {
+        "problem": 14,
+        "markers_in_order": [
+          "①",
+          "④",
+          "②",
+          "⑤",
+          "③"
+        ]
+      },
+      {
+        "problem": 16,
+        "markers_in_order": [
+          "①",
+          "④",
+          "②",
+          "⑤",
+          "③"
+        ]
+      }
+    ],
+    "problem_boundaries": [
+      {
+        "problem": 1,
+        "y_range": [
+          0.42,
+          0.62
+        ]
+      },
+      {
+        "problem": 2,
+        "y_range": [
+          0.62,
+          0.95
+        ]
+      },
+      {
+        "problem": 3,
+        "y_range": [
+          0.08,
+          0.52
+        ]
+      },
+      {
+        "problem": 4,
+        "y_range": [
+          0.52,
+          0.95
+        ]
+      },
+      {
+        "problem": 5,
+        "y_range": [
+          0.04,
+          0.52
+        ]
+      },
+      {
+        "problem": 6,
+        "y_range": [
+          0.52,
+          0.95
+        ]
+      },
+      {
+        "problem": 7,
+        "y_range": [
+          0.04,
+          0.52
+        ]
+      },
+      {
+        "problem": 8,
+        "y_range": [
+          0.52,
+          0.95
+        ]
+      },
+      {
+        "problem": 9,
+        "y_range": [
+          0.04,
+          0.45
+        ]
+      },
+      {
+        "problem": 10,
+        "y_range": [
+          0.45,
+          0.95
+        ]
+      },
+      {
+        "problem": 11,
+        "y_range": [
+          0.04,
+          0.52
+        ]
+      },
+      {
+        "problem": 12,
+        "y_range": [
+          0.52,
+          0.75
+        ]
+      },
+      {
+        "problem": 13,
+        "y_range": [
+          0.04,
+          0.52
+        ]
+      },
+      {
+        "problem": 14,
+        "y_range": [
+          0.52,
+          0.95
+        ]
+      },
+      {
+        "problem": 15,
+        "y_range": [
+          0.04,
+          0.95
+        ]
+      },
+      {
+        "problem": 16,
+        "y_range": [
+          0.04,
+          0.65
+        ]
+      },
+      {
+        "problem": 17,
+        "y_range": [
+          0.04,
+          0.65
+        ]
+      },
+      {
+        "problem": 18,
+        "y_range": [
+          0.65,
+          0.95
+        ]
+      },
+      {
+        "problem": 19,
+        "y_range": [
+          0.04,
+          0.55
+        ]
+      },
+      {
+        "problem": 20,
+        "y_range": [
+          0.55,
+          0.95
+        ]
+      }
+    ],
+    "table_regions": [
+      {
+        "page": 5,
+        "y_range": [
+          0.22,
+          0.42
+        ]
+      },
+      {
+        "page": 4,
+        "y_range": [
+          0.06,
+          0.22
+        ]
+      }
+    ],
+    "answer_noise_regions": [
+      {
+        "page": 1,
+        "y_range": [
+          0.0,
+          0.08
+        ]
+      },
+      {
+        "page": 1,
+        "y_range": [
+          0.92,
+          1.0
+        ]
+      },
+      {
+        "page": 2,
+        "y_range": [
+          0.92,
+          1.0
+        ]
+      },
+      {
+        "page": 3,
+        "y_range": [
+          0.92,
+          1.0
+        ]
+      },
+      {
+        "page": 4,
+        "y_range": [
+          0.92,
+          1.0
+        ]
+      },
+      {
+        "page": 5,
+        "y_range": [
+          0.92,
+          1.0
+        ]
+      },
+      {
+        "page": 6,
+        "y_range": [
+          0.92,
+          1.0
+        ]
+      }
+    ],
+    "multiline_formula_regions": [
+      {
+        "problem": 3,
+        "page": 1,
+        "y_range": [
+          0.08,
+          0.18
+        ]
+      },
+      {
+        "problem": 7,
+        "page": 2,
+        "y_range": [
+          0.04,
+          0.18
+        ]
+      },
+      {
+        "problem": 8,
+        "page": 2,
+        "y_range": [
+          0.52,
+          0.68
+        ]
+      },
+      {
+        "problem": 9,
+        "page": 3,
+        "y_range": [
+          0.04,
+          0.2
+        ]
+      },
+      {
+        "problem": 19,
+        "page": 6,
+        "y_range": [
+          0.04,
+          0.22
+        ]
+      }
+    ],
+    "noise_lines": [
+      "광주고등학교",
+      "2025년 7월 1일 3교시 시행",
+      "( 1 )학년  (공통 수학1)과   ( 1 )학기   제( 2 )차 지필평가",
+      "계",
+      "부장",
+      "교감",
+      "교장",
+      "공통 수학1",
+      "★ 다음은 서술형 문항입니다. 문제해결 과정과 답을 상세히 서술하십시오.(별도 제공된 서술형 답안지에 작성) ★",
+      "서술형문항 1",
+      "서술형문항 2",
+      "ο 확인 사항",
+      "* 답안지의 해당란에 필요한 내용을 정확히 기입(표기)했는지 확인하시오."
+    ],
+    "confidence": "medium"
+  },
+  "raw_preview": "```json\n{\n  \"choice_order\": [\n    {\"problem\": 5, \"markers_in_order\": [\"①\",\"④\",\"②\",\"⑤\",\"③\"]},\n    {\"problem\": 13, \"markers_in_order\": [\"①\",\"④\",\"②\",\"⑤\",\"③\"]},\n    {\"problem\": 14, \"markers_in_order\": [\"①\",\"④\",\"②\",\"⑤\",\"③\"]},\n    {\"problem\": 16, \"markers_in_order\": [\"①\",\"④\",\"②\",\"⑤\",\"③\"]}\n  ],\n  \"problem_boundaries\": [\n    {\"problem\": 1, \"y_range\": [0.42, 0.62]},\n    {\"problem\": 2, \"y_range\": [0.62, 0.95]},\n    {\"problem\": 3, \"y_range\": [0.08, 0.52]},\n    {\"problem\": 4, \"y_range\": [0.52, 0.95]},\n    {\"problem\": 5, \"y_range\": [0.04, 0.52]},\n    {\"problem\": 6, \"y_range\": [0.52, 0.95]},\n    {\"problem\":"
+}

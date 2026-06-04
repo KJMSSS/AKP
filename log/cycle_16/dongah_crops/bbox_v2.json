@@ -1,0 +1,32 @@
+[
+  {
+    "num": "1",
+    "column": "left",
+    "y_start": 820,
+    "y_end": 1750
+  },
+  {
+    "num": "2",
+    "column": "left",
+    "y_start": 1750,
+    "y_end": 4298
+  },
+  {
+    "num": "3",
+    "column": "right",
+    "y_start": 100,
+    "y_end": 1550
+  },
+  {
+    "num": "4",
+    "column": "right",
+    "y_start": 1550,
+    "y_end": 2750
+  },
+  {
+    "num": "5",
+    "column": "right",
+    "y_start": 2750,
+    "y_end": 4298
+  }
+]

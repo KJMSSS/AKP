@@ -1,0 +1,229 @@
+{
+  "timestamp": "20260517_064256",
+  "pdf": "[2025_1_1_b_공수1_금호고].pdf",
+  "cost_usd": 0.051504,
+  "layout": {
+    "choice_order": [],
+    "problem_boundaries": [
+      {
+        "problem": 1,
+        "y_range": [
+          0.13,
+          0.35
+        ]
+      },
+      {
+        "problem": 2,
+        "y_range": [
+          0.35,
+          0.55
+        ]
+      },
+      {
+        "problem": 3,
+        "y_range": [
+          0.55,
+          0.85
+        ]
+      },
+      {
+        "problem": 4,
+        "y_range": [
+          0.13,
+          0.45
+        ]
+      },
+      {
+        "problem": 5,
+        "y_range": [
+          0.45,
+          0.75
+        ]
+      },
+      {
+        "problem": 6,
+        "y_range": [
+          0.75,
+          1.0
+        ]
+      },
+      {
+        "problem": 7,
+        "y_range": [
+          0.08,
+          0.52
+        ]
+      },
+      {
+        "problem": 8,
+        "y_range": [
+          0.52,
+          1.0
+        ]
+      },
+      {
+        "problem": 9,
+        "y_range": [
+          0.08,
+          0.75
+        ]
+      },
+      {
+        "problem": 10,
+        "y_range": [
+          0.08,
+          0.55
+        ]
+      },
+      {
+        "problem": 11,
+        "y_range": [
+          0.55,
+          1.0
+        ]
+      },
+      {
+        "problem": 12,
+        "y_range": [
+          0.08,
+          1.0
+        ]
+      },
+      {
+        "problem": 13,
+        "y_range": [
+          0.08,
+          0.75
+        ]
+      },
+      {
+        "problem": 14,
+        "y_range": [
+          0.08,
+          0.75
+        ]
+      },
+      {
+        "problem": 15,
+        "y_range": [
+          0.75,
+          1.0
+        ]
+      },
+      {
+        "problem": 16,
+        "y_range": [
+          0.08,
+          1.0
+        ]
+      },
+      {
+        "problem": 17,
+        "y_range": [
+          0.08,
+          1.0
+        ]
+      },
+      {
+        "problem": "서1",
+        "y_range": [
+          0.12,
+          0.42
+        ]
+      },
+      {
+        "problem": "서2",
+        "y_range": [
+          0.42,
+          0.75
+        ]
+      },
+      {
+        "problem": "서3",
+        "y_range": [
+          0.12,
+          0.75
+        ]
+      },
+      {
+        "problem": "서4",
+        "y_range": [
+          0.08,
+          0.75
+        ]
+      },
+      {
+        "problem": "서5",
+        "y_range": [
+          0.08,
+          0.85
+        ]
+      }
+    ],
+    "table_regions": [
+      {
+        "y_range": [
+          0.1,
+          0.18
+        ]
+      }
+    ],
+    "answer_noise_regions": [
+      {
+        "y_range": [
+          0.88,
+          1.0
+        ]
+      }
+    ],
+    "multiline_formula_regions": [
+      {
+        "problem": 10,
+        "y_range": [
+          0.28,
+          0.55
+        ]
+      },
+      {
+        "problem": 8,
+        "y_range": [
+          0.62,
+          1.0
+        ]
+      },
+      {
+        "problem": 16,
+        "y_range": [
+          0.45,
+          1.0
+        ]
+      },
+      {
+        "problem": "서3",
+        "y_range": [
+          0.55,
+          0.75
+        ]
+      }
+    ],
+    "noise_lines": [
+      "(1)학년 (1)학기 ( 공통수학1 )　 2차 지필평가",
+      "2025. 7. 10. 2교시",
+      "- 1 -",
+      "- 2 -",
+      "- 3 -",
+      "- 4 -",
+      "- 5 -",
+      "- 6 -",
+      "- 7 -",
+      "마지막 페이지입니다. 정말 수고하셨습니다.",
+      "[선택형 17문항]",
+      "[서술형 5문항]",
+      "이 시험문제의 저작권은 금호고등학교에 있습니다. 저작권법에 의해 보호받는 저작물이므로 전재와 복제는 금지되며, 이를 어길시 저작권법에 의거 처벌될 수 있습니다.",
+      "※ 다음 글을 읽고 물음에 알맞은 답이나 번호를 답인지에 표기하시오.",
+      "(선택형 17문항, 서술형 5문항 / 총 22문항)"
+    ],
+    "confidence": "medium"
+  },
+  "raw_preview": "```json\n{\n  \"choice_order\": [],\n  \"problem_boundaries\": [\n    {\"problem\": 1, \"y_range\": [0.13, 0.35]},\n    {\"problem\": 2, \"y_range\": [0.35, 0.55]},\n    {\"problem\": 3, \"y_range\": [0.55, 0.85]},\n    {\"problem\": 4, \"y_range\": [0.13, 0.45]},\n    {\"problem\": 5, \"y_range\": [0.45, 0.75]},\n    {\"problem\": 6, \"y_range\": [0.75, 1.0]},\n    {\"problem\": 7, \"y_range\": [0.08, 0.52]},\n    {\"problem\": 8, \"y_range\": [0.52, 1.0]},\n    {\"problem\": 9, \"y_range\": [0.08, 0.75]},\n    {\"problem\": 10, \"y_range\": [0.08, 0.55]},\n    {\"problem\": 11, \"y_range\": [0.55, 1.0]},\n    {\"problem\": 12, \"y_range\": [0.08, 1.0]},\n   "
+}

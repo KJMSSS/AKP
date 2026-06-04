@@ -1,0 +1,65 @@
+{
+  "경신여고": {
+    "file": "_2025_1_1_b_공수1_경신여고_raw.md",
+    "total_images": 23,
+    "total_problems": 19,
+    "choice_problems": 19,
+    "essay_problems": 0,
+    "choice_images": 23,
+    "essay_images": 0
+  },
+  "광덕고": {
+    "file": "_2025_1_1_b_공수1_광덕고_raw.md",
+    "total_images": 20,
+    "total_problems": 28,
+    "choice_problems": 28,
+    "essay_problems": 0,
+    "choice_images": 20,
+    "essay_images": 0
+  },
+  "광주여고": {
+    "file": "_2025_1_1_b_공수1_광주여고_raw.md",
+    "total_images": 2,
+    "total_problems": 20,
+    "choice_problems": 20,
+    "essay_problems": 0,
+    "choice_images": 2,
+    "essay_images": 0
+  },
+  "광주제일고": {
+    "file": "_2025_1_1_b_공수1_광주제일고_raw.md",
+    "total_images": 10,
+    "total_problems": 26,
+    "choice_problems": 22,
+    "essay_problems": 4,
+    "choice_images": 7,
+    "essay_images": 3
+  },
+  "금호고": {
+    "file": "_2025_1_1_b_공수1_금호고_raw.md",
+    "total_images": 11,
+    "total_problems": 14,
+    "choice_problems": 14,
+    "essay_problems": 0,
+    "choice_images": 11,
+    "essay_images": 0
+  },
+  "대성여고": {
+    "file": "_2025_1_1_b_공수1_대성여고_raw.md",
+    "total_images": 4,
+    "total_problems": 19,
+    "choice_problems": 19,
+    "essay_problems": 0,
+    "choice_images": 4,
+    "essay_images": 0
+  },
+  "동신여고": {
+    "file": "_2025_1_1_b_공수1_동신여고_raw.md",
+    "total_images": 27,
+    "total_problems": 20,
+    "choice_problems": 20,
+    "essay_problems": 0,
+    "choice_images": 27,
+    "essay_images": 0
+  }
+}

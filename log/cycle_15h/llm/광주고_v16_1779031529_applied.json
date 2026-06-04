@@ -1,0 +1,15 @@
+{
+  "status": "applied",
+  "meta": {
+    "skipped": false,
+    "cost_usd": 0.042345,
+    "input_tokens": 4530,
+    "output_tokens": 1917,
+    "elapsed_s": 27.17,
+    "korean_lines": 66,
+    "corrections": 27
+  },
+  "original_len": 4429,
+  "corrected_len": 2033,
+  "diff_chars": -2396
+}

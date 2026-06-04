@@ -1,0 +1,2 @@
+9. 이차부등식 \( x^{2}+2 k x+4 k-3>0 \) 이 모든 실수 \( x \) 에 대하여 성 립하도록 하는 실수 \( k \) 의 값의 범위를 구하면? (6.7점)
+40. 주 행 렬 \( A=\left(\begin{array}{ll}4 & 3 \\ 5 & 8\end{array}\right) \) 과 \( B=\left(\begin{array}{ll}0 & 1 \\ a & b\end{array}\right) \) 에 대하여 \( A B=B A \) 일 때,

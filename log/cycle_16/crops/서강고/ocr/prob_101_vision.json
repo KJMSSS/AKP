@@ -1,0 +1,1 @@
+{"problem_no": "101", "text": "[서술형1]\n\n$\\tan(\\pi-\\theta)\\times\\dfrac{1}{\\tan\\theta}$ 의 값을 구하고 그 과정을 서술하시오. [3점]", "has_figure": false, "figure_bbox": [], "raw_response": "```json\n{\n  \"text\": \"[서술형1]\\n\\n$\\\\tan(\\\\pi-\\\\theta)\\\\times\\\\dfrac{1}{\\\\tan\\\\theta}$ 의 값을 구하고 그 과정을 서술하시오. [3점]\",\n  \"has_figure\": false,\n  \"figure_bbox\": []\n}\n```"}

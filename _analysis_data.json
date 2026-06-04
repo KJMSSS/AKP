@@ -1,0 +1,118 @@
+{
+  "results": [
+    {
+      "file": "2025_1_1_b_공수1_경신여고_v5.hwpx",
+      "damage_markers": 0,
+      "unprocessed_markers": 3,
+      "empty_hp_t": 0,
+      "total_hp_t": 300,
+      "empty_ratio": 0.0,
+      "school": "경신여고"
+    },
+    {
+      "file": "2025_1_1_b_공수1_광덕고_v5.hwpx",
+      "damage_markers": 0,
+      "unprocessed_markers": 5,
+      "empty_hp_t": 0,
+      "total_hp_t": 309,
+      "empty_ratio": 0.0,
+      "school": "광덕고"
+    },
+    {
+      "file": "2025_1_1_b_공수1_광주여고_v5.hwpx",
+      "damage_markers": 0,
+      "unprocessed_markers": 1,
+      "empty_hp_t": 0,
+      "total_hp_t": 251,
+      "empty_ratio": 0.0,
+      "school": "광주여고"
+    },
+    {
+      "file": "2025_1_1_b_공수1_광주제일고_v5.hwpx",
+      "damage_markers": 1,
+      "unprocessed_markers": 0,
+      "empty_hp_t": 0,
+      "total_hp_t": 249,
+      "empty_ratio": 0.0,
+      "school": "광주제일고"
+    },
+    {
+      "file": "2025_1_1_b_공수1_금호고_v5.hwpx",
+      "damage_markers": 0,
+      "unprocessed_markers": 2,
+      "empty_hp_t": 0,
+      "total_hp_t": 283,
+      "empty_ratio": 0.0,
+      "school": "금호고"
+    },
+    {
+      "file": "2025_1_1_b_공수1_대성여고_v5.hwpx",
+      "damage_markers": 0,
+      "unprocessed_markers": 2,
+      "empty_hp_t": 0,
+      "total_hp_t": 286,
+      "empty_ratio": 0.0,
+      "school": "대성여고"
+    },
+    {
+      "file": "2025_1_1_b_공수1_동신여고_v5.hwpx",
+      "damage_markers": 0,
+      "unprocessed_markers": 0,
+      "empty_hp_t": 0,
+      "total_hp_t": 292,
+      "empty_ratio": 0.0,
+      "school": "동신여고"
+    }
+  ],
+  "school_summary": {
+    "경신여고": {
+      "avg_damage": 0.0,
+      "avg_unproc": 3.0,
+      "total_empty": 0,
+      "total_hp_t": 300,
+      "avg_ratio": 0.0
+    },
+    "광덕고": {
+      "avg_damage": 0.0,
+      "avg_unproc": 5.0,
+      "total_empty": 0,
+      "total_hp_t": 309,
+      "avg_ratio": 0.0
+    },
+    "광주여고": {
+      "avg_damage": 0.0,
+      "avg_unproc": 1.0,
+      "total_empty": 0,
+      "total_hp_t": 251,
+      "avg_ratio": 0.0
+    },
+    "광주제일고": {
+      "avg_damage": 1.0,
+      "avg_unproc": 0.0,
+      "total_empty": 0,
+      "total_hp_t": 249,
+      "avg_ratio": 0.0
+    },
+    "금호고": {
+      "avg_damage": 0.0,
+      "avg_unproc": 2.0,
+      "total_empty": 0,
+      "total_hp_t": 283,
+      "avg_ratio": 0.0
+    },
+    "대성여고": {
+      "avg_damage": 0.0,
+      "avg_unproc": 2.0,
+      "total_empty": 0,
+      "total_hp_t": 286,
+      "avg_ratio": 0.0
+    },
+    "동신여고": {
+      "avg_damage": 0.0,
+      "avg_unproc": 0.0,
+      "total_empty": 0,
+      "total_hp_t": 292,
+      "avg_ratio": 0.0
+    }
+  }
+}

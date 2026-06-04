@@ -1,0 +1,223 @@
+{
+  "files": [
+    {
+      "file": "2025_1_1_b_공수1_경신여고_v5.hwpx",
+      "damage_markers": 0,
+      "unprocessed_markers": 3,
+      "empty_hp_t": 0,
+      "total_hp_t": 300,
+      "empty_ratio": 0.0,
+      "choice_problems": 0,
+      "essay_problems": 2,
+      "school": "경신여고"
+    },
+    {
+      "file": "2025_1_1_b_공수1_광덕고_v5.hwpx",
+      "damage_markers": 0,
+      "unprocessed_markers": 5,
+      "empty_hp_t": 0,
+      "total_hp_t": 309,
+      "empty_ratio": 0.0,
+      "choice_problems": 0,
+      "essay_problems": 1,
+      "school": "광덕고"
+    },
+    {
+      "file": "2025_1_1_b_공수1_광주여고_v5.hwpx",
+      "damage_markers": 0,
+      "unprocessed_markers": 1,
+      "empty_hp_t": 0,
+      "total_hp_t": 251,
+      "empty_ratio": 0.0,
+      "choice_problems": 0,
+      "essay_problems": 3,
+      "school": "광주여고"
+    },
+    {
+      "file": "2025_1_1_b_공수1_광주제일고_v5.hwpx",
+      "damage_markers": 1,
+      "unprocessed_markers": 0,
+      "empty_hp_t": 0,
+      "total_hp_t": 249,
+      "empty_ratio": 0.0,
+      "choice_problems": 0,
+      "essay_problems": 4,
+      "school": "광주제일고"
+    },
+    {
+      "file": "2025_1_1_b_공수1_금호고_v5.hwpx",
+      "damage_markers": 0,
+      "unprocessed_markers": 2,
+      "empty_hp_t": 0,
+      "total_hp_t": 283,
+      "empty_ratio": 0.0,
+      "choice_problems": 0,
+      "essay_problems": 1,
+      "school": "금호고"
+    },
+    {
+      "file": "2025_1_1_b_공수1_대성여고_v5.hwpx",
+      "damage_markers": 0,
+      "unprocessed_markers": 2,
+      "empty_hp_t": 0,
+      "total_hp_t": 286,
+      "empty_ratio": 0.0,
+      "choice_problems": 0,
+      "essay_problems": 0,
+      "school": "대성여고"
+    },
+    {
+      "file": "2025_1_1_b_공수1_동신여고_v5.hwpx",
+      "damage_markers": 0,
+      "unprocessed_markers": 0,
+      "empty_hp_t": 0,
+      "total_hp_t": 292,
+      "empty_ratio": 0.0,
+      "choice_problems": 0,
+      "essay_problems": 4,
+      "school": "동신여고"
+    }
+  ],
+  "schools": {
+    "경신여고": {
+      "file_count": 1,
+      "damage_markers": {
+        "avg": 0.0,
+        "total": 0
+      },
+      "unprocessed_markers": {
+        "avg": 3.0,
+        "total": 3
+      },
+      "empty_hp_t": {
+        "total": 0,
+        "total_hp_t": 300,
+        "ratio": 0.0
+      },
+      "problems": {
+        "choice": 0,
+        "essay": 2
+      }
+    },
+    "광덕고": {
+      "file_count": 1,
+      "damage_markers": {
+        "avg": 0.0,
+        "total": 0
+      },
+      "unprocessed_markers": {
+        "avg": 5.0,
+        "total": 5
+      },
+      "empty_hp_t": {
+        "total": 0,
+        "total_hp_t": 309,
+        "ratio": 0.0
+      },
+      "problems": {
+        "choice": 0,
+        "essay": 1
+      }
+    },
+    "광주여고": {
+      "file_count": 1,
+      "damage_markers": {
+        "avg": 0.0,
+        "total": 0
+      },
+      "unprocessed_markers": {
+        "avg": 1.0,
+        "total": 1
+      },
+      "empty_hp_t": {
+        "total": 0,
+        "total_hp_t": 251,
+        "ratio": 0.0
+      },
+      "problems": {
+        "choice": 0,
+        "essay": 3
+      }
+    },
+    "광주제일고": {
+      "file_count": 1,
+      "damage_markers": {
+        "avg": 1.0,
+        "total": 1
+      },
+      "unprocessed_markers": {
+        "avg": 0.0,
+        "total": 0
+      },
+      "empty_hp_t": {
+        "total": 0,
+        "total_hp_t": 249,
+        "ratio": 0.0
+      },
+      "problems": {
+        "choice": 0,
+        "essay": 4
+      }
+    },
+    "금호고": {
+      "file_count": 1,
+      "damage_markers": {
+        "avg": 0.0,
+        "total": 0
+      },
+      "unprocessed_markers": {
+        "avg": 2.0,
+        "total": 2
+      },
+      "empty_hp_t": {
+        "total": 0,
+        "total_hp_t": 283,
+        "ratio": 0.0
+      },
+      "problems": {
+        "choice": 0,
+        "essay": 1
+      }
+    },
+    "대성여고": {
+      "file_count": 1,
+      "damage_markers": {
+        "avg": 0.0,
+        "total": 0
+      },
+      "unprocessed_markers": {
+        "avg": 2.0,
+        "total": 2
+      },
+      "empty_hp_t": {
+        "total": 0,
+        "total_hp_t": 286,
+        "ratio": 0.0
+      },
+      "problems": {
+        "choice": 0,
+        "essay": 0
+      }
+    },
+    "동신여고": {
+      "file_count": 1,
+      "damage_markers": {
+        "avg": 0.0,
+        "total": 0
+      },
+      "unprocessed_markers": {
+        "avg": 0.0,
+        "total": 0
+      },
+      "empty_hp_t": {
+        "total": 0,
+        "total_hp_t": 292,
+        "ratio": 0.0
+      },
+      "problems": {
+        "choice": 0,
+        "essay": 4
+      }
+    }
+  }
+}

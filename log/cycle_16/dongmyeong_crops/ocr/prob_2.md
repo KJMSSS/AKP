@@ -1,0 +1,1 @@
+연립방정식을 풀면 그 해가 \( \left\{\begin{array}{l}x=\alpha \\ y=\beta\end{array}\right. \) 또는 \( \left\{\begin{array}{l}x=\gamma \\ y=\delta\end{array}\right. \) 이다. \( \alpha \times \beta \times \gamma \times \delta \) 의 1 엇은? (5.1점)
