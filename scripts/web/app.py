@@ -807,7 +807,7 @@ async def api_add_subject(request: Request):
     cfg = _load_mconfig()
     if any(s["id"] == sid for s in cfg["subjects"]):
         raise HTTPException(409, f'"{sid}"는 이미 등록된 과목입니다.')
-    cfg["subjects"].append({"id": sid, "name": name, "grade": "", "sem": ""})
+    cfg["subjects"].append({"id": sid, "name": name, "grade": "", "sem": "", "exam_type": ""})
     _save_mconfig(cfg)
     return JSONResponse({"ok": True, "id": sid, "name": name})
 
@@ -820,8 +820,9 @@ async def api_update_subject(subj_id: str, request: Request):
     subj = next((s for s in cfg["subjects"] if s["id"] == subj_id), None)
     if not subj:
         raise HTTPException(404)
-    if "grade" in body: subj["grade"] = body["grade"]
-    if "sem"   in body: subj["sem"]   = body["sem"]
+    if "grade"     in body: subj["grade"]     = body["grade"]
+    if "sem"       in body: subj["sem"]       = body["sem"]
+    if "exam_type" in body: subj["exam_type"] = body["exam_type"]
     _save_mconfig(cfg)
     return JSONResponse(subj)
 

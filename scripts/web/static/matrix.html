@@ -443,19 +443,30 @@ body {
 #move-modal.open { display: flex; }
 #move-modal-box {
   background: #fff; border-radius: 12px; padding: 24px;
-  max-width: 400px; width: 90%; box-shadow: 0 8px 32px rgba(0,0,0,.25);
+  max-width: 480px; width: 94%; box-shadow: 0 8px 32px rgba(0,0,0,.25);
   display: flex; flex-direction: column; gap: 14px;
 }
 #move-modal-box h3 { font-size: 1rem; color: #1e293b; }
-.move-label { font-size: 0.78rem; color: #64748b; margin-bottom: 2px; }
+.move-label { font-size: 0.78rem; color: #64748b; margin-bottom: 3px; }
 .move-from-name {
-  font-size: 0.88rem; font-weight: 600; color: #475569;
+  font-size: 0.85rem; font-weight: 600; color: #475569;
   background: #f1f5f9; padding: 6px 10px; border-radius: 6px;
 }
-#move-to-select {
-  width: 100%; padding: 8px 10px; border: 1px solid #cbd5e1;
-  border-radius: 6px; font-size: 0.9rem; background: #fff;
+.move-grid {
+  display: grid; grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px;
 }
+.mv-sel {
+  width: 100%; padding: 6px 8px; border: 1px solid #cbd5e1;
+  border-radius: 6px; font-size: 0.85rem; background: #fff;
+}
+#mv-target-preview {
+  font-size: 0.8rem; color: #64748b; background: #f8fafc;
+  border: 1px solid #e2e8f0; border-radius: 6px;
+  padding: 7px 10px; min-height: 28px; word-break: break-all;
+}
+#mv-target-preview.conflict { background: #fff1f2; border-color: #fda4af; color: #be123c; }
+#mv-target-preview.ok       { background: #f0fdf4; border-color: #86efac; color: #166534; }
 .move-modal-btns { display: flex; gap: 10px; justify-content: flex-end; margin-top: 4px; }
 .move-modal-btns button { padding: 8px 20px; border-radius: 6px; border: none; cursor: pointer; font-size: 0.9rem; }
 #btn-move-confirm { background: #2563eb; color: #fff; }
@@ -471,15 +482,46 @@ body {
 <div id="move-modal">
   <div id="move-modal-box">
     <h3>잡 이동</h3>
-    <p style="font-size:0.85rem;color:#64748b;">업로드된 PDF와 변환 결과를 다른 학교 행으로 이동합니다.</p>
     <div>
       <div class="move-label">현재 위치</div>
       <div class="move-from-name" id="move-from-name"></div>
     </div>
-    <div>
-      <div class="move-label">이동할 위치</div>
-      <select id="move-to-select"><option value="">-- 학교 선택 --</option></select>
+    <div class="move-grid">
+      <div>
+        <div class="move-label">학교</div>
+        <select id="mv-school" class="mv-sel"></select>
+      </div>
+      <div>
+        <div class="move-label">과목</div>
+        <select id="mv-subject" class="mv-sel"></select>
+      </div>
+      <div>
+        <div class="move-label">학년</div>
+        <select id="mv-grade" class="mv-sel">
+          <option value="">-</option>
+          <option value="1">1학년</option>
+          <option value="2">2학년</option>
+          <option value="3">3학년</option>
+        </select>
+      </div>
+      <div>
+        <div class="move-label">학기</div>
+        <select id="mv-sem" class="mv-sel">
+          <option value="">-</option>
+          <option value="1">1학기</option>
+          <option value="2">2학기</option>
+        </select>
+      </div>
+      <div>
+        <div class="move-label">중간/기말</div>
+        <select id="mv-exam" class="mv-sel">
+          <option value="">-</option>
+          <option value="중간">중간</option>
+          <option value="기말">기말</option>
+        </select>
+      </div>
     </div>
+    <div id="mv-target-preview"></div>
     <div class="move-modal-btns">
       <button id="btn-move-cancel">취소</button>
       <button id="btn-move-confirm" disabled>이동</button>
@@ -546,7 +588,15 @@ body {
       <option value="2">2학기</option>
     </select>
   </label>
-  <span id="subj-meta-hint" style="color:#adb5bd;font-size:0.78rem;">← 이 과목의 학년·학기 설정 (과목마다 다르게 설정 가능)</span>
+  <label style="display:flex;align-items:center;gap:4px;">
+    중간/기말
+    <select id="subj-exam-sel" class="period-select">
+      <option value="">-</option>
+      <option value="중간">중간</option>
+      <option value="기말">기말</option>
+    </select>
+  </label>
+  <span id="subj-meta-hint" style="color:#adb5bd;font-size:0.78rem;">← 이 과목의 학년·학기·시험종류 설정 (과목마다 다르게 설정 가능)</span>
 </div>
 
 <div id="main">
@@ -678,31 +728,38 @@ function renderSubjectMeta() {
   const subj = gConfig.subjects.find(s => s.id === gCurrentSubject);
   if (!subj) return;
   $('subj-meta-name').textContent = subj.name || subj.id;
-  $('subj-grade-sel').value = subj.grade || '';
-  $('subj-sem-sel').value   = subj.sem   || '';
+  $('subj-grade-sel').value = subj.grade     || '';
+  $('subj-sem-sel').value   = subj.sem       || '';
+  $('subj-exam-sel').value  = subj.exam_type || '';
 }
 
-async function saveSubjectMeta(grade, sem) {
+async function saveSubjectMeta(grade, sem, exam_type) {
   try {
     const res = await apiFetch(`/api/config/subjects/${encodeURIComponent(gCurrentSubject)}`, {
       method: 'PATCH',
       headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ grade, sem }),
+      body: JSON.stringify({ grade, sem, exam_type }),
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const updated = await res.json();
     const subj = gConfig.subjects.find(s => s.id === gCurrentSubject);
-    if (subj) { subj.grade = updated.grade; subj.sem = updated.sem; }
+    if (subj) { subj.grade = updated.grade; subj.sem = updated.sem; subj.exam_type = updated.exam_type; }
     renderMatrix();
   } catch(e) {
-    showToast('학년/학기 저장 실패: ' + e.message, 'err');
+    showToast('과목 정보 저장 실패: ' + e.message, 'err');
   }
 }
 
-$('subj-grade-sel').addEventListener('change', () =>
-  saveSubjectMeta($('subj-grade-sel').value, $('subj-sem-sel').value));
-$('subj-sem-sel').addEventListener('change', () =>
-  saveSubjectMeta($('subj-grade-sel').value, $('subj-sem-sel').value));
+function _subjMetaVals() {
+  return [
+    $('subj-grade-sel').value,
+    $('subj-sem-sel').value,
+    $('subj-exam-sel').value,
+  ];
+}
+$('subj-grade-sel').addEventListener('change', () => saveSubjectMeta(..._subjMetaVals()));
+$('subj-sem-sel').addEventListener('change',   () => saveSubjectMeta(..._subjMetaVals()));
+$('subj-exam-sel').addEventListener('change',  () => saveSubjectMeta(..._subjMetaVals()));
 
 PERIOD_KEYS.forEach(id => {
   const el = $(id);
@@ -1281,35 +1338,109 @@ async function deleteJob(key, jobId) {
 async function showMoveModal(fromKey) {
   const modal    = $('move-modal');
   const fromName = $('move-from-name');
-  const toSel    = $('move-to-select');
   const btnOk    = $('btn-move-confirm');
   const btnCancel= $('btn-move-cancel');
+  const preview  = $('mv-target-preview');
+  const selSchool = $('mv-school');
+  const selSubj   = $('mv-subject');
+  const selGrade  = $('mv-grade');
+  const selSem    = $('mv-sem');
+  const selExam   = $('mv-exam');
 
+  // 현재 위치 파싱
   const fromSchool = keyToSchool(fromKey);
-  fromName.textContent = fromSchool;
+  const fromParts  = fromKey.split('_');  // year_grade_sem_round_subjectId_school...
+  const fromSubj   = fromParts[4] || gCurrentSubject;
+  const fromSubjObj = gConfig.subjects.find(s => s.id === fromSubj) || {};
 
-  // 이동 가능한 학교 목록: 현재 과목+기간 기준, 잡 없는 행
-  toSel.innerHTML = '<option value="">-- 학교 선택 --</option>';
-  const allSchools = [...(gConfig.schools || [])].sort((a,b) => a.localeCompare(b,'ko'));
-  allSchools.forEach(school => {
-    if (school === fromSchool) return;
-    const k = buildRegistryKey(school, gCurrentSubject);
-    if (gRegistry[k]?.job_id) return; // 이미 잡 있는 행은 제외
-    const opt = document.createElement('option');
-    opt.value = k;
-    opt.textContent = school;
-    toSel.appendChild(opt);
+  fromName.textContent = `${fromSchool} / ${fromSubjObj.name || fromSubj} / ${fromParts[1] || '-'}학년 ${fromParts[2] || '-'}학기 / ${fromSubjObj.exam_type || '-'}`;
+
+  // 학교 목록
+  selSchool.innerHTML = '';
+  [...(gConfig.schools || [])].sort((a,b) => a.localeCompare(b,'ko')).forEach(s => {
+    const o = document.createElement('option');
+    o.value = s; o.textContent = s;
+    if (s === fromSchool) o.selected = true;
+    selSchool.appendChild(o);
   });
 
-  if (toSel.options.length <= 1) {
-    showToast('이동 가능한 빈 행이 없습니다.', 'warn');
-    return;
+  // 과목 목록
+  selSubj.innerHTML = '';
+  (gConfig.subjects || []).forEach(s => {
+    const o = document.createElement('option');
+    o.value = s.id; o.textContent = s.name || s.id;
+    if (s.id === fromSubj) o.selected = true;
+    selSubj.appendChild(o);
+  });
+
+  // 과목 선택 시 학년/학기/중간기말 자동 채움 + gConfig.subjects 로컬 업데이트
+  function fillFromSubject(subjId) {
+    const s = gConfig.subjects.find(x => x.id === subjId) || {};
+    selGrade.value = s.grade     || '';
+    selSem.value   = s.sem       || '';
+    selExam.value  = s.exam_type || '';
+    updatePreview();
+  }
+  selSubj.onchange = () => fillFromSubject(selSubj.value);
+
+  // 학년/학기/중간기말 변경 시 gConfig.subjects 로컬 반영 (키 계산에 쓰임)
+  function syncSubjectMeta() {
+    const subj = gConfig.subjects.find(s => s.id === selSubj.value);
+    if (subj) {
+      subj.grade     = selGrade.value;
+      subj.sem       = selSem.value;
+      subj.exam_type = selExam.value;
+    }
+    updatePreview();
+  }
+  [selGrade, selSem, selExam].forEach(el => { el.onchange = syncSubjectMeta; });
+
+  // 현재 과목 값으로 초기화
+  fillFromSubject(fromSubj);
+
+  // 대상 키 계산 — renderMatrix와 동일한 로직(getSubjectMeta) 사용
+  function computeTargetKey() {
+    const p = getPeriod();
+    const school  = selSchool.value;
+    const subjId  = selSubj.value;
+    const m = getSubjectMeta(subjId);  // gConfig.subjects에서 읽음 (syncSubjectMeta로 갱신됨)
+    return `${p.year}_${m.grade}_${m.sem}_${p.round}_${subjId}_${school}`;
   }
 
-  btnOk.disabled = true;
-  toSel.onchange = () => { btnOk.disabled = !toSel.value; };
+  function updatePreview() {
+    const toKey   = computeTargetKey();
+    const isSame  = (toKey === fromKey);
+    const hasJob  = !!gRegistry[toKey]?.job_id;
+    const school  = selSchool.value;
+    const subjId  = selSubj.value;
+    const subjObj = gConfig.subjects.find(s => s.id === subjId) || {};
+    const m       = getSubjectMeta(subjId);
+    const grade   = m.grade || '-';
+    const sem     = m.sem   || '-';
+    const exam    = subjObj.exam_type || '-';
 
+    preview.className = '';
+    if (isSame) {
+      preview.textContent = '⚠ 현재 위치와 동일합니다.';
+      preview.className = 'conflict';
+      btnOk.disabled = true;
+    } else if (hasJob) {
+      preview.textContent = `⚠ 대상(${school} / ${subjObj.name || subjId})에 이미 잡이 있습니다. 먼저 삭제하세요.`;
+      preview.className = 'conflict';
+      btnOk.disabled = true;
+    } else {
+      preview.textContent = `→ ${school} / ${subjObj.name || subjId} / ${grade}학년 ${sem}학기 / ${exam}`;
+      preview.className = 'ok';
+      btnOk.disabled = false;
+    }
+  }
+
+  selSchool.onchange = updatePreview;
+
+  btnOk.textContent = '이동';
+  btnOk.disabled = true;
   modal.classList.add('open');
+  updatePreview();
 
   await new Promise(resolve => {
     let settled = false;
@@ -1319,13 +1450,13 @@ async function showMoveModal(fromKey) {
       modal.classList.remove('open');
       btnOk.onclick = null;
       btnCancel.onclick = null;
-      toSel.onchange = null;
+      [selSchool, selSubj, selGrade, selSem, selExam].forEach(el => { el.onchange = null; });
       resolve(ok);
     }
     btnCancel.onclick = () => close(false);
     btnOk.onclick = async () => {
-      const toKey = toSel.value;
-      if (!toKey) return;
+      const toKey = computeTargetKey();
+      if (toKey === fromKey || btnOk.disabled) return;
       btnOk.disabled = true;
       btnOk.textContent = '이동중…';
       try {
@@ -1339,12 +1470,34 @@ async function showMoveModal(fromKey) {
           throw new Error(d.detail || `HTTP ${res.status}`);
         }
         const data = await res.json();
-        // 로컬 레지스트리 업데이트
         gRegistry[toKey] = data.entry;
         delete gRegistry[fromKey];
         gExpandedRows.delete(fromKey);
+
+        // 대상 과목 탭으로 전환 (다른 과목으로 이동한 경우)
+        const targetSubj = selSubj.value;
+        if (targetSubj && targetSubj !== gCurrentSubject) {
+          gCurrentSubject = targetSubj;
+          // 탭 UI 갱신
+          document.querySelectorAll('.subj-tab').forEach(t => {
+            t.classList.toggle('active', t.dataset.subj === gCurrentSubject);
+          });
+          renderSubjectMeta();
+        }
+
+        // 이동 시 변경된 과목 학년/학기 서버 저장
+        apiFetch(`/api/config/subjects/${encodeURIComponent(targetSubj)}`, {
+          method: 'PATCH',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({
+            grade:     selGrade.value,
+            sem:       selSem.value,
+            exam_type: selExam.value,
+          }),
+        }).catch(() => {});
+
         renderMatrix();
-        showToast(`${fromSchool} → ${keyToSchool(toKey)} 이동 완료`, 'ok');
+        showToast(`이동 완료 → ${selSchool.value}`, 'ok');
         close(true);
       } catch(e) {
         if (e.message !== 'unauthenticated') showToast(`이동 실패: ${e.message}`, 'err');
