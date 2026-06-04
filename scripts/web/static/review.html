@@ -186,31 +186,6 @@
       padding-right: 2px;
     }
 
-    /* ── 크롭 이미지 ── */
-    .prob-crop {
-      margin: 8px 12px 4px;
-      border: 1px solid #e2e8f0;
-      border-radius: 6px;
-      overflow: hidden;
-      max-height: 200px;
-      transition: max-height .3s ease;
-      cursor: zoom-in;
-      position: relative;
-    }
-    .prob-crop.expanded { max-height: 1400px; cursor: zoom-out; }
-    .prob-crop img { width: 100%; display: block; }
-    .crop-hint {
-      position: absolute;
-      bottom: 4px; right: 6px;
-      font-size: 10px;
-      color: #94a3b8;
-      background: rgba(255,255,255,.75);
-      padding: 1px 4px;
-      border-radius: 3px;
-      pointer-events: none;
-    }
-    .prob-crop.expanded .crop-hint { display: none; }
-
     /* ── 문제 카드 ── */
     .problem-card {
       background: #fff;
@@ -817,7 +792,6 @@
         number: p.number,
         full_text: p.full_text || '',
         is_subjective: !!p.is_subjective,
-        has_crop: !!p.has_crop,
         status: 'pending',
         note: '',
         corrected_text: '',
@@ -922,19 +896,11 @@
     const isLong = prob.full_text.length > COLLAPSE_THRESHOLD;
     const textHtml = renderLatex(prob.full_text);
 
-    const cropHtml = prob.has_crop
-      ? `<div class="prob-crop" id="crop-${prob.number}">
-           <img src="/crop/${state.jobId}/${prob.number}" loading="lazy" alt="${prob.number}번 원본">
-           <span class="crop-hint">클릭하여 확대/축소</span>
-         </div>`
-      : '';
-
     card.innerHTML = `
       <div class="card-header">
         <span class="card-num">${escHtml(labelText)}</span>
         <span class="card-badge">미확인</span>
       </div>
-      ${cropHtml}
       <div class="card-text-wrap">
         <div class="card-text${isLong ? ' card-text-collapsed' : ''}">${textHtml}</div>
         ${isLong ? '<button class="btn-expand">더보기 ▼</button>' : ''}
@@ -966,14 +932,6 @@
         </div>
       </div>
     `;
-
-    // 크롭 이미지 확대/축소 토글
-    if (prob.has_crop) {
-      const cropDiv = card.querySelector('.prob-crop');
-      if (cropDiv) {
-        cropDiv.addEventListener('click', () => cropDiv.classList.toggle('expanded'));
-      }
-    }
 
     // 더보기
     if (isLong) {
