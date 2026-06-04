@@ -947,6 +947,13 @@ function togglePipeline(key) {
 
   if (gExpandedRows.has(key)) {
     detailTr.classList.add('open');
+    // 열 때마다 최신 데이터로 재렌더링
+    const entry = gRegistry[key] || null;
+    const td = detailTr.querySelector('.pipeline-expand-td');
+    if (td) {
+      td.innerHTML = renderPipelineDetail(key, entry);
+      bindDetailEvents(detailTr, key);
+    }
   } else {
     detailTr.classList.remove('open');
   }
@@ -1005,6 +1012,8 @@ function bindDetailEvents(detailTr, key) {
         deleteStageFile(k, el.dataset.stage);
       } else if (action === 'delete-job') {
         deleteJob(k, el.dataset.jobId);
+      } else if (action === 'typer-generate') {
+        generateTyperFile(k);
       }
     });
   });
