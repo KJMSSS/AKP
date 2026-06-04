@@ -190,8 +190,8 @@ def _require_admin(request: Request) -> str:
 async def auth_login(request: Request):
     redirect_uri = str(request.url_for("auth_callback"))
     params: dict = {"access_type": "offline"}
-    if not is_configured():
-        params["prompt"] = "consent"   # 첫 로그인: Drive 동의 화면 표시
+    if not is_configured() or request.query_params.get("gdrive"):
+        params["prompt"] = "consent"   # 첫 로그인 또는 Drive 재인증
     return await oauth.google.authorize_redirect(request, redirect_uri, **params)
 
 
@@ -293,16 +293,10 @@ async def api_drive_status(request: Request):
 
 @app.get("/auth/gdrive")
 async def auth_gdrive(request: Request):
-    """Drive refresh_token 강제 재취득 — 기존 /auth/callback URI 재사용."""
+    """Drive refresh_token 강제 재취득 — /auth/login?gdrive=1 으로 위임."""
     _require_login(request)
-    request.session["gdrive_reauth"] = "1"   # callback에서 Drive 재인증 경로임을 표시
-    redirect_uri = str(request.url_for("auth_callback"))
-    return await oauth.google.authorize_redirect(
-        request, redirect_uri,
-        access_type="offline",
-        prompt="consent",
-        scope="openid email profile https://www.googleapis.com/auth/drive.file",
-    )
+    request.session["gdrive_reauth"] = "1"
+    return RedirectResponse("/auth/login?gdrive=1")
 
 
 @app.get("/api/me")
