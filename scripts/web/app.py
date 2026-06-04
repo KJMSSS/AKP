@@ -224,6 +224,23 @@ async def auth_callback(request: Request):
 
     request.session["email"] = email
     request.session["name"]  = name
+
+    # Drive 재인증 경로: 성공/실패 결과 페이지로 이동
+    if request.session.pop("gdrive_reauth", None):
+        if refresh_token:
+            return HTMLResponse(
+                "<p style='font-family:sans-serif;padding:40px;color:green;font-size:1.2em'>"
+                "✓ Google Drive 연동 완료</p>"
+                "<script>setTimeout(()=>location.href='/',2000)</script>"
+            )
+        return HTMLResponse(
+            "<p style='font-family:sans-serif;padding:40px;color:#c00'>"
+            "refresh_token을 받지 못했습니다.<br><br>"
+            "<a href='https://myaccount.google.com/permissions'>Google 계정 → 앱 권한</a>에서 "
+            "AKP 앱 액세스를 취소 후 "
+            "<a href='/auth/gdrive'>다시 시도</a>하세요.</p>"
+        )
+
     return RedirectResponse("/")
 
 
@@ -276,39 +293,15 @@ async def api_drive_status(request: Request):
 
 @app.get("/auth/gdrive")
 async def auth_gdrive(request: Request):
-    """Drive refresh_token 강제 재취득 — 항상 consent 화면 표시."""
+    """Drive refresh_token 강제 재취득 — 기존 /auth/callback URI 재사용."""
     _require_login(request)
-    redirect_uri = str(request.url_for("auth_gdrive_callback"))
+    request.session["gdrive_reauth"] = "1"   # callback에서 Drive 재인증 경로임을 표시
+    redirect_uri = str(request.url_for("auth_callback"))
     return await oauth.google.authorize_redirect(
         request, redirect_uri,
         access_type="offline",
         prompt="consent",
         scope="openid email profile https://www.googleapis.com/auth/drive.file",
-    )
-
-
-@app.get("/auth/gdrive/callback")
-async def auth_gdrive_callback(request: Request):
-    _require_login(request)
-    try:
-        token = await oauth.google.authorize_access_token(request)
-    except Exception as e:
-        return HTMLResponse(f"<p>오류: {e}</p><a href='/auth/gdrive'>다시 시도</a>")
-
-    refresh_token = token.get("refresh_token", "")
-    if refresh_token:
-        save_refresh_token(refresh_token)
-        return HTMLResponse(
-            "<p style='font-family:sans-serif;padding:40px;color:green'>"
-            "✓ Google Drive 연동 완료</p>"
-            "<script>setTimeout(()=>location.href='/',1500)</script>"
-        )
-    return HTMLResponse(
-        "<p style='font-family:sans-serif;padding:40px;color:red'>"
-        "refresh_token을 받지 못했습니다.<br>"
-        "<a href='https://myaccount.google.com/permissions'>Google 계정 → 앱 권한</a>에서 "
-        "akp 앱 접근을 취소한 후 다시 시도하세요.</p>"
-        "<a href='/auth/gdrive'>다시 시도</a>"
     )
 
 
