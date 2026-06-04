@@ -26,6 +26,7 @@ sys.stdout.reconfigure(encoding='utf-8')
 
 from src.common.ocr.mathpix_client import MathpixClient
 from src.ocr.claude_pdf_reader import read_pdf_as_markdown
+from src.common.pdf_utils import normalize_pdf_rotation
 from src.text_only.text_builder import build_from_markdown
 from src.text_only.handwriting_filter import filter_handwriting
 from src.text_only.ocr_fallback import apply_fallback, reinforce_placeholders
@@ -58,6 +59,9 @@ def _pick_template() -> Path:
 
 
 def convert(pdf_path: Path, filter_hw: bool = False, ocr_engine: str = "mathpix", full_content: bool = False) -> Path:
+    # 회전 정상화 (회전된 페이지가 있으면 보정 PDF로 교체)
+    pdf_path = normalize_pdf_rotation(pdf_path)
+
     stem    = pdf_path.stem
     out_md  = ROOT / "output_text_temp.md"          # 임시 마크다운 저장
     out_hwpx = SAMPLES_DIR / f"output_text_{stem}.hwpx"
