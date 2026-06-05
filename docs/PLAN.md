@@ -350,7 +350,51 @@ def correct_latex(md: str, subject: str = "") -> str:
 |--------|------|------|
 | 🔴 | 서강고 선택지 마커 초과 | 75건 검출, 기대 70건 — 파서 선택지 인식 로직 검토 필요 |
 | 🟠 | 웹 검수 크롭 PNG | 문제별 크롭 PNG + 텍스트 나란히 표시 미구현 |
-| 🟡 | 서강고 HWPX D안 | 첫 실전 결과물 — 다음 세션 시작 시 확인 필요 |
+| 🟡 | 서강고 HWPX D안 | 3번 집합기호·7번 손글씨 OCR 잡음 수정 완료 (2026-06-05) |
+
+---
+
+## 7-1. HWPX 수식 직접 편집 시 주의사항 (실전 교훈)
+
+서강고 vD 수정 작업에서 수식을 직접 XML로 조작했더니 **수식이 전부 빈 박스로 표시**되는 현상 발생.  
+4번 시도 실패 후 파악한 3대 원인:
+
+### 원인 1: `<hp:outMargin>` 누락
+```xml
+<!-- 필수 구조 (이 태그 없으면 HWP에서 빈 박스) -->
+<hp:equation id="..." ...>
+  <hp:sz .../>
+  <hp:pos .../>
+  <hp:outMargin left="0" right="0" top="0" bottom="0"/>  ← 필수!
+  <hp:script>HWP Script</hp:script>
+</hp:equation>
+```
+
+### 원인 2: LaTeX를 HWP Script로 변환하지 않음
+`hp:script`에는 LaTeX가 아니라 **HWP Script**가 들어가야 한다.
+
+| LaTeX | HWP Script |
+|-------|-----------|
+| `\times` | `times` |
+| `\frac{a}{b}` | `{a} over {b}` |
+| `\sqrt{x}` | `sqrt {x}` |
+
+`from src.common.latex_to_hwp import convert as latex_to_hwp`로 변환.
+
+### 원인 3: 단락/수식 ID 충돌
+다른 HWPX에서 단락을 가져올 때, `hp:p id`, `hp:equation id`, `zOrder`가  
+기존 문서 값과 겹치면 HWP가 오작동한다.
+
+### 올바른 수정 절차
+```
+1. 올바른 마크다운 작성 ($...$로 수식 감싸기)
+2. build_from_markdown()으로 임시 HWPX 생성
+3. 임시 HWPX에서 목표 단락 추출
+4. 대상 문서의 최대 id/zOrder 파악 후 오프셋 적용
+5. 교체 범위 통째로 교체 (문제 단락 + 선택지 단락들)
+```
+
+> **규칙**: 수식 포함 단락은 절대 직접 XML 조합하지 않는다. **항상 build_from_markdown 파이프라인 경유.**
 
 ---
 
