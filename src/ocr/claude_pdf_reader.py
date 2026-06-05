@@ -33,20 +33,38 @@ _MAX_PDF_BYTES = 18 * 1024 * 1024  # 단일 호출 최대 PDF 크기 (18MB, base
 _SYSTEM = """\
 당신은 한국 수학 시험지 PDF를 정확하게 마크다운으로 전사하는 전문가입니다.
 
+[수식 정확도 — 최우선]
+- 인라인 수식: $LaTeX$  /  독립 줄 수식: $$LaTeX$$
+- 분수: \\frac{분자}{분모}  예) $\\frac{x+1}{2}$
+- 거듭제곱·지수: 두 자리 이상 반드시 중괄호  예) $x^{2}$, $a^{n+1}$, $3^{-x+1}$
+- 아래첨자: 두 자리 이상 중괄호  예) $a_{n}$, $S_{10}$
+- 루트: $\\sqrt{x}$, $\\sqrt[n]{x}$
+- 극한: $\\lim_{x \\to a}$, $\\lim_{n \\to \\infty}$
+- 적분: $\\int_{a}^{b} f(x)\\,dx$
+- 시그마: $\\sum_{k=1}^{n}$
+- 삼각·로그 함수: 백슬래시 필수  $\\sin$, $\\cos$, $\\tan$, $\\log$, $\\ln$
+- 그리스 문자: $\\alpha$, $\\beta$, $\\pi$, $\\theta$, $\\infty$
+- 부등호: $\\leq$, $\\geq$, $\\neq$
+- 집합 기호: $\\in$, $\\subset$, $\\cup$, $\\cap$
+- 절댓값·괄호: $\\left| \\frac{a}{b} \\right|$, $\\left( \\right)$
+- 조합: $\\binom{n}{r}$  또는  ${}_{n}C_{r}$
+- cases 환경: $f(x) = \\begin{cases} ... \\end{cases}$
+
+[수식 오류 주의 — 자주 틀리는 패턴]
+- ❌ x^2  →  ✅ x^{2}   (지수 중괄호 누락)
+- ❌ 3^-x  →  ✅ 3^{-x}  (음수 지수 중괄호)
+- ❌ log x  →  ✅ \\log x  (백슬래시 누락)
+- ❌ sin θ  →  ✅ \\sin \\theta  (함수·문자 백슬래시)
+- ❌ lim x→∞  →  ✅ \\lim_{x \\to \\infty}
+- ❌ a_n  →  ✅ a_{n}   (첨자 중괄호 누락)
+
 [출력 규칙]
-1. 수식 표기
-   - 문장 안 인라인 수식: $LaTeX$
-   - 독립 줄 디스플레이 수식: $$LaTeX$$
-   - 수식 내용은 LaTeX 원문 그대로
-2. 한국어 텍스트: 보이는 그대로 정확히 전사 (추측·수정 금지)
-3. 문제 번호: "1." "2." ... 형식으로 줄 시작
-4. 선택지: ①②③④⑤ 원형 마커 그대로 사용
-5. 배점: 문제 끝에 [3점] [4점] 형태 그대로 유지
-6. 그림·도표 위치: 해당 위치에 【★ 그림:N번】 마커 삽입 (N=해당 문제번호)
-7. 제거 대상
-   - 페이지 헤더/푸터 (페이지 번호, 학교명, 날짜)
-   - 학생 답안 기입란 (빈 칸, 채점표)
-   - 결재선·서명란
+1. 한국어 텍스트: 보이는 그대로 정확히 전사 (추측·수정 금지)
+2. 문제 번호: "1." "2." ... 형식으로 줄 시작
+3. 선택지: ①②③④⑤ 원형 마커 그대로 사용
+4. 배점: 문제 끝에 [3점] [4점] 형태 그대로 유지
+5. 그림·도표 위치: 해당 위치에 【★ 그림:N번】 마커 삽입 (N=해당 문제번호)
+6. 제거 대상: 페이지 헤더/푸터, 학생 답안 기입란, 결재선·서명란
 
 [절대 금지]
 - 수식 해설·풀이 추가 금지
@@ -99,6 +117,24 @@ _SYSTEM_FULL = r"""\
 _USER_PROMPT = "이 시험지 PDF의 모든 문제를 마크다운 형식으로 전사해주세요."
 _USER_PROMPT_FULL = "이 PDF에 인쇄된 모든 내용(문제, 정답, 해설, 풀이 과정)을 빠짐없이 마크다운으로 전사해주세요."
 
+# ── STEP B: 과목별 출제 범위 힌트 ────────────────────────────────────────
+SUBJECT_HINTS: dict[str, str] = {
+    "공수1": "다항식, 방정식과 부등식, 도형의 방정식. 주요 수식: 판별식 D=b²-4ac, 근의 공식, 직선·원 방정식",
+    "공수2": "집합, 명제, 함수, 경우의 수. 주요 수식: 순열 P, 조합 C, 집합 연산 ∪∩",
+    "대수":  "지수·로그, 수열. 주요 수식: a^{m+n}, \\log_a b, 등차·등비수열 합 S_n, \\sum",
+    "확통":  "경우의 수, 확률, 통계. 주요 수식: P(A), E(X), \\sigma, 정규분포 N(m,\\sigma^2)",
+    "기하":  "이차곡선, 벡터, 공간도형. 주요 수식: \\frac{x^2}{a^2}+\\frac{y^2}{b^2}=1, \\overrightarrow{AB}",
+    "미적1": "극한, 미분, 적분(다항함수). 주요 수식: \\lim_{x\\to a}, f'(x), \\int_a^b f(x)dx",
+    "미적2": "수열의 극한, 미분법, 적분법(초월함수). 주요 수식: e^x, \\ln x, \\sin x, \\cos x 미적분",
+}
+
+
+def _build_subject_section(subject: str) -> str:
+    hint = SUBJECT_HINTS.get(subject, "")
+    if not hint:
+        return ""
+    return f"\n\n[과목 정보 — {subject}]\n이 시험지는 '{subject}' 과목입니다.\n출제 범위: {hint}\n이 범위의 수식이 주로 등장하므로 해당 LaTeX 표현에 특히 주의하세요."
+
 
 def _build_pattern_section(patterns: list[dict]) -> str:
     """승인된 교정 패턴을 프롬프트 섹션으로 포맷."""
@@ -130,12 +166,14 @@ def read_pdf_as_markdown(
     cost_cap_usd: float = 5.0,
     full_content: bool = False,
     correction_patterns: list[dict] | None = None,
+    subject: str = "",
 ) -> str:
     """
     PDF → Claude API → Mathpix 호환 마크다운.
 
     full_content=True 이면 정답·해설을 포함한 모든 내용을 전사.
     correction_patterns: 관리자가 승인한 교정 패턴 목록 — 프롬프트에 주입됨.
+    subject: 과목 ID (예: '대수', '미적2') — 출제 범위 힌트를 프롬프트에 주입.
     """
     api_key = os.environ.get("ANTHROPIC_API_KEY")
     if not api_key:
@@ -147,17 +185,19 @@ def read_pdf_as_markdown(
     pdf_bytes = pdf_path.read_bytes()
     n_pages = _count_pages(pdf_bytes)
 
-    base_system = _SYSTEM_FULL if full_content else _SYSTEM
+    base_system     = _SYSTEM_FULL if full_content else _SYSTEM
+    subject_section = _build_subject_section(subject)
     pattern_section = _build_pattern_section(correction_patterns or [])
-    system      = base_system + pattern_section
-    user_prompt = _USER_PROMPT_FULL if full_content else _USER_PROMPT
+    system          = base_system + subject_section + pattern_section
+    user_prompt     = _USER_PROMPT_FULL if full_content else _USER_PROMPT
     if max_tokens is None:
         max_tokens = _MAX_TOKENS_FULL if full_content else _MAX_TOKENS
 
     mode_label = "전체(정답·해설 포함)" if full_content else "문제만"
     n_pat = len(correction_patterns) if correction_patterns else 0
-    pat_label = f"  패턴 {n_pat}건 주입" if n_pat else ""
-    print(f"  [claude_pdf] {pdf_path.name}  ({n_pages}p)  {mode_label}{pat_label}")
+    pat_label  = f"  패턴 {n_pat}건" if n_pat else ""
+    subj_label = f"  과목:{subject}" if subject else ""
+    print(f"  [claude_pdf] {pdf_path.name}  ({n_pages}p)  {mode_label}{subj_label}{pat_label}")
 
     needs_chunk = (n_pages > _PAGE_CHUNK) or (len(pdf_bytes) > _MAX_PDF_BYTES)
     if n_pages == 0 or not needs_chunk:

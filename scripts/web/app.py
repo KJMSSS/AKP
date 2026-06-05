@@ -103,6 +103,7 @@ sys.path.insert(0, str(_ROOT))
 
 from src.ocr.claude_pdf_reader import read_pdf_as_markdown          # noqa: E402
 from src.ocr.cost_guard import CostGuard, CostCapError              # noqa: E402
+from src.ocr.latex_corrector import correct_latex                   # noqa: E402
 from src.text_only.text_builder import build_from_markdown           # noqa: E402
 from src.text_only.typer_builder import build_typer_hwpx             # noqa: E402
 from src.text_only.ocr_fallback import apply_fallback               # noqa: E402
@@ -1171,8 +1172,12 @@ def _run_conversion(
             print(f"  [패턴] {len(patterns)}건 프롬프트 주입 (학교:{_school} 과목:{_subject})")
 
         md = read_pdf_as_markdown(
-            pdf_path, full_content=full_content, correction_patterns=patterns
+            pdf_path,
+            full_content=full_content,
+            correction_patterns=patterns,
+            subject=_subject,
         )
+        md = correct_latex(md, subject=_subject)
         md = apply_fallback(md, pdf_path)
 
         header, segments = parse_problems(md)
