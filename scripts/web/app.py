@@ -707,6 +707,67 @@ async def pipeline_typer_generate(key: str, request: Request):
 # 그림 수동 검수 큐 (P1+P2: extract_with_confidence 미달 → 수동 드래그)
 # ══════════════════════════════════════════════════════════════════════
 
+def _register_figure_queue(
+    reg_key: str,
+    job_id: str,
+    figure_items: set[str],
+    figure_map: dict[str, Path],
+) -> None:
+    """변환 완료 직후 그림 검수 큐 자동 등록.
+
+    figure_items: Claude OCR이 마킹한 그림 문제 번호 집합
+    figure_map:   이미 추출된 {prob_no: fig_png_path}
+    """
+    page_pngs_sorted: list[Path] = sorted(
+        _TMP_DIR.glob(f"{job_id}_page*.png"),
+        key=lambda p: int(re.search(r"page(\d+)", p.stem).group(1)),
+    )
+
+    qdata = _figq_load(reg_key)
+    items: dict = qdata.get("items", {})
+    added = 0
+
+    for prob_no in sorted(figure_items, key=lambda x: int(x) if x.isdigit() else 999):
+        if prob_no in items:
+            continue  # 이미 등록된 항목은 건드리지 않음
+
+        auto_img = figure_map.get(prob_no)
+        crop_path = str(page_pngs_sorted[0]) if page_pngs_sorted else None
+
+        if auto_img and auto_img.exists():
+            strategy   = "vision" if "vision" in auto_img.name else "pymupdf"
+            confidence = 0.6 if strategy == "vision" else 0.7
+            # threshold=0.7: pymupdf 단독은 경계값이므로 "pending"으로 검수 권장
+            status     = "auto_selected" if confidence > 0.7 else "pending"
+        else:
+            strategy   = "none"
+            confidence = 0.0
+            status     = "pending"
+
+        items[prob_no] = {
+            "prob_no":       prob_no,
+            "page_no":       None,
+            "status":        status,
+            "strategy":      strategy,
+            "confidence":    confidence,
+            "crop_path":     crop_path,
+            "auto_path":     str(auto_img) if auto_img else None,
+            "auto_bbox_pct": None,
+            "manual_path":   None,
+            "created_at":    datetime.now().isoformat(timespec="seconds"),
+        }
+        added += 1
+
+    if added == 0:
+        return
+
+    qdata["items"] = items
+    _figq_save(reg_key, qdata)
+
+    pending_cnt = sum(1 for v in items.values() if v["status"] == "pending")
+    auto_cnt    = sum(1 for v in items.values() if v["status"] == "auto_selected")
+    print(f"  [그림큐] +{added}건 등록 (자동={auto_cnt}, 검수필요={pending_cnt}) → /figure/{reg_key}")
+
 @app.get("/figure/{key}", response_class=HTMLResponse)
 async def figure_crop_page(key: str, request: Request):
     _require_login(request)
@@ -1429,6 +1490,17 @@ def _run_conversion(
                 print(f"  [그림] {item_no}번 삽입 완료")
             except Exception as e:
                 print(f"  [그림] {item_no}번 삽입 실패: {e}")
+
+        # ── 그림 검수 큐 자동 등록 ──────────────────────────────────────
+        _reg_key = Path(custom_filename).stem if custom_filename else ""
+        if _reg_key and figure_items_from_claude:
+            try:
+                _validate_safe_key(_reg_key)
+                _register_figure_queue(_reg_key, job_id, figure_items_from_claude, figure_map)
+            except HTTPException:
+                print(f"  [그림큐] 유효하지 않은 키: {_reg_key!r}")
+            except Exception as _qe:
+                print(f"  [그림큐] 등록 실패 (무시): {_qe}")
 
         # ── Google Drive 업로드 ──────────────────────────────────────────
         _drive_file_id = ""
