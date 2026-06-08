@@ -707,6 +707,8 @@ async function apiFetch(url, opts = {}) {
 let gConfig = { subjects: [], schools: [] };
 let gRegistry = {};
 let gCurrentSubject = '';
+let gUserRole = 'tier1';
+let gAllowedStages = ['pdf', 'hwpx_draft', 'hwpx_review', 'hangeul'];
 const gActiveSse = {};
 const gExpandedRows = new Set();
 
@@ -988,6 +990,17 @@ function renderPipeSummary(key, entry) {
 
 function renderStageCard(key, entry, stage) {
   const { id, name, step, manual } = stage;
+
+  // 허용되지 않은 단계 → 잠금 카드
+  if (!gAllowedStages.includes(id)) {
+    return `<div class="stage-card" style="opacity:0.45;filter:grayscale(1);">
+      <div class="stage-num">STEP ${step}</div>
+      <div class="stage-name">${escHtml(name)}</div>
+      <span class="stage-status-badge sb-none" style="font-size:0.7rem;">🔒 잠금</span>
+    </div>`;
+  }
+
+  // 이하 기존 코드 그대로 유지
   let cardClass = 'stage-card';
   let badgeHtml = '';
   let actionsHtml = '';
@@ -1828,6 +1841,16 @@ async function initUser() {
     if (!me.authenticated) { window.location.href = '/auth/login'; return; }
     $('user-name').textContent = me.name || me.email;
     if (me.is_admin) $('admin-link').style.display = 'inline';
+    gUserRole      = me.role          || 'tier1';
+    gAllowedStages = me.allowed_stages || ['pdf', 'hwpx_draft', 'hwpx_review', 'hangeul'];
+    // 역할 뱃지 표시
+    const roleDisplay = me.role_display || '';
+    if (roleDisplay && roleDisplay !== '관리자') {
+      const badge = document.createElement('span');
+      badge.style.cssText = 'font-size:0.75rem;background:#e0f2fe;color:#0369a1;padding:2px 8px;border-radius:100px;white-space:nowrap;';
+      badge.textContent = roleDisplay;
+      $('user-name').after(badge);
+    }
   } catch(e) {
     if (e.message !== 'unauthenticated') window.location.href = '/auth/login';
   }

@@ -167,8 +167,10 @@ from scripts.web.corrections_log import (                           # noqa: E402
     list_patterns, toggle_pattern, delete_pattern,
 )
 from scripts.web.users import (                                     # noqa: E402
-    is_admin, is_allowed, get_user, add_user, update_user,
-    remove_user, list_users, user_today_cost, ADMIN_EMAIL,
+    add_user, get_user, is_admin, is_allowed, list_users,
+    remove_user, update_user,
+    get_role, get_allowed_stages, ROLE_DISPLAY, SELECTABLE_ROLES,
+    user_today_cost, ADMIN_EMAIL,
 )
 from scripts.web.gdrive_uploader import (                           # noqa: E402
     save_refresh_token, upload_hwpx, delete_file as drive_delete_file,
@@ -379,11 +381,15 @@ async def api_me(request: Request):
     email = _current_email(request)
     if not email:
         return JSONResponse({"authenticated": False})
+    role = get_role(email)
     return JSONResponse({
         "authenticated": True,
         "email": email,
         "name": request.session.get("name", email),
         "is_admin": is_admin(email),
+        "role": role,
+        "role_display": ROLE_DISPLAY.get(role, role),
+        "allowed_stages": get_allowed_stages(email),
     })
 
 
@@ -931,7 +937,8 @@ async def api_add_user(request: Request):
     cap_usd = float(body.get("cap_usd", 2.0))
     if not email or not name:
         raise HTTPException(400, "이메일과 이름을 입력하세요.")
-    add_user(email, name, cap_usd)
+    role = body.get("role", "tier1")
+    add_user(email=email, name=name, cap_usd=cap_usd, role=role)
     return JSONResponse({"ok": True, "email": email})
 
 
@@ -948,6 +955,11 @@ async def api_update_user(email: str, request: Request):
         remove_user(email)
     elif action == "cap":
         update_user(email, cap_usd=float(body.get("cap_usd", 2.0)))
+    elif action == "role":
+        new_role = body.get("role", "tier1")
+        if new_role not in SELECTABLE_ROLES:
+            raise HTTPException(400, f"유효하지 않은 역할: {new_role}")
+        update_user(email, role=new_role)
     else:
         raise HTTPException(400, f"알 수 없는 액션: {action}")
     return JSONResponse({"ok": True})

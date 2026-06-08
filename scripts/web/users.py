@@ -22,6 +22,23 @@ from pathlib import Path
 
 from scripts.web.usage_log import read_entries
 
+ROLE_STAGES: dict[str, list[str]] = {
+    "tier1": ["pdf", "hwpx_draft", "hwpx_review", "hangeul"],
+    "tier2": ["pdf", "hwpx_draft", "hwpx_review", "hangeul"],
+    "tier3": ["pdf", "hwpx_draft", "hwpx_review", "hangeul", "typer"],
+    "tier4": ["pdf", "hwpx_draft", "hwpx_review", "hangeul", "typer", "solution"],
+    "staff": ["pdf", "hwpx_draft", "hwpx_review", "hangeul", "typer", "solution"],
+    "admin": ["pdf", "hwpx_draft", "hwpx_review", "hangeul", "typer", "solution"],
+    "user":  ["pdf", "hwpx_draft", "hwpx_review", "hangeul"],
+}
+
+ROLE_DISPLAY: dict[str, str] = {
+    "tier1": "기본", "tier2": "그림완성", "tier3": "타이퍼",
+    "tier4": "해설", "staff": "직원", "admin": "관리자", "user": "기본",
+}
+
+SELECTABLE_ROLES = ["tier1", "tier2", "tier3", "tier4", "staff"]
+
 ADMIN_EMAIL: str = os.environ.get("ADMIN_EMAIL", "")
 
 
@@ -74,11 +91,12 @@ def get_user(email: str) -> dict | None:
     return data.get(email)
 
 
-def add_user(email: str, name: str, cap_usd: float = 2.0) -> None:
+def add_user(email: str, name: str, cap_usd: float = 2.0, role: str = "tier1") -> None:
     data = _load()
     data[email] = {
         "name": name,
         "cap_usd": cap_usd,
+        "role": role,
         "active": True,
         "added": datetime.now().strftime("%Y-%m-%d"),
     }
@@ -155,3 +173,15 @@ def user_today_cost(email: str) -> float:
         for e in read_entries(days=1)
         if e.get("token") == email and e.get("ts", "").startswith(today)
     ), 4)
+
+
+def get_role(email: str) -> str:
+    if is_admin(email):
+        return "admin"
+    data = _load()
+    return data.get(email, {}).get("role", "tier1")
+
+
+def get_allowed_stages(email: str) -> list[str]:
+    role = get_role(email)
+    return list(ROLE_STAGES.get(role, ROLE_STAGES["tier1"]))

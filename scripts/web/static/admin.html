@@ -361,6 +361,16 @@
         <input id="add-cap" type="number" min="0" step="0.5" value="2.0" placeholder="USD">
         <span style="font-size:0.82rem;color:#64748b;">USD &nbsp;(0 = 무제한)</span>
       </div>
+      <div class="field">
+        <label for="add-role">역할:</label>
+        <select id="add-role" style="border:1px solid #cbd5e1;border-radius:6px;padding:6px 10px;font-size:0.85rem;background:#fff;outline:none;">
+          <option value="tier1">기본</option>
+          <option value="tier2">그림완성</option>
+          <option value="tier3">타이퍼</option>
+          <option value="tier4">해설</option>
+          <option value="staff">직원</option>
+        </select>
+      </div>
       <button class="btn-primary" id="add-btn" onclick="doAddUser()">사용자 추가</button>
     </div>
   </div>
@@ -378,11 +388,12 @@
             <th>오늘</th>
             <th>누적</th>
             <th>상태</th>
+            <th>역할</th>
             <th>관리</th>
           </tr>
         </thead>
         <tbody id="users-tbody">
-          <tr class="empty-row"><td colspan="7"><span class="spinner"></span> 불러오는 중...</td></tr>
+          <tr class="empty-row"><td colspan="8"><span class="spinner"></span> 불러오는 중...</td></tr>
         </tbody>
       </table>
     </div>
@@ -573,7 +584,7 @@
 
     apiFetch('/api/admin/users', {
       method: 'POST',
-      body: JSON.stringify({ email: email, name: name, cap_usd: cap })
+      body: JSON.stringify({ email: email, name: name, cap_usd: cap, role: document.getElementById('add-role').value || 'tier1' })
     })
       .then(function () {
         showToast(name + ' 님이 추가되었습니다');
@@ -600,14 +611,16 @@
       .catch(function (err) {
         showToast('사용자 목록 로드 실패: ' + (err.message || err), true);
         document.getElementById('users-tbody').innerHTML =
-          '<tr class="empty-row"><td colspan="7">로드 실패</td></tr>';
+          '<tr class="empty-row"><td colspan="8">로드 실패</td></tr>';
       });
   }
+
+  var ROLE_LABELS = { tier1:'기본', tier2:'그림완성', tier3:'타이퍼', tier4:'해설', staff:'직원', admin:'관리자', user:'기본' };
 
   function renderUsers(list) {
     var tbody = document.getElementById('users-tbody');
     if (!list || list.length === 0) {
-      tbody.innerHTML = '<tr class="empty-row"><td colspan="7">등록된 사용자가 없습니다</td></tr>';
+      tbody.innerHTML = '<tr class="empty-row"><td colspan="8">등록된 사용자가 없습니다</td></tr>';
       return;
     }
 
@@ -633,6 +646,17 @@
         ? '<span class="status-badge badge-active">활성</span>'
         : '<span class="status-badge badge-inactive">비활성</span>';
 
+      // 역할 셀
+      var roleLabel = ROLE_LABELS[u.role] || u.role || '기본';
+      var roleColor = { staff:'#dcfce7', admin:'#fef3c7', tier4:'#ede9fe', tier3:'#e0f2fe', tier2:'#f0fdf4' }[u.role] || '#f1f5f9';
+      var roleSel = (u.role === 'admin') ? escHtml(roleLabel) :
+        '<select style="border:1px solid #e2e8f0;border-radius:5px;padding:2px 6px;font-size:0.78rem;background:' + roleColor + ';"'
+        + ' onchange="doPatch(\'' + emailSafe + '\',{action:\'role\',role:this.value})">'
+        + ['tier1','tier2','tier3','tier4','staff'].map(function(r) {
+            return '<option value="' + r + '"' + (u.role===r?' selected':'') + '>' + ROLE_LABELS[r] + '</option>';
+          }).join('')
+        + '</select>';
+
       // 버튼 그룹
       var btnToggle = active
         ? '<button class="btn-sm btn-warning" onclick="doPatch(\'' + emailSafe + '\',{action:\'deactivate\'})">비활성화</button>'
@@ -650,6 +674,7 @@
         + '<td class="' + todayClass + '">$' + todayCost.toFixed(2) + '</td>'
         + '<td>$' + totalCost.toFixed(2) + '</td>'
         + '<td>' + badgeHtml + '</td>'
+        + '<td>' + roleSel + '</td>'
         + '<td><div class="actions">' + btnToggle + btnDel + '</div></td>'
         + '</tr>';
     }).join('');
