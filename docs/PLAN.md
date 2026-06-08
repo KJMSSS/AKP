@@ -2,7 +2,7 @@
 
 > 한국 수학 시험지 PDF → HWPX(한글 문서) 자동 변환 파이프라인  
 > 학원 운영 도구 — 학원장이 타이퍼 양식(2단 HWPX)으로 직원에게 배포하는 것이 최종 목표  
-> 최종 수정: 2026-06-08 (그림 파이프라인 P1+P2+E1+E2 완료)
+> 최종 수정: 2026-06-09 (그림 파이프라인 큐 자동 등록 완료)
 
 > **핵심 방향 (2026-06-05 확정)**  
 > 중간 검수·재빌드 루프 없이 **한 번에 최고 품질**로 출력하는 것이 목표.  
@@ -254,7 +254,7 @@ PDF
 
 ---
 
-### STEP 1 — 그림 파이프라인 `진행 중` (P1+P2+E1+E2 완료, 큐 연결 미착수)
+### STEP 1 — 그림 파이프라인 `진행 중` (P1+P2+E1+E2+큐연결 완료)
 
 **목표**: PDF의 그림 영역을 자동 감지해 HWPX에 삽입 (첫 빌드에서 올바른 위치에)
 
@@ -269,9 +269,12 @@ PDF
 
 **threshold 기본값**: `0.7` (eval set으로 튜닝 필요)
 
+| **큐연결** | `_run_conversion` → `_register_figure_queue()` → `figure_queue/{key}/items.json` 자동 저장 (commit: `4b255d7`) |
+
 #### 🔲 남은 작업
 
-- **큐 자동 등록 연결**: 변환 파이프라인(`_run_conversion`) → `extract_with_confidence()` 호출 → `figure_queue/{key}/` 자동 저장
+- **BBoxDetector 통합**: 현재 `crop_path`는 전체 페이지 PNG (임시). 문제별 crop으로 교체 시 IoU 신뢰도 정확도 향상
+- **threshold 튜닝**: 현재 pymupdf=0.7(pending), vision=0.6(pending) — eval set으로 조정 필요
 - 기준: `samples/11b/*.hwpx` 골드 18쌍의 그림 위치 참고
 
 **관련 파일**:
