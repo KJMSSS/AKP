@@ -2,7 +2,7 @@
 
 > 한국 수학 시험지 PDF → HWPX(한글 문서) 자동 변환 파이프라인  
 > 학원 운영 도구 — 학원장이 타이퍼 양식(2단 HWPX)으로 직원에게 배포하는 것이 최종 목표  
-> 최종 수정: 2026-06-05 (OCR A+B+C 완료)
+> 최종 수정: 2026-06-08 (그림 파이프라인 P1+P2+E1+E2 완료)
 
 > **핵심 방향 (2026-06-05 확정)**  
 > 중간 검수·재빌드 루프 없이 **한 번에 최고 품질**로 출력하는 것이 목표.  
@@ -254,19 +254,31 @@ PDF
 
 ---
 
-### STEP 1 — 그림 파이프라인 `미착수`
+### STEP 1 — 그림 파이프라인 `진행 중` (P1+P2+E1+E2 완료, 큐 연결 미착수)
 
 **목표**: PDF의 그림 영역을 자동 감지해 HWPX에 삽입 (첫 빌드에서 올바른 위치에)
 
-**작업 항목**:
-- PDF에서 이미지 영역 자동 감지 (Vision + PyMuPDF)
-- 문제별 크롭에 그림 포함
-- HWPX BinData 삽입 + 위치 지정
+#### ✅ 완료 항목 (commit: `c33a030`, 2026-06-08)
+
+| 항목 | 내용 |
+|------|------|
+| **P1** | `FigureCandidate` dataclass + `extract_with_confidence()` — Tesseract bbox × Density bbox IoU로 신뢰도 측정 |
+| **P2** | 기존 6개 추출 전략 무수정 유지, bbox 계산 헬퍼(`_bbox_iou`, `_tesseract_bbox`, `_density_bbox`)만 신규 추가 |
+| **E1** | 웹 검수 API — `GET /figure/{key}`, `GET /api/figure/{key}/queue`, `POST /api/figure/{key}/{prob_no}/decision` (auto/manual/skip + bbox %) |
+| **E2** | `figure_crop.html` — 2패널 비교 UI + Canvas 드래그 + 자동 다음 이동, PIL 빨간 박스 오버레이 |
+
+**threshold 기본값**: `0.7` (eval set으로 튜닝 필요)
+
+#### 🔲 남은 작업
+
+- **큐 자동 등록 연결**: 변환 파이프라인(`_run_conversion`) → `extract_with_confidence()` 호출 → `figure_queue/{key}/` 자동 저장
 - 기준: `samples/11b/*.hwpx` 골드 18쌍의 그림 위치 참고
 
 **관련 파일**:
-- `src/common/image_extractor.py` — PyMuPDF 그림 추출 (부분 구현)
-- `src/common/hwpx_image_inserter.py` — BinData 삽입 (부분 구현)
+- `src/common/image_extractor.py` — PyMuPDF 그림 추출 + 신뢰도 기반 자동 감지
+- `src/common/hwpx_image_inserter.py` — BinData 삽입
+- `scripts/web/static/figure_crop.html` — 수동 검수 UI
+- `scripts/web/app.py` — `/figure/` 라우트
 
 ---
 
@@ -485,6 +497,7 @@ AKP/
 │       ├── static/
 │       │   ├── matrix.html           ← 매트릭스 UI (잡 관리)
 │       │   ├── review.html           ← 검수 인터페이스
+│       │   ├── figure_crop.html      ← 그림 수동 검수 UI (2패널 비교)
 │       │   ├── admin.html            ← 관리자 화면
 │       │   └── login.html            ← 로그인 화면
 │       ├── data/
@@ -513,6 +526,7 @@ AKP/
 │   │       └── mathpix_client.py     ← Mathpix OCR 엔진
 │   └── ocr/
 │       ├── claude_pdf_reader.py      ← Claude OCR 엔진
+│       ├── latex_corrector.py        ← 2차 LaTeX 교정 패스 (Claude Haiku)
 │       └── cost_guard.py             ← 일일 비용 캡
 │
 ├── docs/
