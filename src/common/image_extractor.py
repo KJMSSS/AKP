@@ -41,6 +41,19 @@ class ExtractedImage:
     confidence: float = 0.0
 
 
+@dataclass
+class FigureCandidate:
+    """단일 크롭에서 추출한 그림 후보 + 신뢰도.
+
+    bbox: (x0, y0, x1, y1) 픽셀 좌표 (원본 crop 기준)
+    strategy: "agreement" | "tesseract_only" | "density_only"
+    """
+    bbox: tuple[int, int, int, int]
+    image_path: Path
+    confidence: float
+    strategy: str
+
+
 def _has_meaningful_text(page: fitz.Page, rect: fitz.Rect, threshold: float = 0.1) -> bool:
     """rect 영역 내 텍스트 밀도 계산 — 높으면 텍스트 영역."""
     words = page.get_text("words", clip=rect)
@@ -678,3 +691,233 @@ def extract_images(
 
     doc.close()
     return results
+
+
+# ── 신뢰도 기반 자동 추출 ──────────────────────────────────────────────
+# Tesseract bbox와 Density bbox의 IoU로 신뢰도를 측정.
+# 두 알고리즘이 같은 영역을 가리키면 → auto pass
+# 한쪽만 성공하거나 IoU 낮음 → 수동 검수 큐로 라우팅
+
+def _bbox_iou(
+    a: tuple[int, int, int, int],
+    b: tuple[int, int, int, int],
+) -> float:
+    """두 (x0,y0,x1,y1) bbox의 IoU."""
+    ax0, ay0, ax1, ay1 = a
+    bx0, by0, bx1, by1 = b
+    ix0 = max(ax0, bx0); iy0 = max(ay0, by0)
+    ix1 = min(ax1, bx1); iy1 = min(ay1, by1)
+    if ix1 <= ix0 or iy1 <= iy0:
+        return 0.0
+    inter = (ix1 - ix0) * (iy1 - iy0)
+    a_area = (ax1 - ax0) * (ay1 - ay0)
+    b_area = (bx1 - bx0) * (by1 - by0)
+    union = a_area + b_area - inter
+    return inter / union if union > 0 else 0.0
+
+
+def _tesseract_bbox(crop_png: Path, min_conf: int = 20, pad_px: int = 8) -> tuple[int, int, int, int] | None:
+    """Tesseract 텍스트 마스킹 후 남은 어두운 픽셀의 bbox.
+
+    extract_figure_by_tesseract와 동일 로직이나 파일 저장 없이 bbox만 반환.
+    실패/미감지 시 None.
+    """
+    import numpy as np
+    from PIL import Image as PILImage
+
+    try:
+        import pytesseract
+    except ImportError:
+        return None
+
+    tess_cmd = os.environ.get("TESSERACT_CMD", "")
+    if tess_cmd:
+        pytesseract.pytesseract.tesseract_cmd = tess_cmd
+    elif os.name == "nt":
+        default = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+        if Path(default).exists():
+            pytesseract.pytesseract.tesseract_cmd = default
+
+    tessdata_prefix = os.environ.get("TESSDATA_PREFIX", "")
+    custom_config = "--oem 3 --psm 3"
+    if tessdata_prefix:
+        custom_config += f" --tessdata-dir {tessdata_prefix}"
+
+    try:
+        img_gray = PILImage.open(crop_png).convert("L")
+    except Exception:
+        return None
+    arr = np.array(img_gray)
+    H, W = arr.shape
+
+    tessdata_dir = Path(tessdata_prefix) if tessdata_prefix else Path(r"C:\Program Files\Tesseract-OCR\tessdata")
+    lang = "kor+eng+equ" if (tessdata_dir / "equ.traineddata").exists() else "kor+eng"
+
+    try:
+        data = pytesseract.image_to_data(
+            img_gray, lang=lang,
+            output_type=pytesseract.Output.DICT,
+            config=custom_config,
+        )
+    except Exception:
+        return None
+
+    text_mask = np.zeros((H, W), dtype=bool)
+    n_boxes = 0
+    for i in range(len(data["conf"])):
+        conf = int(data["conf"][i])
+        if conf < min_conf:
+            continue
+        x, y, w, h = data["left"][i], data["top"][i], data["width"][i], data["height"][i]
+        if w <= 0 or h <= 0:
+            continue
+        r0 = max(0, y - pad_px);  r1 = min(H, y + h + pad_px)
+        c0 = max(0, x - pad_px);  c1 = min(W, x + w + pad_px)
+        text_mask[r0:r1, c0:c1] = True
+        n_boxes += 1
+
+    if n_boxes == 0:
+        return None
+
+    masked = arr.copy()
+    masked[text_mask] = 255
+    dark = masked < 180
+    if dark.sum() < 200:
+        return None
+
+    rows = np.where(dark.any(axis=1))[0]
+    cols = np.where(dark.any(axis=0))[0]
+    margin = 15
+    y0 = max(0, int(rows[0]) - margin);  y1 = min(H, int(rows[-1]) + margin)
+    x0 = max(0, int(cols[0]) - margin);  x1 = min(W, int(cols[-1]) + margin)
+    if y1 <= y0 or x1 <= x0:
+        return None
+    return (x0, y0, x1, y1)
+
+
+def _density_bbox(
+    crop_png: Path,
+    text_threshold: float = 0.04,
+    smooth_window: int = 20,
+    min_fig_height_pct: float = 0.10,
+) -> tuple[int, int, int, int] | None:
+    """행 밀도 분석으로 그림 행 범위 추출. x는 풀폭(0~W) 그대로.
+
+    find_figure_by_density와 동일 로직이나 파일 저장 없이 bbox만 반환.
+    """
+    import numpy as np
+    from PIL import Image as PILImage
+
+    try:
+        img = PILImage.open(crop_png).convert("L")
+    except Exception:
+        return None
+    arr = np.array(img)
+    H, W = arr.shape
+
+    dark = (arr < 180)
+    row_density = dark.sum(axis=1) / W
+    kernel = np.ones(smooth_window) / smooth_window
+    smooth = np.convolve(row_density, kernel, mode="same")
+    is_text = smooth > text_threshold
+
+    text_rows = list(np.where(is_text)[0])
+    if not text_rows:
+        return None
+
+    first_block_end = text_rows[0]
+    for i in range(len(text_rows) - 1):
+        if text_rows[i + 1] - text_rows[i] > smooth_window:
+            first_block_end = text_rows[i]
+            break
+    else:
+        first_block_end = text_rows[-1]
+    fig_top = min(H - 1, int(first_block_end) + smooth_window // 2)
+
+    HIGH_TH = 0.06
+    choices_start = int(H * 0.85)
+    scan_lo = int(H * 0.70)
+    scan_hi = int(H * 0.30)
+    in_dense = False
+    last_dense = scan_lo
+    for i in range(scan_lo, scan_hi, -1):
+        if smooth[i] > HIGH_TH:
+            if not in_dense:
+                in_dense = True
+                last_dense = i
+        else:
+            if in_dense:
+                choices_start = last_dense
+                break
+            in_dense = False
+    fig_bot = min(H, choices_start)
+
+    if fig_bot <= fig_top:
+        return None
+    if (fig_bot - fig_top) < int(H * min_fig_height_pct):
+        return None
+    if dark[fig_top:fig_bot].sum() < 50:
+        return None
+
+    return (0, int(fig_top), int(W), int(fig_bot))
+
+
+def extract_with_confidence(
+    crop_png: Path,
+    problem_no: str,
+    output_dir: Path,
+    threshold: float = 0.7,
+) -> FigureCandidate | None:
+    """Tesseract와 Density 결과의 IoU로 신뢰도 측정.
+
+    - IoU >= threshold → confidence=IoU, strategy="agreement" → 자동 패스 (둘의 합집합으로 크롭)
+    - 한쪽만 성공 → confidence=0.5, strategy="tesseract_only"/"density_only" → 패스하지만 검수 권장
+    - 둘 다 실패 → None (수동 큐로 라우팅 권장)
+
+    confidence < threshold면 호출자가 수동 큐로 라우팅 가능 — 본 함수는 큐 기록을 직접 하지 않음.
+    """
+    from PIL import Image as PILImage
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    bbox_t = _tesseract_bbox(crop_png)
+    bbox_d = _density_bbox(crop_png)
+
+    if bbox_t is None and bbox_d is None:
+        return None
+
+    if bbox_t is not None and bbox_d is not None:
+        iou = _bbox_iou(bbox_t, bbox_d)
+        # 합집합 bbox로 크롭 (둘 다 동의하는 영역 + 양쪽이 잡은 가장자리)
+        x0 = min(bbox_t[0], bbox_d[0])
+        y0 = min(bbox_t[1], bbox_d[1])
+        x1 = max(bbox_t[2], bbox_d[2])
+        y1 = max(bbox_t[3], bbox_d[3])
+        chosen_bbox = (x0, y0, x1, y1)
+        strategy = "agreement"
+        confidence = iou
+    elif bbox_t is not None:
+        chosen_bbox = bbox_t
+        strategy = "tesseract_only"
+        confidence = 0.5
+    else:
+        chosen_bbox = bbox_d  # type: ignore[assignment]
+        strategy = "density_only"
+        confidence = 0.5
+
+    img = PILImage.open(crop_png)
+    cropped = img.crop(chosen_bbox)
+    out_path = output_dir / f"fig_conf_{problem_no}.png"
+    cropped.save(str(out_path))
+
+    print(
+        f"  [confidence] {problem_no}번: strategy={strategy} "
+        f"conf={confidence:.2f} bbox={chosen_bbox}"
+    )
+
+    # threshold 미달이어도 후보 반환 — 큐 라우팅 판단은 호출자가 confidence로 결정
+    return FigureCandidate(
+        bbox=chosen_bbox,
+        image_path=out_path,
+        confidence=confidence,
+        strategy=strategy,
+    )

@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>그림 수동 검수</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Malgun Gothic', '맑은 고딕', sans-serif;
+      background: #f0f2f5; color: #1e293b;
+      min-height: 100vh; display: flex; flex-direction: column;
+    }
+    #topbar {
+      position: sticky; top: 0; z-index: 100;
+      background: #1e293b; color: #fff;
+      padding: 0 20px; height: 52px;
+      display: flex; align-items: center; gap: 12px;
+      box-shadow: 0 2px 6px rgba(0,0,0,.25);
+    }
+    #topbar h1 { font-size: 16px; font-weight: 600; }
+    #topbar a { color: #94a3b8; text-decoration: none; font-size: 13px; }
+    #topbar .spacer { flex: 1; }
+    #topbar .key { font-size: 12px; color: #cbd5e1; font-family: monospace; }
+
+    #layout { display: grid; grid-template-columns: 240px 1fr; flex: 1; min-height: 0; }
+
+    /* 좌측 큐 패널 */
+    #queue {
+      background: #fff; border-right: 1px solid #e2e8f0;
+      overflow-y: auto;
+    }
+    #queue h2 {
+      padding: 12px 16px; font-size: 13px; font-weight: 600;
+      color: #475569; border-bottom: 1px solid #e2e8f0;
+      background: #f8fafc; position: sticky; top: 0;
+    }
+    .qitem {
+      padding: 10px 16px; border-bottom: 1px solid #f1f5f9;
+      cursor: pointer; display: flex; align-items: center; gap: 8px;
+      font-size: 14px;
+    }
+    .qitem:hover { background: #f1f5f9; }
+    .qitem.active { background: #dbeafe; font-weight: 600; }
+    .qitem .num { flex: 1; }
+    .qitem .badge {
+      font-size: 11px; padding: 2px 6px; border-radius: 4px;
+      background: #e2e8f0; color: #475569;
+    }
+    .qitem .badge.pending { background: #fef3c7; color: #92400e; }
+    .qitem .badge.auto    { background: #d1fae5; color: #065f46; }
+    .qitem .badge.manual  { background: #ddd6fe; color: #5b21b6; }
+    .qitem .badge.skipped { background: #e2e8f0; color: #64748b; }
+
+    /* 메인 영역 */
+    #main { display: flex; flex-direction: column; overflow: hidden; padding: 16px; gap: 12px; }
+    #title {
+      font-size: 18px; font-weight: 600;
+      display: flex; align-items: center; gap: 12px;
+    }
+    #title .meta { font-size: 13px; color: #64748b; font-weight: 400; }
+    #empty { padding: 60px; text-align: center; color: #94a3b8; }
+
+    #compare {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+      flex: 1; min-height: 0;
+    }
+    .panel {
+      background: #fff; border: 1px solid #e2e8f0; border-radius: 8px;
+      display: flex; flex-direction: column; overflow: hidden;
+    }
+    .panel-head {
+      padding: 8px 12px; border-bottom: 1px solid #e2e8f0;
+      font-size: 13px; font-weight: 600; color: #475569;
+      background: #f8fafc;
+    }
+    .panel-body {
+      flex: 1; min-height: 0; overflow: auto;
+      display: flex; align-items: center; justify-content: center;
+      background: #fafafa; position: relative;
+    }
+    .panel-body img { max-width: 100%; max-height: 100%; display: block; }
+
+    /* 수동 드래그 캔버스 */
+    #drag-wrap { position: relative; }
+    #drag-canvas {
+      position: absolute; top: 0; left: 0;
+      width: 100%; height: 100%;
+      cursor: crosshair;
+    }
+
+    /* 버튼 그룹 */
+    #actions {
+      display: flex; gap: 8px; padding: 8px 0;
+      border-top: 1px solid #e2e8f0;
+    }
+    button {
+      padding: 8px 16px; border-radius: 6px; border: 1px solid #cbd5e1;
+      background: #fff; cursor: pointer; font-size: 14px; font-weight: 500;
+    }
+    button:hover { background: #f1f5f9; }
+    button:disabled { opacity: 0.4; cursor: not-allowed; }
+    button.primary { background: #2563eb; color: #fff; border-color: #2563eb; }
+    button.primary:hover { background: #1d4ed8; }
+    button.manual { background: #7c3aed; color: #fff; border-color: #7c3aed; }
+    button.manual:hover { background: #6d28d9; }
+    button.skip { background: #f1f5f9; color: #475569; }
+
+    #status {
+      padding: 8px 12px; background: #f8fafc; border-radius: 6px;
+      font-size: 13px; color: #475569; min-height: 32px;
+    }
+    #status.err { background: #fee2e2; color: #991b1b; }
+    #status.ok  { background: #d1fae5; color: #065f46; }
+  </style>
+</head>
+<body>
+  <div id="topbar">
+    <a href="/matrix">← 작업 매트릭스</a>
+    <h1>그림 수동 검수</h1>
+    <span class="spacer"></span>
+    <span class="key" id="keylabel"></span>
+  </div>
+  <div id="layout">
+    <aside id="queue">
+      <h2>검수 대기</h2>
+      <div id="qlist"></div>
+    </aside>
+    <main id="main">
+      <div id="empty">왼쪽에서 문제 번호를 선택하세요.</div>
+      <div id="title" style="display:none">
+        <span id="prob-no"></span>
+        <span class="meta" id="prob-meta"></span>
+      </div>
+      <div id="compare" style="display:none">
+        <div class="panel">
+          <div class="panel-head">자동 결과 (현재 추출 영역 — 빨간 박스)</div>
+          <div class="panel-body">
+            <img id="auto-img" alt="자동 결과" />
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-head">수동 드래그 (영역을 마우스로 그리세요)</div>
+          <div class="panel-body" id="drag-body">
+            <div id="drag-wrap">
+              <img id="drag-img" alt="원본 크롭" />
+              <canvas id="drag-canvas"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div id="actions" style="display:none">
+        <button class="primary" id="btn-auto">자동 선택</button>
+        <button class="manual"  id="btn-manual" disabled>수동 영역 적용</button>
+        <button class="skip"    id="btn-skip">건너뛰기</button>
+        <span style="flex:1"></span>
+        <span id="status"></span>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    // /figure/{key} 경로 → key 추출
+    const PATH = location.pathname.replace(/\/+$/, "");
+    const KEY = PATH.split("/").pop();
+    document.getElementById("keylabel").textContent = KEY;
+
+    let queue = [];
+    let current = null;
+    let dragBox = null;  // {x0%, y0%, x1%, y1%}
+    let imgNaturalSize = { w: 0, h: 0 };
+
+    async function loadQueue() {
+      const r = await fetch(`/api/figure/${KEY}/queue`);
+      if (!r.ok) {
+        renderError("큐 로드 실패: " + r.status);
+        return;
+      }
+      const j = await r.json();
+      queue = j.items || [];
+      renderQueue();
+    }
+
+    function renderQueue() {
+      const list = document.getElementById("qlist");
+      if (!queue.length) {
+        list.innerHTML = '<div style="padding:20px;color:#94a3b8;font-size:13px;text-align:center">큐가 비어 있습니다.</div>';
+        return;
+      }
+      list.innerHTML = queue.map(q => {
+        const st = q.status || "pending";
+        const badge = {
+          pending: '<span class="badge pending">대기</span>',
+          auto_selected: '<span class="badge auto">자동</span>',
+          manual_selected: '<span class="badge manual">수동</span>',
+          skipped: '<span class="badge skipped">스킵</span>',
+        }[st] || `<span class="badge">${st}</span>`;
+        const active = (current && current.prob_no === q.prob_no) ? " active" : "";
+        return `<div class="qitem${active}" data-prob="${q.prob_no}">
+          <span class="num">${q.prob_no}번</span>${badge}
+        </div>`;
+      }).join("");
+      list.querySelectorAll(".qitem").forEach(el => {
+        el.addEventListener("click", () => selectProblem(el.dataset.prob));
+      });
+    }
+
+    function selectProblem(probNo) {
+      current = queue.find(q => q.prob_no === probNo);
+      if (!current) return;
+      dragBox = null;
+      document.getElementById("empty").style.display = "none";
+      document.getElementById("title").style.display = "flex";
+      document.getElementById("compare").style.display = "grid";
+      document.getElementById("actions").style.display = "flex";
+      document.getElementById("prob-no").textContent = current.prob_no + "번";
+      const conf = current.confidence != null
+        ? `신뢰도 ${current.confidence.toFixed(2)} · ${current.strategy || "?"}`
+        : "자동 추출 실패";
+      const page = current.page_no != null ? ` · p.${current.page_no + 1}` : "";
+      document.getElementById("prob-meta").textContent = `(${conf}${page})`;
+      const cacheBuster = Date.now();
+      document.getElementById("auto-img").src =
+        `/api/figure/${KEY}/${probNo}/image?which=crop&overlay=true&t=${cacheBuster}`;
+      const dragImg = document.getElementById("drag-img");
+      dragImg.src = `/api/figure/${KEY}/${probNo}/image?which=crop&t=${cacheBuster}`;
+      dragImg.onload = setupCanvas;
+      document.getElementById("btn-manual").disabled = true;
+      setStatus("");
+      renderQueue();
+    }
+
+    function setupCanvas() {
+      const img = document.getElementById("drag-img");
+      const canvas = document.getElementById("drag-canvas");
+      imgNaturalSize = { w: img.naturalWidth, h: img.naturalHeight };
+      // wrap을 자연 크기에 맞춰 조절 + canvas도 같은 크기
+      const wrap = document.getElementById("drag-wrap");
+      wrap.style.width = img.clientWidth + "px";
+      wrap.style.height = img.clientHeight + "px";
+      canvas.width = img.clientWidth;
+      canvas.height = img.clientHeight;
+      drawBox();
+    }
+
+    // 드래그 처리
+    let dragStart = null;
+    const canvas = document.getElementById("drag-canvas");
+    canvas.addEventListener("mousedown", e => {
+      const rect = canvas.getBoundingClientRect();
+      dragStart = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    });
+    canvas.addEventListener("mousemove", e => {
+      if (!dragStart) return;
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      const x0 = Math.min(dragStart.x, x);
+      const y0 = Math.min(dragStart.y, y);
+      const x1 = Math.max(dragStart.x, x);
+      const y1 = Math.max(dragStart.y, y);
+      const w = canvas.width, h = canvas.height;
+      dragBox = {
+        x0: x0 / w * 100, y0: y0 / h * 100,
+        x1: x1 / w * 100, y1: y1 / h * 100,
+      };
+      drawBox();
+    });
+    canvas.addEventListener("mouseup", () => {
+      dragStart = null;
+      if (dragBox && (dragBox.x1 - dragBox.x0) > 1 && (dragBox.y1 - dragBox.y0) > 1) {
+        document.getElementById("btn-manual").disabled = false;
+      }
+    });
+    window.addEventListener("resize", () => {
+      if (current) setupCanvas();
+    });
+
+    function drawBox() {
+      const ctx = canvas.getContext("2d");
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      if (!dragBox) return;
+      const w = canvas.width, h = canvas.height;
+      const x0 = dragBox.x0 / 100 * w;
+      const y0 = dragBox.y0 / 100 * h;
+      const x1 = dragBox.x1 / 100 * w;
+      const y1 = dragBox.y1 / 100 * h;
+      ctx.strokeStyle = "#7c3aed";
+      ctx.lineWidth = 3;
+      ctx.fillStyle = "rgba(124, 58, 237, 0.15)";
+      ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
+      ctx.strokeRect(x0, y0, x1 - x0, y1 - y0);
+    }
+
+    async function decide(action, bboxPct) {
+      if (!current) return;
+      const body = { action };
+      if (bboxPct) body.bbox_pct = bboxPct;
+      const r = await fetch(`/api/figure/${KEY}/${current.prob_no}/decision`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!r.ok) {
+        const txt = await r.text().catch(() => "");
+        setStatus("실패: " + r.status + " " + txt, true);
+        return;
+      }
+      const j = await r.json();
+      setStatus(`${current.prob_no}번 → ${j.status}`, false, true);
+      current.status = j.status;
+      // 다음 pending으로 자동 이동
+      const idx = queue.findIndex(q => q.prob_no === current.prob_no);
+      const next = queue.slice(idx + 1).find(q => (q.status || "pending") === "pending");
+      if (next) selectProblem(next.prob_no);
+      else renderQueue();
+    }
+
+    document.getElementById("btn-auto").addEventListener("click", () => decide("auto", null));
+    document.getElementById("btn-skip").addEventListener("click", () => decide("skip", null));
+    document.getElementById("btn-manual").addEventListener("click", () => {
+      if (!dragBox) return;
+      decide("manual", [dragBox.x0, dragBox.y0, dragBox.x1, dragBox.y1]);
+    });
+
+    function setStatus(msg, isErr, isOk) {
+      const el = document.getElementById("status");
+      el.textContent = msg;
+      el.classList.remove("err", "ok");
+      if (isErr) el.classList.add("err");
+      if (isOk) el.classList.add("ok");
+    }
+
+    function renderError(msg) {
+      document.getElementById("qlist").innerHTML =
+        `<div style="padding:20px;color:#dc2626;font-size:13px">${msg}</div>`;
+    }
+
+    loadQueue();
+  </script>
+</body>
+</html>

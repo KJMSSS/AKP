@@ -51,8 +51,11 @@ _UPLOADS_DIR   = _DATA_DIR / "uploads"
 _UPLOADS_DIR.mkdir(exist_ok=True, parents=True)
 
 _MANUAL_STAGES = {"hangeul", "typer", "solution"}
+_FIGQ_DIR      = _DATA_DIR / "figure_queue"
+_FIGQ_DIR.mkdir(exist_ok=True, parents=True)
 _config_lock   = threading.Lock()
 _registry_lock = threading.Lock()
+_figq_lock     = threading.Lock()
 
 _DEFAULT_SUBJECTS = [
     {"id": "공수1", "name": "공통수학1", "grade": "1", "sem": "1"},
@@ -98,6 +101,44 @@ def _load_registry() -> dict:
 def _save_registry(reg: dict) -> None:
     with _registry_lock:
         _REGISTRY_FILE.write_text(json.dumps(reg, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def _figq_key_dir(key: str) -> Path:
+    """검증된 key에 대한 큐 디렉토리. _validate_safe_key 통과 후에만 호출."""
+    return _FIGQ_DIR / key
+
+def _figq_load(key: str) -> dict:
+    """{key}/items.json 로드. 없으면 빈 dict."""
+    f = _figq_key_dir(key) / "items.json"
+    if not f.exists():
+        return {"items": {}}
+    try:
+        with _figq_lock:
+            return json.loads(f.read_text(encoding="utf-8"))
+    except Exception:
+        return {"items": {}}
+
+def _figq_save(key: str, data: dict) -> None:
+    d = _figq_key_dir(key)
+    d.mkdir(parents=True, exist_ok=True)
+    with _figq_lock:
+        (d / "items.json").write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+
+def _figq_clamp_bbox_pct(bbox: list) -> tuple[float, float, float, float]:
+    """[x0,y0,x1,y1] % 값을 0~100으로 클램프 + 정렬."""
+    if not isinstance(bbox, list) or len(bbox) != 4:
+        raise HTTPException(400, "bbox는 [x0,y0,x1,y1] %  배열이어야 합니다.")
+    try:
+        vals = [float(v) for v in bbox]
+    except (TypeError, ValueError):
+        raise HTTPException(400, "bbox 값이 숫자가 아닙니다.")
+    x0 = max(0.0, min(100.0, vals[0]));  y0 = max(0.0, min(100.0, vals[1]))
+    x1 = max(0.0, min(100.0, vals[2]));  y1 = max(0.0, min(100.0, vals[3]))
+    if x1 < x0: x0, x1 = x1, x0
+    if y1 < y0: y0, y1 = y1, y0
+    if (x1 - x0) < 1.0 or (y1 - y0) < 1.0:
+        raise HTTPException(400, "bbox 영역이 너무 작습니다.")
+    return (x0, y0, x1, y1)
 
 sys.path.insert(0, str(_ROOT))
 
@@ -660,6 +701,148 @@ async def pipeline_typer_generate(key: str, request: Request):
     reg[key] = entry
     _save_registry(reg)
     return JSONResponse({"ok": True, "filename": out_path.name})
+
+
+# ══════════════════════════════════════════════════════════════════════
+# 그림 수동 검수 큐 (P1+P2: extract_with_confidence 미달 → 수동 드래그)
+# ══════════════════════════════════════════════════════════════════════
+
+@app.get("/figure/{key}", response_class=HTMLResponse)
+async def figure_crop_page(key: str, request: Request):
+    _require_login(request)
+    _validate_safe_key(key)
+    html = (_HERE / "static" / "figure_crop.html").read_text(encoding="utf-8")
+    return HTMLResponse(html)
+
+
+@app.get("/api/figure/{key}/queue")
+async def api_figure_queue(key: str, request: Request):
+    """수동 검수 대기 그림 목록."""
+    _require_login(request)
+    _validate_safe_key(key)
+    data = _figq_load(key)
+    items = data.get("items", {})
+    queue = []
+    for prob_no, e in sorted(items.items(), key=lambda x: int(x[0]) if x[0].isdigit() else 999):
+        queue.append({
+            "prob_no":        prob_no,
+            "page_no":        e.get("page_no"),
+            "status":         e.get("status", "pending"),
+            "strategy":       e.get("strategy"),
+            "confidence":     e.get("confidence"),
+            "auto_bbox_pct":  e.get("auto_bbox_pct"),
+        })
+    return JSONResponse({"items": queue})
+
+
+@app.get("/api/figure/{key}/{prob_no}/image")
+async def api_figure_image(
+    key: str, prob_no: str, request: Request,
+    which: str = "crop", overlay: bool = False,
+):
+    """그림 검수용 이미지 응답.
+
+    which: "crop"=문제 크롭, "auto"=자동 결과, "manual"=수동 결과
+    overlay: True+which=crop이면 auto_bbox_pct를 빨간 박스로 오버레이
+    """
+    _require_login(request)
+    _validate_safe_key(key)
+    if which not in ("crop", "auto", "manual"):
+        raise HTTPException(400, "which는 crop|auto|manual")
+
+    data = _figq_load(key)
+    entry = data.get("items", {}).get(prob_no)
+    if not entry:
+        raise HTTPException(404, f"{prob_no}번 그림 큐 없음")
+
+    path_key = {"crop": "crop_path", "auto": "auto_path", "manual": "manual_path"}[which]
+    raw_path = entry.get(path_key)
+    if not raw_path:
+        raise HTTPException(404, f"{which} 이미지 없음")
+
+    src = Path(raw_path)
+    if not src.exists():
+        raise HTTPException(404, f"파일 없음: {src.name}")
+
+    if not overlay or which != "crop":
+        return FileResponse(str(src), media_type="image/png")
+
+    bbox_pct = entry.get("auto_bbox_pct")
+    if not bbox_pct:
+        return FileResponse(str(src), media_type="image/png")
+
+    from PIL import Image as PILImage, ImageDraw
+    img = PILImage.open(src).convert("RGB")
+    W, H = img.size
+    x0 = int(W * bbox_pct[0] / 100);  y0 = int(H * bbox_pct[1] / 100)
+    x1 = int(W * bbox_pct[2] / 100);  y1 = int(H * bbox_pct[3] / 100)
+    draw = ImageDraw.Draw(img)
+    draw.rectangle((x0, y0, x1, y1), outline="red", width=4)
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    buf.seek(0)
+    return StreamingResponse(buf, media_type="image/png")
+
+
+@app.post("/api/figure/{key}/{prob_no}/decision")
+async def api_figure_decision(key: str, prob_no: str, request: Request):
+    """검수 결정. body: {action: "auto"|"manual"|"skip", bbox_pct?: [x0,y0,x1,y1]}
+
+    - auto:  자동 결과 채택 (auto_path가 최종 path)
+    - manual: bbox_pct 필수, 큐 디렉토리에 manual_path 생성
+    - skip:  건너뜀 (그림 없음으로 처리)
+    """
+    _require_login(request)
+    _validate_safe_key(key)
+
+    try:
+        body = await request.json()
+    except Exception:
+        raise HTTPException(400, "JSON 본문 필요")
+    action = body.get("action")
+    if action not in ("auto", "manual", "skip"):
+        raise HTTPException(400, "action은 auto|manual|skip")
+
+    data = _figq_load(key)
+    entry = data.get("items", {}).get(prob_no)
+    if not entry:
+        raise HTTPException(404, f"{prob_no}번 그림 큐 없음")
+
+    if action == "manual":
+        bbox_pct = _figq_clamp_bbox_pct(body.get("bbox_pct") or [])
+        crop_path = entry.get("crop_path")
+        if not crop_path or not Path(crop_path).exists():
+            raise HTTPException(404, "원본 크롭 파일 없음")
+
+        from PIL import Image as PILImage
+        img = PILImage.open(crop_path)
+        W, H = img.size
+        x0 = int(W * bbox_pct[0] / 100);  y0 = int(H * bbox_pct[1] / 100)
+        x1 = int(W * bbox_pct[2] / 100);  y1 = int(H * bbox_pct[3] / 100)
+        if (x1 - x0) < 4 or (y1 - y0) < 4:
+            raise HTTPException(400, "픽셀 영역이 너무 작습니다.")
+
+        out_dir = _figq_key_dir(key)
+        out_dir.mkdir(parents=True, exist_ok=True)
+        manual_path = out_dir / f"{prob_no}_manual.png"
+        img.crop((x0, y0, x1, y1)).save(str(manual_path))
+
+        # last-wins: 동시 요청 시 마지막 호출이 덮어쓴다 (로그만 남김)
+        prev_status = entry.get("status")
+        if prev_status and prev_status != "pending":
+            print(f"  [figq] {key}/{prob_no} 상태 덮어쓰기: {prev_status} → manual_selected")
+
+        entry["manual_bbox_pct"] = list(bbox_pct)
+        entry["manual_path"] = str(manual_path)
+        entry["status"] = "manual_selected"
+    else:
+        # auto / skip 모두 last-wins 단순 갱신
+        entry["status"] = "auto_selected" if action == "auto" else "skipped"
+
+    entry["updated_at"] = datetime.now().isoformat(timespec="seconds")
+    data.setdefault("items", {})[prob_no] = entry
+    _figq_save(key, data)
+    return JSONResponse({"ok": True, "status": entry["status"]})
 
 
 # ══════════════════════════════════════════════════════════════════════
