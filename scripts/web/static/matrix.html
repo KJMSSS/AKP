@@ -434,6 +434,34 @@ body {
 .pdf-name-row { font-size: 0.72rem; color: #64748b; margin-top: 3px;
   word-break: break-all; line-height: 1.3; }
 
+/* ── 일괄 학교 추가 모달 ───────────────────────────────── */
+#bulk-school-modal {
+  display: none; position: fixed; inset: 0;
+  background: rgba(15,23,42,.65); z-index: 500;
+  align-items: center; justify-content: center;
+}
+#bulk-school-modal.open { display: flex; }
+#bulk-school-box {
+  background: #fff; border-radius: 12px; padding: 24px;
+  max-width: 440px; width: 92%; box-shadow: 0 8px 32px rgba(0,0,0,.25);
+  display: flex; flex-direction: column; gap: 14px;
+}
+#bulk-school-box h3 { font-size: 1rem; color: #1e293b; }
+#bulk-school-box .hint { font-size: 0.82rem; color: #64748b; }
+#bulk-school-textarea {
+  width: 100%; height: 180px; resize: vertical;
+  border: 1.5px solid #cbd5e1; border-radius: 8px;
+  padding: 10px 12px; font-size: 0.88rem; font-family: inherit;
+  line-height: 1.6; outline: none;
+}
+#bulk-school-textarea:focus { border-color: #0d6efd; }
+#bulk-school-result { font-size: 0.82rem; color: #475569; min-height: 20px; }
+.bulk-modal-btns { display: flex; gap: 10px; justify-content: flex-end; }
+.bulk-modal-btns button { padding: 8px 20px; border-radius: 6px; border: none; cursor: pointer; font-size: 0.9rem; }
+#btn-bulk-confirm { background: #2563eb; color: #fff; }
+#btn-bulk-confirm:disabled { background: #93c5fd; cursor: not-allowed; }
+#btn-bulk-cancel  { background: #f1f5f9; color: #475569; }
+
 /* ── 잡 이동 모달 ──────────────────────────────────────── */
 #move-modal {
   display: none; position: fixed; inset: 0;
@@ -477,6 +505,20 @@ body {
 <body>
 
 <div id="toast-container"></div>
+
+<!-- 일괄 학교 추가 모달 -->
+<div id="bulk-school-modal">
+  <div id="bulk-school-box">
+    <h3>학교 일괄 추가</h3>
+    <p class="hint">학교명을 한 줄에 하나씩 입력하세요.</p>
+    <textarea id="bulk-school-textarea" placeholder="경신여고&#10;동성고&#10;서강고&#10;광주제일고&#10;..."></textarea>
+    <div id="bulk-school-result"></div>
+    <div class="bulk-modal-btns">
+      <button id="btn-bulk-cancel">취소</button>
+      <button id="btn-bulk-confirm">추가</button>
+    </div>
+  </div>
+</div>
 
 <!-- 잡 이동 모달 -->
 <div id="move-modal">
@@ -602,6 +644,7 @@ body {
 <div id="main">
   <div id="add-school-row">
     <button id="add-school-btn">+ 학교 추가</button>
+    <button id="bulk-school-btn" style="padding:7px 16px;font-size:0.85rem;color:#495057;border:1px dashed #ced4da;border-radius:6px;background:transparent;cursor:pointer;transition:all 0.15s;" onmouseover="this.style.background='#f8f9fa'" onmouseout="this.style.background='transparent'">목록으로 추가</button>
     <div id="school-input-wrap">
       <input type="text" id="new-school-input" placeholder="학교명 입력 후 Enter">
       <button class="btn-sm btn-primary" id="school-confirm-btn">추가</button>
@@ -1683,6 +1726,56 @@ function subscribeSSE(registryKey, jobId) {
     showToast(`변환 실패: ${keyToSchool(registryKey)} — ${msg}`, 'err');
   });
 }
+
+$('bulk-school-btn').addEventListener('click', () => {
+  $('bulk-school-textarea').value = '';
+  $('bulk-school-result').textContent = '';
+  $('btn-bulk-confirm').disabled = false;
+  $('bulk-school-modal').classList.add('open');
+  $('bulk-school-textarea').focus();
+});
+
+$('btn-bulk-cancel').addEventListener('click', () => {
+  $('bulk-school-modal').classList.remove('open');
+});
+
+$('btn-bulk-confirm').addEventListener('click', async () => {
+  const lines = $('bulk-school-textarea').value
+    .split('\n')
+    .map(l => l.trim())
+    .filter(Boolean);
+  if (!lines.length) return;
+
+  $('btn-bulk-confirm').disabled = true;
+  $('bulk-school-result').textContent = '추가 중...';
+  try {
+    const res = await apiFetch('/api/config/schools/bulk', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ names: lines }),
+    });
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      throw new Error(d.detail || `HTTP ${res.status}`);
+    }
+    const data = await res.json();
+    const msg = data.added.length
+      ? `${data.added.length}개 추가됨` + (data.skipped.length ? ` (이미 있음: ${data.skipped.length}개)` : '')
+      : `모두 이미 등록된 학교입니다.`;
+    $('bulk-school-result').textContent = msg;
+    await loadConfig();
+    renderSubjectTabs();
+    renderMatrix();
+    showToast(msg, data.added.length ? 'ok' : 'warn');
+    setTimeout(() => $('bulk-school-modal').classList.remove('open'), 1200);
+  } catch(e) {
+    if (e.message !== 'unauthenticated') {
+      $('bulk-school-result').textContent = '오류: ' + e.message;
+      showToast('일괄 추가 실패: ' + e.message, 'err');
+    }
+    $('btn-bulk-confirm').disabled = false;
+  }
+});
 
 $('add-school-btn').addEventListener('click', () => {
   $('add-school-btn').style.display = 'none';

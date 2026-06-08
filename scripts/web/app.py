@@ -1043,6 +1043,25 @@ async def api_add_school(request: Request):
     return JSONResponse({"ok": True, "name": name})
 
 
+@app.post("/api/config/schools/bulk")
+async def api_bulk_add_schools(request: Request):
+    _require_login(request)
+    body  = await request.json()
+    names = [n.strip() for n in body.get("names", []) if n.strip()]
+    if not names:
+        raise HTTPException(400, "학교명을 입력하세요.")
+    cfg   = _load_mconfig()
+    added, skipped = [], []
+    for name in names:
+        if name not in cfg["schools"]:
+            cfg["schools"].append(name)
+            added.append(name)
+        else:
+            skipped.append(name)
+    _save_mconfig(cfg)
+    return JSONResponse({"ok": True, "added": added, "skipped": skipped})
+
+
 @app.delete("/api/config/schools/{school:path}")
 async def api_delete_school(school: str, request: Request):
     _require_login(request)
