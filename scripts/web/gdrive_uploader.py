@@ -110,9 +110,14 @@ def delete_file(file_id: str) -> bool:
         return False
 
 
-def upload_hwpx(hwpx_path: Path, year: str, subject: str) -> str | None:
+def upload_file(
+    file_path: Path,
+    year: str,
+    subject: str,
+    content_type: str = "application/octet-stream",
+) -> str | None:
     """
-    HWPX를 AKP/{year}/{subject}/ 에 업로드.
+    임의 파일을 AKP/{year}/{subject}/ 에 업로드.
     성공 시 Drive 파일 ID, 실패·미설정 시 None.
     """
     token = _get_access_token()
@@ -123,8 +128,8 @@ def upload_hwpx(hwpx_path: Path, year: str, subject: str) -> str | None:
         year_id    = _find_or_create_folder(token, year,    _AKP_FOLDER_ID)
         subject_id = _find_or_create_folder(token, subject, year_id)
 
-        meta    = json.dumps({"name": hwpx_path.name, "parents": [subject_id]}).encode()
-        content = hwpx_path.read_bytes()
+        meta    = json.dumps({"name": file_path.name, "parents": [subject_id]}).encode()
+        content = file_path.read_bytes()
         boundary = b"----GDriveBoundary"
 
         body = (
@@ -132,7 +137,7 @@ def upload_hwpx(hwpx_path: Path, year: str, subject: str) -> str | None:
             b"Content-Type: application/json; charset=UTF-8\r\n\r\n"
             + meta + b"\r\n"
             b"--" + boundary + b"\r\n"
-            b"Content-Type: application/zip\r\n\r\n"
+            b"Content-Type: " + content_type.encode() + b"\r\n\r\n"
             + content + b"\r\n"
             b"--" + boundary + b"--"
         )
@@ -145,7 +150,7 @@ def upload_hwpx(hwpx_path: Path, year: str, subject: str) -> str | None:
             },
             params={"uploadType": "multipart"},
             content=body,
-            timeout=60,
+            timeout=120,
         )
         if r.status_code in (200, 201):
             return r.json().get("id")
@@ -153,3 +158,13 @@ def upload_hwpx(hwpx_path: Path, year: str, subject: str) -> str | None:
 
     except Exception:
         return None
+
+
+def upload_hwpx(hwpx_path: Path, year: str, subject: str) -> str | None:
+    """HWPX를 AKP/{year}/{subject}/ 에 업로드. 성공 시 Drive 파일 ID."""
+    return upload_file(hwpx_path, year, subject, "application/zip")
+
+
+def upload_pdf(pdf_path: Path, year: str, subject: str) -> str | None:
+    """(회전 보정된) PDF를 AKP/{year}/{subject}/ 에 업로드. 성공 시 Drive 파일 ID."""
+    return upload_file(pdf_path, year, subject, "application/pdf")

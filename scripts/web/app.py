@@ -19,6 +19,7 @@ import io
 import json
 import os
 import queue
+import shutil
 import re
 import sys
 import threading
@@ -176,7 +177,7 @@ from scripts.web.users import (                                     # noqa: E402
     user_today_cost, ADMIN_EMAIL,
 )
 from scripts.web.gdrive_uploader import (                           # noqa: E402
-    save_refresh_token, upload_hwpx, delete_file as drive_delete_file,
+    save_refresh_token, upload_hwpx, upload_pdf, delete_file as drive_delete_file,
     is_configured, TOKEN_FILE,
 )
 
@@ -1467,7 +1468,10 @@ def _run_conversion(
     t0          = time.time()
 
     try:
+        # ★ 0순위: PDF 방향 보정 (메타 회전 + 내용 기반 OSD) — 모든 OCR의 전제
+        _orig_pdf_path = pdf_path
         pdf_path = normalize_pdf_rotation(pdf_path)
+        _pdf_rotated = (pdf_path != _orig_pdf_path)
 
         guard = CostGuard(cap_usd=DAILY_CAP_USD)
         guard.check_or_raise("web")
@@ -1607,6 +1611,19 @@ def _run_conversion(
                         print("  [Drive] 업로드 실패 (계속 진행)")
                 except Exception as _e:
                     print(f"  [Drive] 업로드 오류 (무시): {_e}")
+
+                # ★ 회전 보정된 PDF도 Drive에 저장 (학원장 요구: 올바른 방향 PDF 보관)
+                if _pdf_rotated and pdf_path.exists():
+                    try:
+                        _pdf_drive_name = f"{Path(custom_filename).stem}_정방향.pdf"
+                        _fixed_for_drive = pdf_path.with_name(_pdf_drive_name)
+                        shutil.copyfile(pdf_path, _fixed_for_drive)
+                        if upload_pdf(_fixed_for_drive, _year, _subj):
+                            print(f"  [Drive] AKP/{_year}/{_subj}/{_pdf_drive_name} (보정 PDF) 저장 완료")
+                        elif is_configured():
+                            print("  [Drive] 보정 PDF 업로드 실패 (계속 진행)")
+                    except Exception as _pe:
+                        print(f"  [Drive] 보정 PDF 업로드 오류 (무시): {_pe}")
 
         print("  [검수] 문제 파싱 및 검수 데이터 저장 중...")
         _save_review_data(job_id, original_name, md, n_pages, custom_filename, _drive_file_id)
