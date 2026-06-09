@@ -29,5 +29,10 @@
     "claude_pdf": 0.093897,
     "latex_corrector": 0.020213,
     "web": 0.1141
+  },
+  "2026-06-10": {
+    "claude_pdf": 0.094782,
+    "latex_corrector": 0.02091,
+    "web": 0.1157
   }
 }
