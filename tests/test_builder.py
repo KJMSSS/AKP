@@ -93,13 +93,14 @@ class TestLatexToHwp:
         assert convert(r"\Sigma") == "SIGMA"
 
     def test_leq(self):
-        assert convert(r"\leq") == "<="
+        # ss.hwp 통일표: \leq → le (수식 편집기에서 ≤ 렌더)
+        assert convert(r"\leq") == "le"
 
     def test_geq(self):
-        assert convert(r"\geq") == ">="
+        assert convert(r"\geq") == "ge"
 
     def test_neq(self):
-        assert convert(r"\neq") == "<>"
+        assert convert(r"\neq") == "ne"
 
     def test_times(self):
         assert convert(r"\times") == "times"
@@ -111,7 +112,8 @@ class TestLatexToHwp:
         assert convert(r"\infty") == "inf"
 
     def test_to_arrow(self):
-        assert convert(r"\to") == "->"
+        # ss.hwp: 화살표 양옆에 간격(backtick) 포함
+        assert convert(r"\to") == "``->``"
 
     def test_passthrough_power(self):
         # x^{2} 는 HWP에서도 동일 문법
@@ -129,28 +131,30 @@ class TestLatexToHwp:
         assert "x^{2}" in result
 
     def test_left_right_to_delimiters(self):
+        # ss.hwp: \left(…\right) → LEFT (…RIGHT ) 크기 자동조절 괄호
         result = convert(r"\left( x+1 \right)")
         assert "\\left" not in result
         assert "\\right" not in result
-        assert result == "( x+1 )"
+        assert result == "LEFT ( x+1 RIGHT )"
 
     def test_left_brace(self):
         result = convert(r"\left\{ a_n \right\}")
-        assert result == "{ a_n }"
+        assert result == "LEFT { a_n RIGHT }"
 
     def test_left_abs(self):
         result = convert(r"\left| x \right|")
-        assert result == "| x |"
+        assert result == "LEFT | x RIGHT |"
 
     def test_left_dot_removed(self):
+        # \left. → 빈 여는 구분자, \right. → RIGHT . (소문자 left/right 미잔존)
         result = convert(r"c\left(\frac{a}{b}\right.")
         assert "left" not in result
         assert "right" not in result
-        assert result == "c({a} over {b}"  # \right. → empty (no closing delimiter)
+        assert result == "cLEFT ({a} over {b} RIGHT ."
 
     def test_left_bracket(self):
         result = convert(r"\left[ x \right]")
-        assert result == "[ x ]"
+        assert result == "LEFT [ x RIGHT ]"
 
     def test_text_unwrapped(self):
         result = convert(r"\text{단위}")
@@ -187,11 +191,12 @@ class TestLatexToHwp:
 
     # ── 집합 / 확통 패턴 ───────────────────────────────────────────
 
-    def test_cap_uppercase(self):
-        assert convert(r"A \cap B") == "A CAP B"
+    def test_cap_lowercase(self):
+        # ss.hwp: \cap → cap (소문자, 수식 편집기에서 ∩ 렌더)
+        assert convert(r"A \cap B") == "A cap B"
 
-    def test_cup_uppercase(self):
-        assert convert(r"A \cup B") == "A CUP B"
+    def test_cup_lowercase(self):
+        assert convert(r"A \cup B") == "A cup B"
 
     def test_cdots_keyword(self):
         assert convert(r"\cdots") == "CDOTS"
@@ -204,8 +209,13 @@ class TestLatexToHwp:
     def test_bullet(self):
         assert convert(r"\bullet") == "bullet"
 
-    def test_degree_circ(self):
-        assert convert(r"\circ") == "DEG"
+    def test_circ_composition(self):
+        # ss.hwp: \circ 는 합성함수 기호 → CIRC (각도 °가 아님)
+        assert convert(r"\circ") == "CIRC"
+
+    def test_degree_superscript(self):
+        # 각도는 ^{\circ} 형태 → DEG (convert에서 우선 처리)
+        assert convert(r"60^{\circ}") == "60DEG"
 
     def test_degree_keyword(self):
         assert convert(r"90\degree") == "90DEG"
