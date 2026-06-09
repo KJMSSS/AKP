@@ -149,7 +149,10 @@ from src.text_only.text_builder import build_from_markdown           # noqa: E40
 from src.text_only.typer_builder import build_typer_hwpx             # noqa: E402
 from src.text_only.ocr_fallback import apply_fallback               # noqa: E402
 from src.text_only.problem_segmenter import parse_problems, rebuild_markdown  # noqa: E402
-from src.common.image_extractor import extract_images, extract_figures_by_vision  # noqa: E402
+from src.common.image_extractor import (                            # noqa: E402
+    extract_images, extract_figures_by_vision,
+    crop_problems_by_bbox, extract_with_confidence, FigureCandidate,
+)
 from src.common.hwpx_image_inserter import insert_figure_placeholder  # noqa: E402
 from src.common.hwpx_table_inserter import (                        # noqa: E402
     replace_condition_tables, replace_boilerplate_tables,
@@ -718,16 +721,30 @@ def _register_figure_queue(
     job_id: str,
     figure_items: set[str],
     figure_map: dict[str, Path],
+    prob_crop_map: dict[str, Path] | None = None,
+    conf_map: dict[str, "FigureCandidate"] | None = None,
+    threshold: float = 0.7,
 ) -> None:
     """변환 완료 직후 그림 검수 큐 자동 등록.
 
-    figure_items: Claude OCR이 마킹한 그림 문제 번호 집합
-    figure_map:   이미 추출된 {prob_no: fig_png_path}
+    figure_items:  Claude OCR이 마킹한 그림 문제 번호 집합
+    figure_map:    HWPX 삽입에 쓴 {prob_no: fig_png_path} (extract_images/vision)
+    prob_crop_map: BBoxDetector로 자른 {prob_no: 문제별_crop_png} — 검수 화면 원본
+    conf_map:      {prob_no: FigureCandidate} — extract_with_confidence 실측 결과
+    threshold:     이 값 이상이면 auto_selected, 미만이면 pending(검수 권장)
+
+    crop_path는 문제별 crop을 우선 사용하고, 없으면 첫 페이지 전체로 폴백한다.
     """
+    from PIL import Image as PILImage
+
+    prob_crop_map = prob_crop_map or {}
+    conf_map = conf_map or {}
+
     page_pngs_sorted: list[Path] = sorted(
         _TMP_DIR.glob(f"{job_id}_page*.png"),
         key=lambda p: int(re.search(r"page(\d+)", p.stem).group(1)),
     )
+    fallback_crop = str(page_pngs_sorted[0]) if page_pngs_sorted else None
 
     qdata = _figq_load(reg_key)
     items: dict = qdata.get("items", {})
@@ -737,18 +754,42 @@ def _register_figure_queue(
         if prob_no in items:
             continue  # 이미 등록된 항목은 건드리지 않음
 
-        auto_img = figure_map.get(prob_no)
-        crop_path = str(page_pngs_sorted[0]) if page_pngs_sorted else None
+        crop = prob_crop_map.get(prob_no)
+        crop_path = str(crop) if crop else fallback_crop
 
-        if auto_img and auto_img.exists():
-            strategy   = "vision" if "vision" in auto_img.name else "pymupdf"
-            confidence = 0.6 if strategy == "vision" else 0.7
-            # threshold=0.7: pymupdf 단독은 경계값이므로 "pending"으로 검수 권장
-            status     = "auto_selected" if confidence > 0.7 else "pending"
+        cand = conf_map.get(prob_no)
+        if cand is not None and crop is not None:
+            # ── 실측 신뢰도 (Tesseract×Density IoU) ──────────────────────
+            confidence = cand.confidence
+            strategy   = cand.strategy
+            auto_path  = str(cand.image_path)
+            auto_bbox_pct = None
+            try:
+                with PILImage.open(crop) as im:
+                    W, H = im.size
+                x0, y0, x1, y1 = cand.bbox
+                if W and H:
+                    auto_bbox_pct = [
+                        round(x0 / W * 100, 1), round(y0 / H * 100, 1),
+                        round(x1 / W * 100, 1), round(y1 / H * 100, 1),
+                    ]
+            except Exception:
+                pass
+            status = "auto_selected" if confidence >= threshold else "pending"
         else:
-            strategy   = "none"
-            confidence = 0.0
-            status     = "pending"
+            # ── 신뢰도 측정 불가 → figure_map 파일명 추정 폴백 ────────────
+            auto_img = figure_map.get(prob_no)
+            if auto_img and auto_img.exists():
+                strategy   = "vision" if "vision" in auto_img.name else "pymupdf"
+                confidence = 0.6 if strategy == "vision" else 0.7
+                auto_path  = str(auto_img)
+                status     = "auto_selected" if confidence > threshold else "pending"
+            else:
+                strategy   = "none"
+                confidence = 0.0
+                auto_path  = None
+                status     = "pending"
+            auto_bbox_pct = None
 
         items[prob_no] = {
             "prob_no":       prob_no,
@@ -757,8 +798,8 @@ def _register_figure_queue(
             "strategy":      strategy,
             "confidence":    confidence,
             "crop_path":     crop_path,
-            "auto_path":     str(auto_img) if auto_img else None,
-            "auto_bbox_pct": None,
+            "auto_path":     auto_path,
+            "auto_bbox_pct": auto_bbox_pct,
             "manual_path":   None,
             "created_at":    datetime.now().isoformat(timespec="seconds"),
         }
@@ -1522,12 +1563,31 @@ def _run_conversion(
             except Exception as e:
                 print(f"  [그림] {item_no}번 삽입 실패: {e}")
 
+        # ── 문제별 crop + 신뢰도 측정 (그림 마커가 있을 때만 = 추가 비용 0) ──
+        # BBoxDetector.detect_all()이 Claude API를 쓰므로 그림 문제가 있을 때만 호출.
+        prob_crop_map: dict[str, Path] = {}
+        conf_map: dict[str, FigureCandidate] = {}
+        if figure_items_from_claude:
+            try:
+                prob_crop_map = crop_problems_by_bbox(
+                    pdf_path, figure_items_from_claude, fig_dir
+                )
+                for _no, _crop in prob_crop_map.items():
+                    cand = extract_with_confidence(_crop, _no, fig_dir)
+                    if cand is not None:
+                        conf_map[_no] = cand
+            except Exception as _ce:
+                print(f"  [그림] BBox crop·신뢰도 측정 실패 (큐 폴백): {_ce}")
+
         # ── 그림 검수 큐 자동 등록 ──────────────────────────────────────
         _reg_key = Path(custom_filename).stem if custom_filename else ""
         if _reg_key and figure_items_from_claude:
             try:
                 _validate_safe_key(_reg_key)
-                _register_figure_queue(_reg_key, job_id, figure_items_from_claude, figure_map)
+                _register_figure_queue(
+                    _reg_key, job_id, figure_items_from_claude, figure_map,
+                    prob_crop_map=prob_crop_map, conf_map=conf_map,
+                )
             except HTTPException:
                 print(f"  [그림큐] 유효하지 않은 키: {_reg_key!r}")
             except Exception as _qe:

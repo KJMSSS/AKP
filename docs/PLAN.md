@@ -2,7 +2,7 @@
 
 > 한국 수학 시험지 PDF → HWPX(한글 문서) 자동 변환 파이프라인  
 > 학원 운영 도구 — 학원장이 타이퍼 양식(2단 HWPX)으로 직원에게 배포하는 것이 최종 목표  
-> 최종 수정: 2026-06-09 (그림 파이프라인 큐 자동 등록 완료)
+> 최종 수정: 2026-06-09 (그림 파이프라인 BBoxDetector 통합 — 문제별 crop·실측 신뢰도)
 
 > **핵심 방향 (2026-06-05 확정)**  
 > 중간 검수·재빌드 루프 없이 **한 번에 최고 품질**로 출력하는 것이 목표.  
@@ -254,7 +254,7 @@ PDF
 
 ---
 
-### STEP 1 — 그림 파이프라인 `진행 중` (P1+P2+E1+E2+큐연결 완료)
+### STEP 1 — 그림 파이프라인 `진행 중` (P1+P2+E1+E2+큐연결+BBox통합 완료)
 
 **목표**: PDF의 그림 영역을 자동 감지해 HWPX에 삽입 (첫 빌드에서 올바른 위치에)
 
@@ -266,22 +266,28 @@ PDF
 | **P2** | 기존 6개 추출 전략 무수정 유지, bbox 계산 헬퍼(`_bbox_iou`, `_tesseract_bbox`, `_density_bbox`)만 신규 추가 |
 | **E1** | 웹 검수 API — `GET /figure/{key}`, `GET /api/figure/{key}/queue`, `POST /api/figure/{key}/{prob_no}/decision` (auto/manual/skip + bbox %) |
 | **E2** | `figure_crop.html` — 2패널 비교 UI + Canvas 드래그 + 자동 다음 이동, PIL 빨간 박스 오버레이 |
-
-**threshold 기본값**: `0.7` (eval set으로 튜닝 필요)
-
 | **큐연결** | `_run_conversion` → `_register_figure_queue()` → `figure_queue/{key}/items.json` 자동 저장 (commit: `4b255d7`) |
+
+#### ✅ BBoxDetector 통합 (2026-06-09)
+
+| 항목 | 내용 |
+|------|------|
+| **crop 분리** | `crop_problems_by_bbox()` — BBoxDetector로 문제별 crop 생성 (`extract_figures_with_bbox_detection`에서 재사용) |
+| **신뢰도 복구** | 변환부에서 `extract_with_confidence()`를 문제별 crop에 적용 → 큐의 `confidence`/`strategy`/`auto_bbox_pct`가 실측값 |
+| **crop_path 교체** | 큐 `crop_path`가 전체 페이지 PNG → **문제별 crop**으로 교체 (검수 UI가 문제 단위로 동작) |
+| **비용 가드** | `BBoxDetector.detect_all()`은 Claude API 호출 → **그림 마커(`figure_items_from_claude`)가 있을 때만** 실행, 그림 없는 시험지는 추가 비용 0 |
 
 #### 🔲 남은 작업
 
-- **BBoxDetector 통합**: 현재 `crop_path`는 전체 페이지 PNG (임시). 문제별 crop으로 교체 시 IoU 신뢰도 정확도 향상
-- **threshold 튜닝**: 현재 pymupdf=0.7(pending), vision=0.6(pending) — eval set으로 조정 필요
-- 기준: `samples/11b/*.hwpx` 골드 18쌍의 그림 위치 참고
+- **threshold 튜닝** `보류`: 현재 IoU agreement≥0.7→auto, tesseract/density 단독=0.5→pending.
+  - 🚨 **기준이 될 골드셋이 없음** — PLAN이 가리키던 `samples/11b/*.hwpx`는 현재 리포에 부재(`samples/`엔 `template.hwpx`만).
+  - 튜닝하려면 먼저 **실제 변환물 + 정답 그림 위치**로 eval set을 구축해야 함. 그 전까지 0.7 기본값 유지.
 
 **관련 파일**:
-- `src/common/image_extractor.py` — PyMuPDF 그림 추출 + 신뢰도 기반 자동 감지
+- `src/common/image_extractor.py` — PyMuPDF 추출 + `crop_problems_by_bbox` + `extract_with_confidence`
 - `src/common/hwpx_image_inserter.py` — BinData 삽입
 - `scripts/web/static/figure_crop.html` — 수동 검수 UI
-- `scripts/web/app.py` — `/figure/` 라우트
+- `scripts/web/app.py` — `/figure/` 라우트, `_register_figure_queue`, 변환부 crop·신뢰도 연결
 
 ---
 

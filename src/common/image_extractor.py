@@ -575,24 +575,20 @@ def extract_figures_from_crops(
     return result
 
 
-def extract_figures_with_bbox_detection(
+def crop_problems_by_bbox(
     pdf_path: Path,
     problem_numbers: set[str],
     output_dir: Path,
-    api_key: str | None = None,
 ) -> dict[str, Path]:
-    """
-    BBoxDetector로 문제 위치 감지 → 문제별 크롭 → detect_figure_in_crop.
+    """BBoxDetector로 문제 위치 감지 → 문제별 크롭 PNG 생성.
 
-    스캔 PDF 전용 2단계 추출:
-      1. BBoxDetector: 페이지·컬럼·y범위 획득
-      2. 문제 크롭 PNG 생성
-      3. detect_figure_in_crop: 크롭 내 그래프/도형 bbox만 추출
+    스캔/텍스트 PDF 공통. BBoxDetector.detect_all()이 Claude API를 호출하므로
+    problem_numbers가 비어있으면 호출자가 미리 걸러 비용을 아낄 것.
 
-    problem_numbers: Claude OCR이 마킹한 그림 문제 번호 집합 {"2","9",...}
-    반환: {item_no: figure_png_path}
+    problem_numbers: 크롭할 문제 번호 집합 {"2","9",...}
+    반환: {item_no: prob_crop_png_path}  (위치 미감지 문제는 누락)
     """
-    from src.pipeline.bbox_detector import BBoxDetector, THUMB_DPI
+    from src.pipeline.bbox_detector import BBoxDetector
     from src.pipeline.crop_ocr_builder import CROP_SCALE, THUMB_SCALE
 
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -642,7 +638,26 @@ def extract_figures_with_bbox_detection(
         crop_pngs[num_str] = crop_path
 
     doc.close()
+    return crop_pngs
 
+
+def extract_figures_with_bbox_detection(
+    pdf_path: Path,
+    problem_numbers: set[str],
+    output_dir: Path,
+    api_key: str | None = None,
+) -> dict[str, Path]:
+    """
+    BBoxDetector로 문제 위치 감지 → 문제별 크롭 → detect_figure_in_crop.
+
+    스캔 PDF 전용 2단계 추출:
+      1. BBoxDetector: 페이지·컬럼·y범위 획득 (crop_problems_by_bbox)
+      2. detect_figure_in_crop: 크롭 내 그래프/도형 bbox만 추출
+
+    problem_numbers: Claude OCR이 마킹한 그림 문제 번호 집합 {"2","9",...}
+    반환: {item_no: figure_png_path}
+    """
+    crop_pngs = crop_problems_by_bbox(pdf_path, problem_numbers, output_dir)
     if not crop_pngs:
         return {}
 
