@@ -108,6 +108,30 @@ def _escape(text: str) -> str:
 
 # ── 공개 API ──────────────────────────────────────────────────────────────
 
+_BOX_WARNED: set[str] = set()
+
+
+def _box_skeleton_ok(skeleton: str, kind: str) -> bool:
+    """1×1 박스 스켈레톤 검증 — 오염된 템플릿 거부.
+
+    추출이 잘못되면 다중 셀 표(예: 6×4 답안표)가 스켈레톤으로 저장되고,
+    원본 텍스트((가)(나)(다)·①~⑤ 등)가 잔존한 채 {{CONTENT}}만 한 셀에
+    박혀 내용이 좁은 셀에서 세로로 흐른다. rowCnt/colCnt=1 + 잔존 텍스트
+    없음 + {{CONTENT}} 존재를 모두 만족해야 사용한다.
+    """
+    m = re.search(r'rowCnt="(\d+)" colCnt="(\d+)"', skeleton)
+    ok = bool(m and m.group(1) == "1" and m.group(2) == "1"
+              and '{{CONTENT}}' in skeleton)
+    if ok:
+        leftover = [t for t in re.findall(r'<hp:t[^>]*>([^<]*)</hp:t>', skeleton)
+                    if t.strip()]
+        ok = not leftover
+    if not ok and kind not in _BOX_WARNED:
+        _BOX_WARNED.add(kind)
+        print(f"  [표 템플릿] {kind} 스켈레톤 오염(다중 셀/잔존 텍스트) — 내장 1×1 박스로 폴백")
+    return ok
+
+
 def build_condition_box(
     templates: dict | None,
     content_paras: list[str],
@@ -119,7 +143,9 @@ def build_condition_box(
     templates 없으면 None 반환 → 호출자가 기존 fallback 사용.
     """
     if templates and templates.get('condition_tbl'):
-        return _fill_box_skeleton(templates['condition_tbl']['skeleton'], content_paras, tbl_id, zo)
+        skeleton = templates['condition_tbl']['skeleton']
+        if _box_skeleton_ok(skeleton, '조건'):
+            return _fill_box_skeleton(skeleton, content_paras, tbl_id, zo)
     return '', 0  # fallback 신호
 
 
@@ -131,7 +157,9 @@ def build_boilerplate_box(
 ) -> tuple[str, int]:
     """보기표 XML 생성. templates 없으면 ('' , 0) fallback 신호."""
     if templates and templates.get('boilerplate_tbl'):
-        return _fill_box_skeleton(templates['boilerplate_tbl']['skeleton'], content_paras, tbl_id, zo)
+        skeleton = templates['boilerplate_tbl']['skeleton']
+        if _box_skeleton_ok(skeleton, '보기'):
+            return _fill_box_skeleton(skeleton, content_paras, tbl_id, zo)
     return '', 0
 
 

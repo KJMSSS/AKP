@@ -152,6 +152,60 @@ class TestApplyDecisions:
         assert xml.count("<hp:pic") == 2
 
 
+class TestDpiScaling:
+    """300 DPI 크롭이 150 DPI 가정으로 2배 크게 들어가던 버그 회귀."""
+
+    def _pic_size(self, xml: str) -> tuple[int, int]:
+        m = re.search(r'<hp:orgSz width="(\d+)" height="(\d+)"', xml)
+        return (int(m.group(1)), int(m.group(2)))
+
+    def test_auto_with_explicit_dpi(self, tmp_path):
+        hwpx = _make_hwpx(tmp_path, [_para("【★ 그림:1번】", 10)])
+        png = _make_png(tmp_path, "a.png", size=(300, 150))
+        apply_figure_decisions(hwpx, {
+            "1": _item("auto_selected", auto_path=str(png), auto_dpi=300),
+        })
+        w, h = self._pic_size(_read_xml(hwpx))
+        # 300px @300dpi = 72pt = 7200 HWP
+        assert (w, h) == (7200, 3600)
+
+    def test_legacy_conf_strategy_assumes_300(self, tmp_path):
+        # DPI 메타 없는 구버전 큐 — strategy=agreement는 300 DPI 크롭
+        hwpx = _make_hwpx(tmp_path, [_para("【★ 그림:2번】", 10)])
+        png = _make_png(tmp_path, "b.png", size=(300, 150))
+        apply_figure_decisions(hwpx, {
+            "2": _item("auto_selected", auto_path=str(png), strategy="agreement"),
+        })
+        assert self._pic_size(_read_xml(hwpx)) == (7200, 3600)
+
+    def test_legacy_pymupdf_strategy_assumes_150(self, tmp_path):
+        hwpx = _make_hwpx(tmp_path, [_para("【★ 그림:3번】", 10)])
+        png = _make_png(tmp_path, "c.png", size=(300, 150))
+        apply_figure_decisions(hwpx, {
+            "3": _item("auto_selected", auto_path=str(png), strategy="pymupdf"),
+        })
+        # 300px @150dpi = 144pt = 14400 HWP
+        assert self._pic_size(_read_xml(hwpx)) == (14400, 7200)
+
+    def test_manual_inherits_crop_dpi(self, tmp_path):
+        hwpx = _make_hwpx(tmp_path, [_para("【★ 그림:4번】", 10)])
+        png = _make_png(tmp_path, "d.png", size=(300, 150))
+        apply_figure_decisions(hwpx, {
+            "4": _item("manual_selected", manual_path=str(png), crop_dpi=300),
+        })
+        assert self._pic_size(_read_xml(hwpx)) == (7200, 3600)
+
+    def test_manual_legacy_prob_crop_path_assumes_300(self, tmp_path):
+        # 메타 없는 구버전 — crop_path 파일명에 prob_crop 포함이면 300 DPI
+        hwpx = _make_hwpx(tmp_path, [_para("【★ 그림:5번】", 10)])
+        png = _make_png(tmp_path, "e.png", size=(300, 150))
+        apply_figure_decisions(hwpx, {
+            "5": _item("manual_selected", manual_path=str(png),
+                       crop_path="C:/tmp/figs/prob_crop_5.png"),
+        })
+        assert self._pic_size(_read_xml(hwpx)) == (7200, 3600)
+
+
 class TestStripPlaceholders:
     def test_strip_keeps_merged_text(self, tmp_path):
         # 마커와 본문이 한 단락에 합쳐진 경우 — 본문은 보존

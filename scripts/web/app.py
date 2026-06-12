@@ -743,6 +743,10 @@ def _register_figure_queue(
     crop_path는 문제별 crop을 우선 사용하고, 없으면 첫 페이지 전체로 폴백한다.
     """
     from PIL import Image as PILImage
+    try:
+        from src.pipeline.crop_ocr_builder import CROP_DPI as _CROP_DPI
+    except Exception:
+        _CROP_DPI = 300  # crop_problems_by_bbox 렌더 DPI
 
     prob_crop_map = prob_crop_map or {}
     conf_map = conf_map or {}
@@ -772,12 +776,16 @@ def _register_figure_queue(
         crop = prob_crop_map.get(prob_no)
         crop_path = str(crop) if crop else fallback_crop
 
+        # crop_path DPI: 문제 크롭(prob_crop)은 300, 폴백 페이지 PNG는 150
+        crop_dpi = _CROP_DPI if crop else 150
+
         cand = conf_map.get(prob_no)
         if cand is not None and crop is not None:
             # ── 실측 신뢰도 (Tesseract×Density IoU) ──────────────────────
             confidence = cand.confidence
             strategy   = cand.strategy
             auto_path  = str(cand.image_path)
+            auto_dpi   = _CROP_DPI  # 문제 크롭에서 잘라낸 결과
             auto_bbox_pct = None
             try:
                 with PILImage.open(crop) as im:
@@ -798,11 +806,13 @@ def _register_figure_queue(
                 strategy   = "vision" if "vision" in auto_img.name else "pymupdf"
                 confidence = 0.6 if strategy == "vision" else 0.7
                 auto_path  = str(auto_img)
+                auto_dpi   = 150  # extract_images/vision 모두 150 DPI 렌더
                 status     = "auto_selected" if confidence > threshold else "pending"
             else:
                 strategy   = "none"
                 confidence = 0.0
                 auto_path  = None
+                auto_dpi   = 150
                 status     = "pending"
             auto_bbox_pct = None
 
@@ -814,7 +824,9 @@ def _register_figure_queue(
             "strategy":      strategy,
             "confidence":    confidence,
             "crop_path":     crop_path,
+            "crop_dpi":      crop_dpi,
             "auto_path":     auto_path,
+            "auto_dpi":      auto_dpi,
             "auto_bbox_pct": auto_bbox_pct,
             "manual_path":   None,
             "created_at":    _now,

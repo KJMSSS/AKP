@@ -170,18 +170,20 @@ def insert_figure_placeholder(
     ppr: int = 8,
     cpr: int = 0,
     out_path: Path | None = None,
+    dpi: int = 150,
 ) -> Path:
     """
     【★ 그림:N번】 플레이스홀더 단락을 이미지 단락으로 교체.
 
     max_width_hpc: 최대 폭 (HWP 단위). 이미지가 크면 이 폭으로 비율 유지 축소.
+    dpi: 이미지가 렌더링된 DPI — px→pt 환산 기준. 300 DPI 크롭을
+         150으로 넣으면 실물의 2배 크기로 삽입되므로 출처 DPI를 줄 것.
     """
     from PIL import Image as PILImage
 
     img = PILImage.open(image_path)
     px_w, px_h = img.size
-    # 150dpi 기준: 1pt = 150/72 px → HWP = pt * 100
-    dpi = 150
+    # dpi 기준: 1pt = dpi/72 px → HWP = pt * 100
     w_hpc = int(px_w * 72 / dpi * 100)
     h_hpc = int(px_h * 72 / dpi * 100)
     # 폭 초과 시 비율 축소
@@ -303,6 +305,10 @@ def apply_figure_decisions(hwpx_path: Path, items: dict) -> dict:
     with zipfile.ZipFile(hwpx_path, "r") as zf:
         xml = zf.read("Contents/section0.xml").decode("utf-8")
 
+    # 신뢰도 측정 경로(문제 크롭 기반)는 300 DPI 렌더 — DPI 메타 없는
+    # 구버전 큐 항목은 strategy로 추정 (pymupdf/vision은 150 DPI)
+    _conf_strategies = {"agreement", "tesseract_only", "density_only"}
+
     skip_nos: list[str] = []
     for prob_no in sorted(items, key=lambda x: int(x) if x.isdigit() else 999):
         entry = items[prob_no]
@@ -317,15 +323,20 @@ def apply_figure_decisions(hwpx_path: Path, items: dict) -> dict:
             print(f"  [그림반영] {prob_no}번 플레이스홀더 없음 — 건너뜀")
             continue
 
+        legacy_dpi = 300 if entry.get("strategy") in _conf_strategies else 150
         if status == "manual_selected":
             raw = entry.get("manual_path")
+            # 수동 크롭은 crop_path(문제 크롭)에서 잘라낸 것 — 그 DPI 상속
+            dpi = entry.get("crop_dpi") or (
+                300 if "prob_crop" in str(entry.get("crop_path") or "") else 150)
         else:  # auto_selected / pending — 자동 결과 최선 적용 (첫 빌드와 동일 동작)
             raw = entry.get("auto_path")
+            dpi = entry.get("auto_dpi") or legacy_dpi
 
         if raw and Path(raw).exists():
             # 항목별 격리 — 손상 이미지 1건이 나머지 반영을 막지 않도록
             try:
-                insert_figure_placeholder(hwpx_path, prob_no, Path(raw))
+                insert_figure_placeholder(hwpx_path, prob_no, Path(raw), dpi=int(dpi))
                 counts["manual" if status == "manual_selected" else "auto"] += 1
                 counts["applied_nos"].append(prob_no)
             except Exception as e:
