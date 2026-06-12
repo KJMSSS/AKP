@@ -22,6 +22,16 @@
     #topbar a { color: #94a3b8; text-decoration: none; font-size: 13px; }
     #topbar .spacer { flex: 1; }
     #topbar .key { font-size: 12px; color: #cbd5e1; font-family: monospace; }
+    #apply-status { font-size: 12px; color: #94a3b8; max-width: 380px; }
+    #apply-status.ok  { color: #6ee7b7; }
+    #apply-status.err { color: #fca5a5; }
+    #btn-apply {
+      padding: 6px 14px; border-radius: 6px; border: 1px solid #2563eb;
+      background: #2563eb; color: #fff; cursor: pointer;
+      font-size: 13px; font-weight: 600;
+    }
+    #btn-apply:hover { background: #1d4ed8; }
+    #btn-apply:disabled { opacity: 0.5; cursor: not-allowed; }
 
     #layout { display: grid; grid-template-columns: 240px 1fr; flex: 1; min-height: 0; }
 
@@ -119,6 +129,8 @@
     <a href="/matrix">← 작업 매트릭스</a>
     <h1>그림 수동 검수</h1>
     <span class="spacer"></span>
+    <span id="apply-status"></span>
+    <button id="btn-apply" title="검수 결정을 HWPX에 반영합니다 (재조립 — 과금 없음)">HWPX 반영</button>
     <span class="key" id="keylabel"></span>
   </div>
   <div id="layout">
@@ -183,6 +195,9 @@
 
     function renderQueue() {
       const list = document.getElementById("qlist");
+      const pendingCnt = queue.filter(q => (q.status || "pending") === "pending").length;
+      document.querySelector("#queue h2").textContent =
+        queue.length ? `검수 대기 ${pendingCnt} / 전체 ${queue.length}` : "검수 대기";
       if (!queue.length) {
         list.innerHTML = '<div style="padding:20px;color:#94a3b8;font-size:13px;text-align:center">큐가 비어 있습니다.</div>';
         return;
@@ -335,6 +350,62 @@
       document.getElementById("qlist").innerHTML =
         `<div style="padding:20px;color:#dc2626;font-size:13px">${msg}</div>`;
     }
+
+    // ── HWPX 반영 ──────────────────────────────────────────────────
+    function setApplyStatus(msg, isErr, linkUrl) {
+      const el = document.getElementById("apply-status");
+      el.textContent = msg;
+      el.classList.remove("err", "ok");
+      if (msg) el.classList.add(isErr ? "err" : "ok");
+      if (linkUrl) {
+        const a = document.createElement("a");
+        a.href = linkUrl;
+        a.target = "_blank";
+        a.textContent = " ⬇ HWPX 다운로드";
+        a.style.cssText = "color:inherit;text-decoration:underline;margin-left:6px";
+        el.appendChild(a);
+      }
+    }
+
+    async function applyToHwpx() {
+      const pendings = queue.filter(q => (q.status || "pending") === "pending");
+      if (pendings.length > 0) {
+        const noAuto = pendings.filter(q => q.strategy === "none").length;
+        let msg = `검수 대기 ${pendings.length}건이 남아 있습니다.\n`
+          + "대기 건은 자동 추출 결과가 있으면 그 결과로 들어가고, 없으면 그림 자리 마커가 남습니다.";
+        if (noAuto) msg += `\n(자동 추출 실패 ${noAuto}건은 마커【★ 그림:N번】로 남습니다)`;
+        if (!confirm(msg + "\n지금 반영할까요?")) return;
+      }
+      const btn = document.getElementById("btn-apply");
+      btn.disabled = true;
+      setApplyStatus("HWPX 재조립·반영 중...");
+      try {
+        const r = await fetch(`/api/figure/${KEY}/apply`, { method: "POST" });
+        const j = await r.json().catch(() => ({}));
+        if (!r.ok) {
+          setApplyStatus("실패: " + (j.detail || r.status), true);
+          return;
+        }
+        const c = j.counts || {};
+        const parts = [];
+        if (c.manual) parts.push(`수동 ${c.manual}`);
+        if (c.auto) parts.push(`자동 ${c.auto}`);
+        if (c.skipped) parts.push(`그림없음 ${c.skipped}`);
+        const miss = (c.missing || 0) + (c.no_placeholder || 0) + (c.failed || 0);
+        if (miss) parts.push(`미반영 ${miss}`);
+        const tgt = j.target === "reviewed" ? "검수완료본" : "변환본";
+        const drive = j.drive === true ? " · Drive 교체" : j.drive === false ? " · Drive 실패" : "";
+        setApplyStatus(
+          `✓ ${tgt} 반영 완료 (${parts.join(" · ") || "그림 변경 0건"})${drive}`,
+          false, j.download_url
+        );
+      } catch (e) {
+        setApplyStatus("오류: " + e, true);
+      } finally {
+        btn.disabled = false;
+      }
+    }
+    document.getElementById("btn-apply").addEventListener("click", applyToHwpx);
 
     loadQueue();
   </script>

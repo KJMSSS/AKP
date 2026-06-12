@@ -339,6 +339,24 @@ body {
 .sb-progress { background: #fff3cd; color: #856404; }
 .sb-error    { background: #fee2e2; color: #991b1b; }
 
+/* 그림 검수 배지 (요약 행) */
+.fig-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 8px;
+  border-radius: 100px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  white-space: nowrap;
+  text-decoration: none;
+  transition: filter 0.15s;
+}
+.fig-badge:hover { filter: brightness(0.93); }
+.fb-pending { background: #fef3c7; color: #92400e; }
+.fb-apply   { background: #ede9fe; color: #5b21b6; }
+.fb-done    { background: #f1f3f5; color: #6c757d; }
+
 .stage-actions {
   display: flex;
   flex-direction: column;
@@ -981,9 +999,26 @@ function renderPipeSummary(key, entry) {
     return `<button class="upload-btn" data-key="${escHtml(key)}" data-school="${escHtml(school)}">📄 PDF 업로드</button>`;
   }
 
+  // 그림 검수 배지: 대기 → 주황, 반영 대기 → 보라, 완료 → 회색
+  // onclick 인라인 — refreshCell 부분 재렌더에서도 행 토글 전파 차단 유지
+  let figBadge = '';
+  const fs = entry.figure_summary;
+  if (fs && fs.total > 0) {
+    const href = `/figure/${encodeURIComponent(key)}`;
+    const stop = 'onclick="event.stopPropagation()"';
+    if (fs.pending > 0) {
+      figBadge = `<a class="fig-badge fb-pending" ${stop} href="${href}" target="_blank" title="그림 검수 대기 ${fs.pending}건 — 클릭하여 검수">🖼 검수 ${fs.pending}건</a>`;
+    } else if (fs.needs_apply > 0) {
+      figBadge = `<a class="fig-badge fb-apply" ${stop} href="${href}" target="_blank" title="검수 완료 — HWPX 반영 대기 ${fs.needs_apply}건">🖼 반영대기 ${fs.needs_apply}건</a>`;
+    } else {
+      figBadge = `<a class="fig-badge fb-done" ${stop} href="${href}" target="_blank" title="그림 ${fs.total}건 처리 완료">🖼 ${fs.total}</a>`;
+    }
+  }
+
   return `<div class="pipe-summary" data-key="${escHtml(key)}">
     <div class="pipe-dots">${dots}</div>
     <div class="pipe-status-text">${statusText}</div>
+    ${figBadge}
     <span class="pipe-toggle-icon">${gExpandedRows.has(key) ? '▲' : '▼'}</span>
   </div>`;
 }
@@ -1722,7 +1757,11 @@ function subscribeSSE(registryKey, jobId) {
         pdf_name: entry.pdf_name || '',
         status: 'done',
       }),
-    }).catch(() => {});
+    })
+      // 등록 완료 후 registry 재로드 — figure_summary(그림 배지)가 채워짐
+      .then(() => loadRegistry())
+      .then(() => refreshCell(registryKey))
+      .catch(() => {});
     refreshCell(registryKey);
     showToast(`변환 완료: ${keyToSchool(registryKey)}`, 'ok');
   });
@@ -1874,6 +1913,12 @@ async function init() {
   renderMatrix();
   restoreActiveSse();
 }
+
+// 탭 복귀 시 registry 재로드 — 그림 검수/반영 후 stale 배지 갱신
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) return;
+  loadRegistry().then(renderMatrix).catch(() => {});
+});
 
 init();
 </script>

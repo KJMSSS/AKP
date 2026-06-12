@@ -243,6 +243,104 @@ def insert_figure_placeholder(
     return out_path
 
 
+def strip_figure_placeholders(
+    hwpx_path: Path,
+    item_nos: list[str],
+    out_path: Path | None = None,
+) -> list[str]:
+    """【★ 그림:N번】 마커 텍스트 제거 — skipped 결정(그림 없음) 반영.
+
+    마커 문자열만 지우고 단락은 보존한다 (본문이 합쳐진 단락 안전).
+    제거된 마커의 문제 번호 목록을 반환.
+    """
+    if not item_nos:
+        return []
+    out_path = out_path or hwpx_path
+    tmp_path = hwpx_path.with_suffix(".strip_tmp.hwpx")
+
+    with zipfile.ZipFile(hwpx_path, "r") as src_zf:
+        xml = src_zf.read("Contents/section0.xml").decode("utf-8")
+        removed: list[str] = []
+        for no in item_nos:
+            marker = f"【★ 그림:{no}번】"
+            if marker in xml:
+                xml = xml.replace(marker, "")
+                removed.append(no)
+        if not removed:
+            return []
+        with zipfile.ZipFile(tmp_path, "w", zipfile.ZIP_DEFLATED) as dst_zf:
+            for item in src_zf.infolist():
+                if item.filename != "Contents/section0.xml":
+                    dst_zf.writestr(item, src_zf.read(item.filename))
+            dst_zf.writestr("Contents/section0.xml", xml.encode("utf-8"))
+
+    shutil.move(str(tmp_path), str(out_path))
+    return removed
+
+
+def apply_figure_decisions(hwpx_path: Path, items: dict) -> dict:
+    """그림 검수 큐 결정을 빌드 직후 HWPX에 반영.
+
+    전제: 【★ 그림:N번】 플레이스홀더가 살아있는 HWPX (build_from_markdown 직후).
+    items: figure_queue items.json의 items dict ({prob_no: {status, *_path, ...}})
+
+    - manual_selected → manual_path 삽입
+    - auto_selected / pending → auto_path 삽입 (없으면 플레이스홀더 유지)
+    - skipped → 마커 제거 (그림 없음 처리)
+
+    반환: {"manual": n, "auto": n, "skipped": n, "missing": n,
+           "no_placeholder": n, "failed": n,
+           "applied_nos": [...], "skipped_nos": [...]} 반영 통계.
+    applied_nos/skipped_nos는 실제 반영에 성공한 문제 번호 —
+    호출자가 applied_at 마킹에 사용한다.
+    """
+    counts: dict = {
+        "manual": 0, "auto": 0, "skipped": 0,
+        "missing": 0, "no_placeholder": 0, "failed": 0,
+        "applied_nos": [], "skipped_nos": [],
+    }
+
+    with zipfile.ZipFile(hwpx_path, "r") as zf:
+        xml = zf.read("Contents/section0.xml").decode("utf-8")
+
+    skip_nos: list[str] = []
+    for prob_no in sorted(items, key=lambda x: int(x) if x.isdigit() else 999):
+        entry = items[prob_no]
+        status = entry.get("status", "pending")
+
+        if status == "skipped":
+            skip_nos.append(prob_no)
+            continue
+
+        if f"【★ 그림:{prob_no}번】" not in xml:
+            counts["no_placeholder"] += 1
+            print(f"  [그림반영] {prob_no}번 플레이스홀더 없음 — 건너뜀")
+            continue
+
+        if status == "manual_selected":
+            raw = entry.get("manual_path")
+        else:  # auto_selected / pending — 자동 결과 최선 적용 (첫 빌드와 동일 동작)
+            raw = entry.get("auto_path")
+
+        if raw and Path(raw).exists():
+            # 항목별 격리 — 손상 이미지 1건이 나머지 반영을 막지 않도록
+            try:
+                insert_figure_placeholder(hwpx_path, prob_no, Path(raw))
+                counts["manual" if status == "manual_selected" else "auto"] += 1
+                counts["applied_nos"].append(prob_no)
+            except Exception as e:
+                counts["failed"] += 1
+                hwpx_path.with_suffix(".fig_tmp.hwpx").unlink(missing_ok=True)
+                print(f"  [그림반영] {prob_no}번 삽입 실패 — 건너뜀: {e}")
+        else:
+            counts["missing"] += 1
+            print(f"  [그림반영] {prob_no}번 이미지 파일 없음({status}) — 플레이스홀더 유지")
+
+    counts["skipped_nos"] = strip_figure_placeholders(hwpx_path, skip_nos)
+    counts["skipped"] = len(counts["skipped_nos"])
+    return counts
+
+
 def crop_figure_from_pdf(
     pdf_path: Path,
     page_1idx: int,

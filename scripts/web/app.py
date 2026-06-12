@@ -154,7 +154,9 @@ from src.common.image_extractor import (                            # noqa: E402
     extract_images, extract_figures_by_vision,
     crop_problems_by_bbox, extract_with_confidence, FigureCandidate,
 )
-from src.common.hwpx_image_inserter import insert_figure_placeholder  # noqa: E402
+from src.common.hwpx_image_inserter import (                        # noqa: E402
+    insert_figure_placeholder, apply_figure_decisions,
+)
 from src.common.hwpx_table_inserter import (                        # noqa: E402
     replace_condition_tables, replace_boilerplate_tables,
 )
@@ -591,6 +593,10 @@ async def api_delete_job(job_id: str, request: Request):
     if keys_to_del:
         _save_registry(reg)
 
+    # 그림 검수 큐 제거 (dangling crop 경로 방지)
+    for k in keys_to_del:
+        shutil.rmtree(_figq_key_dir(k), ignore_errors=True)
+
     return JSONResponse({"ok": True, "deleted_keys": keys_to_del})
 
 
@@ -748,6 +754,14 @@ def _register_figure_queue(
     fallback_crop = str(page_pngs_sorted[0]) if page_pngs_sorted else None
 
     qdata = _figq_load(reg_key)
+    # 같은 키로 재변환 시 이전 큐는 옛 job의 crop 경로를 가리킴 — 초기화
+    # (job_id 필드가 없는 레거시 큐도 이전 잡 소속이므로 동일하게 리셋)
+    job_changed = qdata.get("job_id") != job_id
+    if job_changed and qdata.get("items"):
+        print(f"  [그림큐] 재변환 감지 — 이전 큐 초기화 "
+              f"({qdata.get('job_id') or '레거시'} → {job_id})")
+        qdata = {"items": {}}
+    qdata["job_id"] = job_id
     items: dict = qdata.get("items", {})
     added = 0
 
@@ -792,6 +806,7 @@ def _register_figure_queue(
                 status     = "pending"
             auto_bbox_pct = None
 
+        _now = datetime.now().isoformat(timespec="seconds")
         items[prob_no] = {
             "prob_no":       prob_no,
             "page_no":       None,
@@ -802,11 +817,20 @@ def _register_figure_queue(
             "auto_path":     auto_path,
             "auto_bbox_pct": auto_bbox_pct,
             "manual_path":   None,
-            "created_at":    datetime.now().isoformat(timespec="seconds"),
+            "created_at":    _now,
         }
+        # 첫 빌드에서 자동 이미지가 실제 삽입된 항목은 이미 반영된 상태 —
+        # applied_at 스탬프로 '반영대기' 오표시 방지 (figure_map 기준)
+        _ins = figure_map.get(prob_no)
+        if _ins and Path(_ins).exists():
+            items[prob_no]["applied_at"] = _now
         added += 1
 
     if added == 0:
+        if job_changed:
+            # 항목 변화가 없어도 job_id는 영속화 (재변환 리셋 판단 기준)
+            qdata["items"] = items
+            _figq_save(reg_key, qdata)
         return
 
     qdata["items"] = items
@@ -904,6 +928,10 @@ async def api_figure_decision(key: str, prob_no: str, request: Request):
     _require_login(request)
     _validate_safe_key(key)
 
+    with _figq_apply_busy_lock:
+        if key in _figq_apply_busy:
+            raise HTTPException(409, "HWPX 반영 작업이 진행 중입니다 — 잠시 후 다시 시도해 주세요.")
+
     try:
         body = await request.json()
     except Exception:
@@ -952,6 +980,156 @@ async def api_figure_decision(key: str, prob_no: str, request: Request):
     data.setdefault("items", {})[prob_no] = entry
     _figq_save(key, data)
     return JSONResponse({"ok": True, "status": entry["status"]})
+
+
+_figq_apply_busy: set[str] = set()
+_figq_apply_busy_lock = threading.Lock()
+
+
+def _figq_summary(key: str) -> dict | None:
+    """그림 큐 요약 — matrix 배지용. 큐 없으면 None."""
+    items = _figq_load(key).get("items", {})
+    if not items:
+        return None
+    pending = sum(1 for e in items.values() if e.get("status") == "pending")
+    # 결정된 항목 중 아직 HWPX에 반영되지 않은 건
+    # (한 번도 반영 안 됨 or 반영 이후 결정이 변경됨)
+    needs_apply = sum(
+        1 for e in items.values()
+        if e.get("status") != "pending"
+        and (not e.get("applied_at")
+             or (e.get("updated_at") or "") > e["applied_at"])
+    )
+    return {"total": len(items), "pending": pending, "needs_apply": needs_apply}
+
+
+def _figq_mark_applied(key: str, snapshot_items: dict, result: dict, target_name: str) -> None:
+    """반영 성공 항목에 applied_at 기록.
+
+    디스크를 fresh 재로드해 병합 — 반영 도중 들어온 결정은 보존하고
+    (status/updated_at이 스냅샷과 다르면 마킹 생략 → needs_apply로 유지),
+    실제 반영된 항목(applied_nos/skipped_nos)만 마킹한다.
+    """
+    now = datetime.now().isoformat(timespec="seconds")
+    fresh = _figq_load(key)
+    fitems = fresh.get("items", {})
+    for no in result.get("applied_nos", []) + result.get("skipped_nos", []):
+        snap = snapshot_items.get(no)
+        cur = fitems.get(no)
+        if not snap or not cur:
+            continue
+        if (cur.get("status") == snap.get("status")
+                and cur.get("updated_at") == snap.get("updated_at")):
+            cur["applied_at"] = now
+    fresh["last_applied"] = {"at": now, "target": target_name}
+    _figq_save(key, fresh)
+
+
+@app.post("/api/figure/{key}/apply")
+def api_figure_apply(key: str, request: Request):
+    """그림 검수 결정을 HWPX에 반영.
+
+    저장된 review.json 마크다운으로 로컬 재조립(build_from_markdown —
+    LLM 호출·과금 0) 후 큐 결정대로 그림을 삽입한다.
+    텍스트 검수 완료본(_reviewed)이 있으면 그 쪽을 갱신한다.
+    """
+    _require_login(request)
+    _validate_safe_key(key)
+
+    qdata = _figq_load(key)
+    items = qdata.get("items", {})
+    if not items:
+        raise HTTPException(404, "그림 검수 큐가 비어 있습니다.")
+
+    reg = _load_registry()
+    entry = reg.get(key)
+    if not entry or not entry.get("job_id"):
+        raise HTTPException(404, "등록된 변환 잡이 없습니다.")
+    job_id = entry["job_id"]
+
+    # 큐가 다른(이전) 변환의 것이면 반영 거부 — 엉뚱한 그림·헛반영 방지
+    if qdata.get("job_id") and qdata["job_id"] != job_id:
+        raise HTTPException(409, "그림 큐가 이전 변환 기준입니다. PDF를 다시 변환해 주세요.")
+
+    review_file = _TMP_DIR / f"{job_id}_review.json"
+    if not review_file.exists():
+        raise HTTPException(404, "변환 데이터가 서버에 없습니다. PDF를 다시 변환해 주세요.")
+
+    with _figq_apply_busy_lock:
+        if key in _figq_apply_busy:
+            raise HTTPException(409, "이미 반영 작업이 진행 중입니다.")
+        _figq_apply_busy.add(key)
+
+    tmp_out = _TMP_DIR / f"{job_id}_figapply.hwpx"
+    try:
+        rv = json.loads(review_file.read_text(encoding="utf-8"))
+        problems = rv.get("problems", [])
+        if not problems:
+            raise HTTPException(400, "변환 데이터에 문제 텍스트가 없습니다.")
+        md = rv.get("header", "") + "\n\n" + "\n\n".join(
+            p["full_text"] for p in problems
+        )
+
+        reviewed_path = _TMP_DIR / f"{job_id}_reviewed.hwpx"
+        is_reviewed = reviewed_path.exists()
+        target = reviewed_path if is_reviewed else (_TMP_DIR / f"{job_id}.hwpx")
+
+        if not _TEMPLATE:
+            raise HTTPException(500, "samples/ 폴더에 템플릿 HWPX가 없습니다.")
+        build_from_markdown(md, tmp_out, _TEMPLATE)
+        replace_condition_tables(tmp_out)
+        replace_boilerplate_tables(tmp_out)
+        fix_hwpx_namespaces(str(tmp_out))
+        errs = validate_hwpx(str(tmp_out))
+        if errs:
+            raise HTTPException(500, f"HWPX 검증 실패: {errs[0]}")
+
+        counts = apply_figure_decisions(tmp_out, items)
+
+        shutil.move(str(tmp_out), str(target))
+        jid = f"{job_id}_reviewed" if is_reviewed else job_id
+        if jid in _jobs:
+            _jobs[jid]["hwpx"] = target
+
+        # ── Drive 사본 교체 (기존 파일 삭제 → 읽기 좋은 이름으로 업로드) ──
+        drive_ok = None
+        custom = rv.get("custom_filename", "") or f"{key}.hwpx"
+        parts = Path(custom).stem.split("_")
+        if len(parts) >= 5 and is_configured():
+            try:
+                old_fid = rv.get("drive_file_id", "")
+                up_name = f"{Path(custom).stem}{'_검수' if is_reviewed else ''}.hwpx"
+                up_path = target.with_name(up_name)
+                shutil.copyfile(target, up_path)
+                new_fid = upload_hwpx(up_path, parts[0], parts[4])
+                up_path.unlink(missing_ok=True)
+                if new_fid:
+                    if old_fid:
+                        drive_delete_file(old_fid)
+                    rv["drive_file_id"] = new_fid
+                    review_file.write_text(
+                        json.dumps(rv, ensure_ascii=False, indent=2), encoding="utf-8"
+                    )
+                    drive_ok = True
+                    print(f"  [Drive] AKP/{parts[0]}/{parts[4]}/{up_name} 교체 완료")
+                else:
+                    drive_ok = False
+            except Exception as _de:
+                drive_ok = False
+                print(f"  [Drive] 그림 반영본 업로드 오류 (무시): {_de}")
+
+        # ── 큐에 반영 시각 기록 (fresh 병합 — 도중 결정 보존) ──────────
+        _figq_mark_applied(key, items, counts, target.name)
+
+        return JSONResponse({
+            "ok": True, "target": "reviewed" if is_reviewed else "draft",
+            "counts": counts, "drive": drive_ok,
+            "download_url": f"/download/{jid}",
+        })
+    finally:
+        tmp_out.unlink(missing_ok=True)
+        with _figq_apply_busy_lock:
+            _figq_apply_busy.discard(key)
 
 
 # ══════════════════════════════════════════════════════════════════════
@@ -1161,7 +1339,16 @@ async def api_update_subject(subj_id: str, request: Request):
 @app.get("/api/registry")
 async def api_get_registry(request: Request):
     _require_login(request)
-    return JSONResponse(_load_registry())
+    reg = _load_registry()
+    # 그림 큐 요약을 비영속 필드로 첨부 — matrix 배지용
+    for rkey, ent in reg.items():
+        try:
+            fs = _figq_summary(rkey)
+            if fs:
+                ent["figure_summary"] = fs
+        except Exception:
+            pass
+    return JSONResponse(reg)
 
 
 @app.post("/api/registry/register")
@@ -1249,10 +1436,18 @@ async def api_registry_move(request: Request):
     from_stage_dir = _UPLOADS_DIR / from_key
     to_stage_dir   = _UPLOADS_DIR / to_key
     if from_stage_dir.exists():
-        import shutil
         if to_stage_dir.exists():
             shutil.rmtree(to_stage_dir)
         shutil.move(str(from_stage_dir), str(to_stage_dir))
+
+    # 그림 검수 큐 디렉토리 이동 (검수 결정·수동 크롭 보존)
+    from_fq = _figq_key_dir(from_key)
+    to_fq   = _figq_key_dir(to_key)
+    if from_fq.exists():
+        with _figq_lock:
+            if to_fq.exists():
+                shutil.rmtree(to_fq)
+            shutil.move(str(from_fq), str(to_fq))
 
     return JSONResponse({"ok": True, "from": from_key, "to": to_key, "entry": entry})
 
@@ -1317,7 +1512,7 @@ async def save_corrections(job_id: str, request: Request):
 
 @app.post("/api/review/{job_id}/submit")
 async def review_submit(job_id: str, request: Request):
-    _require_login(request)
+    email = _require_login(request)
     review_file = _TMP_DIR / f"{job_id}_review.json"
     if not review_file.exists():
         raise HTTPException(404)
@@ -1335,18 +1530,50 @@ async def review_submit(job_id: str, request: Request):
     reviewed_id = f"{job_id}_reviewed"
     out_hwpx    = _TMP_DIR / f"{reviewed_id}.hwpx"
 
+    # 같은 잡의 그림 반영(apply)과 동일 파일 동시 기록 방지
+    _fig_key = next(
+        (rk for rk, ent in _load_registry().items()
+         if ent.get("job_id") == job_id), "")
+    if _fig_key:
+        with _figq_apply_busy_lock:
+            if _fig_key in _figq_apply_busy:
+                raise HTTPException(409, "그림 반영 작업이 진행 중입니다 — 잠시 후 다시 제출해 주세요.")
+            _figq_apply_busy.add(_fig_key)
+
     try:
-        if not _TEMPLATE:
-            raise RuntimeError("템플릿 없음")
-        build_from_markdown(new_md, out_hwpx, _TEMPLATE)
-        replace_condition_tables(out_hwpx)
-        replace_boilerplate_tables(out_hwpx)
-        fix_hwpx_namespaces(str(out_hwpx))
-        errs = validate_hwpx(str(out_hwpx))
-        if errs:
-            raise RuntimeError(f"검증 실패: {errs[0]}")
-    except Exception as e:
-        raise HTTPException(500, str(e))
+        try:
+            if not _TEMPLATE:
+                raise RuntimeError("템플릿 없음")
+            build_from_markdown(new_md, out_hwpx, _TEMPLATE)
+            replace_condition_tables(out_hwpx)
+            replace_boilerplate_tables(out_hwpx)
+            fix_hwpx_namespaces(str(out_hwpx))
+            errs = validate_hwpx(str(out_hwpx))
+            if errs:
+                raise RuntimeError(f"검증 실패: {errs[0]}")
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(500, str(e))
+
+        # ── 그림 복원 + 검수 결정 반영 ──────────────────────────────────
+        # 재빌드된 HWPX에는 【★ 그림:N번】 마커만 남아 있으므로, 그림 큐의
+        # 결정(수동크롭/자동/스킵)대로 다시 삽입한다. 실패해도 제출은 계속.
+        try:
+            if _fig_key:
+                _fig_qd = _figq_load(_fig_key)
+                _fig_items = _fig_qd.get("items", {})
+                # 큐가 다른(이전) 변환의 것이면 적용하지 않음
+                if _fig_items and _fig_qd.get("job_id") in (None, job_id):
+                    _fc = apply_figure_decisions(out_hwpx, _fig_items)
+                    print(f"  [그림] 검수본 반영: {_fc}")
+                    _figq_mark_applied(_fig_key, _fig_items, _fc, out_hwpx.name)
+        except Exception as _fe:
+            print(f"  [그림] 검수본 그림 반영 실패 (계속 진행): {_fe}")
+    finally:
+        if _fig_key:
+            with _figq_apply_busy_lock:
+                _figq_apply_busy.discard(_fig_key)
 
     _jobs[reviewed_id] = {"queue": queue.Queue(), "hwpx": out_hwpx, "meta": {}}
     edited   = sum(1 for p in problems if p.get("status") == "edited")
@@ -1364,7 +1591,6 @@ async def review_submit(job_id: str, request: Request):
     review_file.write_text(
         json.dumps(review_data, ensure_ascii=False, indent=2), encoding="utf-8"
     )
-    email    = request.session.get("email", "")
     pdf_name = review_data.get("pdf_name", "")
 
     append_entry({
@@ -1596,6 +1822,17 @@ def _run_conversion(
                 print(f"  [그림큐] 유효하지 않은 키: {_reg_key!r}")
             except Exception as _qe:
                 print(f"  [그림큐] 등록 실패 (무시): {_qe}")
+        elif _reg_key:
+            # 새 변환에 그림이 없으면 같은 키의 이전 큐는 stale — 제거
+            try:
+                _validate_safe_key(_reg_key)
+                if _figq_key_dir(_reg_key).exists():
+                    shutil.rmtree(_figq_key_dir(_reg_key), ignore_errors=True)
+                    print(f"  [그림큐] 그림 없음 — 이전 큐 제거: {_reg_key}")
+            except HTTPException:
+                pass
+            except Exception:
+                pass
 
         # ── Google Drive 업로드 ──────────────────────────────────────────
         _drive_file_id = ""
