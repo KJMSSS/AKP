@@ -279,9 +279,11 @@ PDF
 
 #### 🔲 남은 작업
 
-- **threshold 튜닝** `보류`: 현재 IoU agreement≥0.7→auto, tesseract/density 단독=0.5→pending.
-  - 🚨 **기준이 될 골드셋이 없음** — PLAN이 가리키던 `samples/11b/*.hwpx`는 현재 리포에 부재(`samples/`엔 `template.hwpx`만).
-  - 튜닝하려면 먼저 **실제 변환물 + 정답 그림 위치**로 eval set을 구축해야 함. 그 전까지 0.7 기본값 유지.
+- **threshold 튜닝** `착수 가능`: 현재 IoU agreement≥0.7→auto, tesseract/density 단독=0.5→pending.
+  - ✅ **골드셋 실존 확인 (2026-06-10)** — `samples/11b/`에 PDF+수기 HWPX **18쌍** (git 미추적, 로컬 전용),
+    `data/gold_manifest/`에 학교별 문제·수식·선택지 구조화 JSON (git 추적).
+    ※ 이전 "골드셋 부재" 기록은 워크트리 경로에서 잘못 확인한 오기록.
+  - 부족한 것은 데이터가 아니라 **비교 하네스**(변환 결과 vs 골드 비교 스크립트). 하네스 구축 전까지 0.7 기본값 유지.
 
 **관련 파일**:
 - `src/common/image_extractor.py` — PyMuPDF 추출 + `crop_problems_by_bbox` + `extract_with_confidence`
