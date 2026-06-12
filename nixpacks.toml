@@ -1,0 +1,5 @@
+# Railway(nixpacks) 빌드 설정
+# Tesseract 바이너리 — PDF 회전 보정(OSD)·그림 신뢰도 측정(kor+eng)에 필요.
+# 없으면 변환은 동작하지만 내용 기반 회전 보정이 조용히 무력화된다.
+[phases.setup]
+aptPkgs = ["tesseract-ocr", "tesseract-ocr-kor"]

@@ -14,3 +14,6 @@ itsdangerous>=2.1.0
 anthropic>=0.20.0
 # PDF 처리
 PyMuPDF>=1.23.0
+# 회전 보정(OSD)·그림 신뢰도 측정 — Tesseract 바이너리는 nixpacks.toml(aptPkgs)
+pytesseract>=0.3.10
+numpy>=1.26.0
