@@ -338,6 +338,21 @@ def replace_boilerplate_tables(
     return _replace_box_tables(hwpx_path, "보기", out_path or hwpx_path)
 
 
+def _rfind_para_open(xml: str, end: int) -> int:
+    """end 이전에서 가장 가까운 진짜 <hp:p 단락 여는 태그 위치 (없으면 -1).
+
+    <hp:pPr/<hp:pos/<hp:pic 등 '<hp:p' 접두만 같은 태그는 건너뛴다
+    (_split_top_level_paras와 동일 규칙).
+    """
+    pos = end
+    while True:
+        pos = xml.rfind("<hp:p", 0, pos)
+        if pos < 0:
+            return -1
+        if xml[pos + 5:pos + 6] in (" ", ">"):
+            return pos
+
+
 def _replace_box_tables(
     hwpx_path: Path,
     kind: str,   # "조건" or "보기"
@@ -346,34 +361,73 @@ def _replace_box_tables(
     with zipfile.ZipFile(hwpx_path, "r") as zf:
         xml = zf.read("Contents/section0.xml").decode("utf-8")
 
-    start_marker = f"【★ {kind}시작:"
-    end_marker   = f"【★ {kind}끝:"
+    start_prefix = f"【★ {kind}시작:"
+    end_prefix   = f"【★ {kind}끝:"
+    start_re = re.compile(re.escape(start_prefix) + r"(\d+)번】")
 
-    if start_marker not in xml:
+    if start_prefix not in xml and end_prefix not in xml:
         return 0
 
     replaced = 0
+    failed   = 0
+    modified = False  # 표 생성 없이 xml만 바뀐 경우에도 재기록 필요
     # 반복 처리 (여러 쌍)
-    while start_marker in xml:
-        # 시작 마커 단락 찾기
-        sm_idx = xml.find(start_marker)
-        p_s_start = xml.rfind("<hp:p", 0, sm_idx)
-        p_s_end   = xml.find("</hp:p>", sm_idx) + 7
-
-        # 끝 마커 단락 찾기 (시작 단락 이후)
-        em_idx = xml.find(end_marker, p_s_end)
-        if em_idx < 0:
+    while True:
+        sm = start_re.search(xml)
+        if sm is None:
             break
-        p_e_start = xml.rfind("<hp:p", 0, em_idx)
-        p_e_end   = xml.find("</hp:p>", em_idx) + 7
+        num        = sm.group(1)
+        start_text = sm.group(0)
+        end_text   = f"【★ {kind}끝:{num}번】"
+        sm_idx     = sm.start()
+
+        def _drop_start_marker(reason: str) -> None:
+            """쌍이 불완전한 시작 마커를 문서에서 제거 (내용은 보존)."""
+            nonlocal xml, failed, modified
+            print(f"  [table] 경고: {kind} {num}번 — {reason}. 마커 제거, 표 미생성 (내용 보존)")
+            xml = xml.replace(start_text, "", 1)
+            failed += 1
+            modified = True
+
+        # 시작 마커 단락 경계
+        p_s_start = _rfind_para_open(xml, sm_idx)
+        p_s_close = xml.find("</hp:p>", sm_idx)
+        if p_s_start < 0 or p_s_close < 0:
+            _drop_start_marker("시작 마커 단락 경계 탐색 실패")
+            continue
+        p_s_end = p_s_close + 7
+
+        # 끝 마커: 반드시 같은 번호와 정확 매칭 — 번호 불일치 페어링이
+        # 이웃 문제를 통째로 박스에 흡수하는 사고 방지
+        em_idx = xml.find(end_text, p_s_end)
+        if em_idx < 0:
+            _drop_start_marker(f"같은 번호의 끝 마커({end_text}) 없음")
+            continue
+        p_e_start = _rfind_para_open(xml, em_idx)
+        p_e_close = xml.find("</hp:p>", em_idx)
+        if p_e_start < 0 or p_e_close < 0 or p_e_start < p_s_end:
+            _drop_start_marker("끝 마커 단락 경계 탐색 실패")
+            continue
+        p_e_end = p_e_close + 7
 
         # 시작~끝 사이 단락들 추출
         between = xml[p_s_end:p_e_start]
         content_paras = _split_top_level_paras(between)
 
         if not content_paras:
-            # 마커만 있고 내용 없으면 그냥 마커 제거
-            xml = xml[:p_s_start] + xml[p_e_end:]
+            # 사이 단락 없음 — 마커 단락 자체에 내용이 합쳐졌는지 검사
+            seg_texts = "".join(
+                re.findall(r"<hp:t[^>]*>([^<]*)</hp:t>", xml[p_s_start:p_e_end])
+            )
+            leftover = seg_texts.replace(start_text, "").replace(end_text, "").strip()
+            if leftover:
+                print(f"  [table] 경고: {kind} {num}번 마커 단락에 내용이 붙어 있음 — 마커만 제거, 내용 보존")
+                xml = xml.replace(start_text, "", 1).replace(end_text, "", 1)
+                failed += 1
+            else:
+                # 빈 마커 쌍 — 두 단락 제거
+                xml = xml[:p_s_start] + xml[p_e_end:]
+            modified = True
             continue
 
         max_pid, max_zo = _max_ids(xml)
@@ -398,9 +452,22 @@ def _replace_box_tables(
         xml = xml[:p_s_start] + new_para + xml[p_e_end:]
         replaced += 1
 
-    if replaced:
+    # 짝 없는 끝 마커 정리 (시작 마커 소실 케이스) — 마커 리터럴 노출 방지
+    stray_end_re = re.compile(re.escape(end_prefix) + r"\d+번】")
+    stray_ends = stray_end_re.findall(xml)
+    if stray_ends:
+        print(f"  [table] 경고: 짝 없는 {kind} 끝 마커 {len(stray_ends)}건 제거: {stray_ends}")
+        xml = stray_end_re.sub("", xml)
+        failed += len(stray_ends)
+        modified = True
+
+    # 번호 없는 비정형 마커가 남아 있으면 알린다 (마커 텍스트 손상 케이스)
+    if start_prefix in xml:
+        print(f"  [table] 경고: 번호를 읽을 수 없는 {kind} 시작 마커 잔존 — 원문 확인 필요")
+
+    if replaced or modified:
         _rewrite_hwpx(hwpx_path, xml, out_path)
-        print(f"  [table] {kind} 박스 표: {replaced}건 삽입")
+        print(f"  [table] {kind} 박스 표: {replaced}건 삽입" + (f", 실패 {failed}건" if failed else ""))
     return replaced
 
 
@@ -422,8 +489,12 @@ def replace_placeholder_with_data_table(
         return out_path
 
     idx = xml.find(marker)
-    p_start = xml.rfind("<hp:p", 0, idx)
-    p_end   = xml.find("</hp:p>", idx) + 7
+    p_start = _rfind_para_open(xml, idx)
+    p_close = xml.find("</hp:p>", idx)
+    if p_start < 0 or p_close < 0:
+        print(f"  [table] 경고: {marker} 단락 경계 탐색 실패 — 삽입 건너뜀")
+        return out_path
+    p_end = p_close + 7
 
     max_pid, max_zo = _max_ids(xml)
     tbl_id = max_pid + 2_000_000

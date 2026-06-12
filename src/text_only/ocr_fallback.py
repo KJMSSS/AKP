@@ -613,9 +613,8 @@ def apply_fallback(md: str, pdf_path: Path) -> str:
         for e in va_actions:
             print(f"    {e}")
 
-    # ── 4단계: 문서별 알려진 OCR 오류 교정 ──────────────────────────────
-    # 광주고 14번: g(4)= 를 Mathpix가 g(4)\neq 로 오인
-    md = re.sub(r'g\(4\)\s*\\neq', 'g(4)=', md)
+    # (제거됨) 문서별 1회성 하드코딩 교정 — 특정 학교의 오인식을 전역 적용하면
+    # 다른 학교의 정상 수식을 바꿀 수 있다. 학교별 교정은 corrections 사전 경유.
 
     damaged, reasons = _has_damage(md)
 

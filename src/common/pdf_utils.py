@@ -10,6 +10,10 @@ from pathlib import Path
 _OSD_CONF_MIN = 1.0
 # 잉크(어두운) 픽셀 비율이 이 미만이면 백지로 간주 (회전 무의미)
 _BLANK_INK_RATIO = 0.004
+# 보정 페이지 렌더 해상도·압축 — 무손실 300DPI는 6페이지에 40MB를 넘겨
+# 후속 OCR이 청크 분할(문제 절단 위험)되므로 OCR 충분 수준으로 억제
+_RENDER_DPI  = 250
+_JPG_QUALITY = 85
 
 
 def _set_tesseract_cmd(pytesseract) -> None:
@@ -81,12 +85,17 @@ def _classify_page_rotation(page, dpi: int = 150) -> tuple[str, int | None]:
     return ("osd", 0)
 
 
-def _insert_rendered_page(new_doc, pix) -> None:
-    """렌더된 pixmap을 새 이미지 페이지로 삽입."""
-    w_pt = pix.width * 72 / 300
-    h_pt = pix.height * 72 / 300
+def _insert_rendered_page(new_doc, pix, dpi: int = _RENDER_DPI) -> None:
+    """렌더된 pixmap을 JPEG 압축 이미지 페이지로 삽입 (무손실 대비 ~1/15 크기)."""
+    w_pt = pix.width * 72 / dpi
+    h_pt = pix.height * 72 / dpi
     new_page = new_doc.new_page(width=w_pt, height=h_pt)
-    new_page.insert_image(new_page.rect, pixmap=pix)
+    try:
+        stream = pix.tobytes("jpeg", jpg_quality=_JPG_QUALITY)
+    except (TypeError, ValueError):
+        # 구버전 PyMuPDF: jpg_quality 미지원 — 기본 품질로 폴백
+        stream = pix.tobytes("jpeg")
+    new_page.insert_image(new_page.rect, stream=stream)
 
 
 def normalize_pdf_rotation(src_path: Path, use_content_detection: bool = True) -> Path:
@@ -94,7 +103,7 @@ def normalize_pdf_rotation(src_path: Path, use_content_detection: bool = True) -
     PDF 페이지의 회전을 정상화한다.
 
     세 종류의 회전을 처리:
-      1. **메타데이터 회전** (page.rotation != 0): 300 DPI 렌더로 구워낸다.
+      1. **메타데이터 회전** (page.rotation != 0): JPEG 렌더로 구워낸다.
       2. **내용 회전** (메타 0이지만 스캔이 물리적으로 누움): Tesseract OSD로
          감지 → set_rotation으로 강제 회전 후 렌더.
       3. **불확실 페이지** (가로인데 OSD 실패): 같은 PDF의 확정 보정각 최빈값으로
@@ -149,7 +158,7 @@ def normalize_pdf_rotation(src_path: Path, use_content_detection: bool = True) -
         print(f"  [회전 보간] OSD 실패 가로 페이지 {interp_pages} → 최빈각 {fallback} 적용")
 
     new_doc = fitz.open()
-    mat = fitz.Matrix(300 / 72, 300 / 72)  # 300 DPI
+    mat = fitz.Matrix(_RENDER_DPI / 72, _RENDER_DPI / 72)
 
     for i, page in enumerate(doc):
         kind, ang = plans[i]

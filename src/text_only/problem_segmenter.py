@@ -17,9 +17,14 @@ _PROB_RE   = re.compile(r'^(\d{1,2})[.．]\s*(?=\S)')  # "1. " "1．$" "22. "
 _SUBJ_RE   = re.compile(r'(?:\[\^\d+\])?\s*서술형\s*(\d+)\s*[.．]?\s*')
 _SCORE_RE  = re.compile(r'[\[［][\d.．]+점[\]］]')  # [3점] ／ [4.5점] ／ ［4．7점］
 _CHOICE_RE = re.compile(r'^(?:[（(]\s*[1-5]\s*[）)]|[①②③④⑤])\s*')
-_COND_RE   = re.compile(r'^[（(][가-힣][）)]\s*')         # （가）, (나) 조건문
+# （가）/(나)/$(가)$ 조건 레이블 — 괄호 안팎 공백·수식 래핑 허용
+_COND_LABEL_RE = re.compile(r'^(?:\$[（(]\s*[가-힣]\s*[）)]\$|[（(]\s*[가-힣]\s*[）)])')
+_COND_LABEL_INNER = re.compile(r'[（(]\s*[가-힣]\s*[）)]')  # 줄 중간 탐색용 (비앵커)
+_COND_RE   = _COND_LABEL_RE  # 하위 호환 별칭
 _BOGI_RE   = re.compile(r'^[ㄱ-ㅎ]\s*[.．]\s*|^보기\s*$')  # ㄱ. ㄴ. ㄷ. 또는 "보기" 헤더
 _ROMAN_ITEM_RE = re.compile(r'^\([ivxIVX]+\)\s+')          # (i) (ii) (iii) 로마자 번호 항목
+# 질문 문장 신호 — 조건 연속 줄 병합을 끊는다 (본문 질문이 조건 박스에 빨려드는 것 방지)
+_QUESTION_RE = re.compile(r'구하시오|구하여라|구하라|쓰시오|답하시오|보이시오|나타내시오|서술하시오')
 
 
 def _is_bogi_line(s: str) -> bool:
@@ -27,6 +32,67 @@ def _is_bogi_line(s: str) -> bool:
     if _BOGI_RE.match(s):
         return True
     return bool(_ROMAN_ITEM_RE.match(s)) and '또는 (' not in s
+
+
+def _is_cond_label(s: str) -> bool:
+    """조건 항목 레이블 판정.
+
+    '(가) 내용' / '（가）내용'은 조건이지만, 본문이 조건을 가리키는
+    '(가)와 (나)를 모두 만족…' 같은 참조 문장은 제외해야 한다.
+    구분 신호: 닫는 괄호에 조사·쉼표가 공백 없이 바로 붙으면 참조.
+    단 '（가）가장 작은…'처럼 내용이 조사와 같은 글자로 시작할 수 있어,
+    와/과/쉼표 외에는 같은 줄에 다른 레이블이 또 있을 때만 참조로 본다.
+    """
+    m = _COND_LABEL_RE.match(s)
+    if not m:
+        return False
+    rest = s[m.end():]
+    if not rest or rest[0].isspace():
+        return True  # 레이블 단독 줄 또는 '(가) 내용'
+    head = rest[0]
+    if head == ',' or head in '와과':
+        return False  # '(가),' '(가)와' — 명백한 참조
+    if head in '을를은는이가의에도' and _COND_LABEL_INNER.search(rest):
+        return False  # '(가)를 … (나)…' — 조사 + 두 번째 레이블 = 참조 문장
+    return True
+
+
+def _consume_cond_block(lines: list[str], i: int) -> tuple[str, int]:
+    """lines[i]가 조건 레이블일 때, OCR 줄바꿈으로 꺾인 연속 줄까지 한 항목으로 병합.
+
+    빈 줄/다음 레이블/선택지/보기/점수/새 문제/이미지/마커에서 끊는다.
+    또한 디스플레이 수식(\\[, $$)·표 잔해(\\begin 등)·질문 문장(? 포함)은
+    학생 스크래치·본문일 가능성이 높아 병합하지 않는다 (실데이터 차등 검증 근거).
+    반환: (병합된 조건 항목, 다음 인덱스)
+    """
+    block = [lines[i].strip()]
+    j = i + 1
+    while j < len(lines):
+        t = lines[j].strip()
+        if (not t or _is_cond_label(t) or _CHOICE_RE.match(t) or _is_bogi_line(t)
+                or _PROB_RE.match(t) or _SUBJ_RE.search(t) or _SCORE_RE.search(t)
+                or t.startswith("![") or t.startswith("【★")
+                or t.startswith(("\\[", "$$", "\\begin", "\\end", "\\hline"))
+                or "?" in t or _QUESTION_RE.search(t)):
+            break
+        block.append(t)
+        j += 1
+    return " ".join(block), j
+
+
+def _extract_cond_blocks(lines: list[str]) -> tuple[list[str], list[str]]:
+    """줄 목록에서 조건 블록들을 추출. 반환: (조건 항목 목록, 나머지 줄 목록)."""
+    conds: list[str] = []
+    remaining: list[str] = []
+    i = 0
+    while i < len(lines):
+        if _is_cond_label(lines[i].strip()):
+            item, i = _consume_cond_block(lines, i)
+            conds.append(item)
+        else:
+            remaining.append(lines[i])
+            i += 1
+    return conds, remaining
 _IMAGE_RE  = re.compile(r'!\[.*?\]\((https://cdn\.mathpix\.com/[^)]+)\)')
 _DISPLAY_MATH_RE = re.compile(r'^\$\$|^\\begin\{')
 _BIGVEE_RE   = re.compile(r'\s*\$\\bigvee_\{(\d+)\}\$\s*$')  # ① OCR 아티팩트
@@ -123,8 +189,7 @@ def _split_block(
 
     if score_idx == -1:
         if is_subj:
-            conditions = [l.strip() for l in block_lines if _COND_RE.match(l.strip())]
-            clean = [l for l in block_lines if not _COND_RE.match(l.strip())]
+            conditions, clean = _extract_cond_blocks(block_lines)
             return "\n".join(clean), [], conditions, []
         return "\n".join(block_lines), [], [], []
 
@@ -165,8 +230,8 @@ def _split_block(
             after_lines = [f'（1） {bv_m.group(1)}'] + list(after_lines)
 
     # 조건문이 score 이전 prob_lines에 있는 경우 추출 (예: 19번, 서술형 3)
-    pre_conds = [l.strip() for l in prob_lines if _COND_RE.match(l.strip())]
-    prob_lines = [l for l in prob_lines if not _COND_RE.match(l.strip())]
+    # 여러 줄로 꺾인 조건은 블록 단위로 병합 수집
+    pre_conds, prob_lines = _extract_cond_blocks(prob_lines)
 
     # 보기 항목(ㄱ/ㄴ/ㄷ)이 score 이전 prob_lines에 있는 경우 추출
     # 로마자 (i)(ii)(iii)는 위치가 prob_lines 중간이라 자동 추출 불가
@@ -175,7 +240,7 @@ def _split_block(
     prob_lines = [l for l in prob_lines if not _BOGI_RE.match(l.strip())]
 
     if is_subj:
-        post_conds = [l.strip() for l in after_lines if _COND_RE.match(l.strip())]
+        post_conds, _ = _extract_cond_blocks(after_lines)
         return "\n".join(prob_lines), [], pre_conds + post_conds, []
 
     choices: list[str]     = []
@@ -195,10 +260,10 @@ def _split_block(
         if _PROB_RE.match(s) or _SUBJ_RE.match(s):
             break
 
-        # 조건문 （가）/（나）/（다）
-        if _COND_RE.match(s):
-            conditions.append(s)
-            i += 1
+        # 조건문 （가）/（나）/（다） — 꺾인 연속 줄까지 한 항목으로
+        if _is_cond_label(s):
+            item, i = _consume_cond_block(after_lines, i)
+            conditions.append(item)
             continue
 
         # 보기 헤더 또는 ㄱ/ㄴ/ㄷ/(i)/(ii)/(iii) 항목
