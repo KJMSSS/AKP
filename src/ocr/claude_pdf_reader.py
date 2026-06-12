@@ -24,8 +24,11 @@ load_dotenv()
 _MODEL = "claude-sonnet-4-6"
 _COST_PER_M_INPUT  = 3.0    # USD / 1M input tokens
 _COST_PER_M_OUTPUT = 15.0   # USD / 1M output tokens
-_MAX_TOKENS      = 8192
-_MAX_TOKENS_FULL = 16000  # 정답·해설 포함 시 더 긴 출력 필요
+# 8192로는 20문제+서술형 시험지가 중간에 잘림 (수완고: [서술형] 1.에서 절단)
+# — 비용은 실사용 토큰 기준이므로 한도 상향 자체는 과금 증가 없음
+_MAX_TOKENS      = 32000
+_MAX_TOKENS_FULL = 32000  # 정답·해설 포함 시 더 긴 출력 필요
+_MAX_CONTINUE    = 4      # max_tokens 절단 시 이어쓰기 최대 횟수
 _PAGE_CHUNK    = 10          # 청크당 최대 페이지 수
 _MAX_PDF_BYTES = 18 * 1024 * 1024  # 단일 호출 최대 PDF 크기 (18MB, base64 후 ~24MB)
 
@@ -231,38 +234,67 @@ def _call_api(
     system: str,
     user_prompt: str,
 ) -> tuple[str, float]:
+    """PDF 1회 전사. stop_reason=max_tokens면 assistant 이어쓰기로 끝까지 받는다.
+
+    조용한 절단은 문제 통째 유실(서술형 누락 등)로 이어지므로,
+    이어쓰기 한도(_MAX_CONTINUE)를 넘겨도 잘려 있으면 명시적으로 실패시킨다.
+    """
     b64 = base64.standard_b64encode(pdf_bytes).decode()
     client = anthropic.Anthropic(api_key=api_key)
 
-    t0 = time.time()
-    resp = client.messages.create(
-        model=_MODEL,
-        max_tokens=max_tokens,
-        system=system,
-        messages=[
+    user_msg = {
+        "role": "user",
+        "content": [
             {
-                "role": "user",
-                "content": [
-                    {
-                        "type": "document",
-                        "source": {
-                            "type": "base64",
-                            "media_type": "application/pdf",
-                            "data": b64,
-                        },
-                    },
-                    {"type": "text", "text": user_prompt},
-                ],
-            }
+                "type": "document",
+                "source": {
+                    "type": "base64",
+                    "media_type": "application/pdf",
+                    "data": b64,
+                },
+            },
+            {"type": "text", "text": user_prompt},
         ],
-    )
+    }
 
-    elapsed = time.time() - t0
-    in_tok  = resp.usage.input_tokens
-    out_tok = resp.usage.output_tokens
-    cost    = (in_tok * _COST_PER_M_INPUT + out_tok * _COST_PER_M_OUTPUT) / 1_000_000
-    print(f"  [claude_pdf] {elapsed:.1f}s  in={in_tok:,} out={out_tok:,}  ${cost:.4f}")
-    return resp.content[0].text, cost
+    full_text  = ""
+    total_cost = 0.0
+    for round_no in range(_MAX_CONTINUE + 1):
+        messages = [user_msg]
+        if full_text:
+            # 이어쓰기: 지금까지 출력을 assistant 프리필로 전달
+            # (API 제약: 프리필은 공백으로 끝날 수 없음 → rstrip 후 이어붙임)
+            full_text = full_text.rstrip()
+            messages.append({"role": "assistant", "content": full_text})
+
+        t0 = time.time()
+        # 긴 출력은 비스트리밍 한도를 넘으므로 스트리밍으로 수신
+        with client.messages.stream(
+            model=_MODEL,
+            max_tokens=max_tokens,
+            system=system,
+            messages=messages,
+        ) as stream:
+            resp = stream.get_final_message()
+
+        elapsed = time.time() - t0
+        in_tok  = resp.usage.input_tokens
+        out_tok = resp.usage.output_tokens
+        cost    = (in_tok * _COST_PER_M_INPUT + out_tok * _COST_PER_M_OUTPUT) / 1_000_000
+        total_cost += cost
+        print(f"  [claude_pdf] {elapsed:.1f}s  in={in_tok:,} out={out_tok:,}  ${cost:.4f}")
+
+        part = "".join(b.text for b in resp.content if getattr(b, "type", "") == "text")
+        full_text += part
+
+        if resp.stop_reason != "max_tokens":
+            return full_text, total_cost
+        print(f"  [claude_pdf] 경고: max_tokens 절단 감지 — 이어쓰기 {round_no + 1}/{_MAX_CONTINUE}")
+
+    raise RuntimeError(
+        f"Claude OCR 출력이 이어쓰기 {_MAX_CONTINUE}회 후에도 잘렸습니다 "
+        f"(max_tokens={max_tokens}). 문제 유실 방지를 위해 변환을 중단합니다."
+    )
 
 
 def _extract_chunk_bytes(doc, start: int, end: int) -> bytes:

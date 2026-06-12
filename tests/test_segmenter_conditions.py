@@ -41,6 +41,54 @@ class TestCondLabel:
         assert not _is_cond_label("(1) 소문제")
 
 
+class TestSubjectiveBoundary:
+    """서술형 경계 인식 — 대괄호 형식 미인식으로 직전 문제에 흡수되던 회귀.
+
+    실사고(수완고): OCR이 "[서술형] 1." 형식으로 출력 → 옛 _SUBJ_RE가
+    인식 못 해 20번 객관식 문제 꼬리에 통째로 붙음.
+    """
+
+    _CHOICES = ["① 1", "② 2", "③ 3", "④ 4", "⑤ 5"]
+
+    def test_bracketed_subjective_detected(self):
+        md = "\n".join([
+            "20. 마지막 객관식 문제는? [4점]",
+            *self._CHOICES,
+            "[서술형] 1.",
+            "$\\int_0^1 x\\,dx$ 의 값을 구하는 과정을 서술하시오. [6점]",
+            "[서술형] 2.",
+            "다음을 증명하시오. [7점]",
+        ])
+        _, segs = parse_problems(md)
+        nums = [s.number for s in segs]
+        assert nums == [20, 101, 102]
+        assert not segs[0].is_subjective
+        assert segs[1].is_subjective and segs[2].is_subjective
+        # 객관식 꼬리에 서술형이 흡수되지 않음
+        assert "서술형" not in segs[0].raw_block
+
+    def test_plain_subjective_still_detected(self):
+        md = "\n".join([
+            "1. 객관식 [3점]",
+            *self._CHOICES,
+            "서술형 1. 과정을 서술하시오. [5점]",
+        ])
+        _, segs = parse_problems(md)
+        assert [s.number for s in segs] == [1, 101]
+        assert segs[1].is_subjective
+
+    def test_numbered_bracket_label_detected(self):
+        # "21. [서술형1]" — 번호 이어쓰기 + 접두사 형식
+        md = "\n".join([
+            "20. 객관식 [3점]",
+            *self._CHOICES,
+            "21. [서술형1] 과정을 서술하시오. [5점]",
+        ])
+        _, segs = parse_problems(md)
+        assert [s.number for s in segs] == [20, 101]
+        assert segs[1].is_subjective
+
+
 class TestMultilineCondition:
     def test_wrapped_condition_merged(self):
         md = "\n".join([
