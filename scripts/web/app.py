@@ -171,6 +171,7 @@ from scripts.web.corrections_log import (                           # noqa: E402
     corrections_summary,
     approve_as_pattern, get_active_patterns,
     list_patterns, toggle_pattern, delete_pattern,
+    seed_default_patterns,
 )
 from scripts.web.users import (                                     # noqa: E402
     add_user, get_user, is_admin, is_allowed, list_users,
@@ -1233,6 +1234,14 @@ async def api_approve_pattern(cid: str, request: Request):
 async def api_list_patterns(request: Request):
     _require_admin(request)
     return JSONResponse(list_patterns())
+
+
+@app.post("/api/admin/patterns/seed-defaults")
+async def api_seed_default_patterns(request: Request):
+    """큐레이션된 기본 교정 패턴을 global로 등록 (멱등). 초기 품질 부트스트랩."""
+    _require_admin(request)
+    added = seed_default_patterns()
+    return JSONResponse({"ok": True, "added": added})
 
 
 @app.patch("/api/admin/patterns/{pid}")

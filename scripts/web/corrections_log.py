@@ -75,6 +75,60 @@ def approve_as_pattern(
     _save_patterns(patterns)
     return pid
 
+# ── 큐레이션된 기본 패턴 (초기 품질용) ────────────────────────────────────
+# corrected_text는 latex_to_hwp.convert가 지원하는 표기만 사용 (검증됨).
+# \overrightarrow·\overarc 등 미지원 표기는 새 변환 실패를 유발하므로 금지.
+DEFAULT_SEED_PATTERNS: list[dict] = [
+    {
+        "id": "seed-geom-symbols",
+        "original_text": "∠ABC, △ABC, ∽, ≡ (각·삼각형·닮음·합동 기호를 글자로 읽거나 누락)",
+        "corrected_text": r"$\angle \mathrm{ABC}$, $\triangle \mathrm{ABC}$, $\sim$, $\equiv$",
+        "note": r"도형·관계 기호는 수식 모드로 — 닮음 ∽=\sim, 합동 ≡=\equiv",
+    },
+    {
+        "id": "seed-segment-vector",
+        "original_text": "선분 AB 윗줄·벡터 AB 화살표 누락 (그냥 AB로 읽음)",
+        "corrected_text": r"$\overline{\mathrm{AB}}$, $\vec{\mathrm{AB}}$",
+        "note": r"선분은 \overline, 벡터는 \vec — \overrightarrow는 변환 미지원이므로 쓰지 말 것",
+    },
+    {
+        "id": "seed-parallel-perp",
+        "original_text": "평행 ∥, 수직 ⊥ 기호를 //·T 등으로 오인",
+        "corrected_text": r"$\parallel$, $\perp$",
+        "note": r"평행 \parallel, 수직 \perp",
+    },
+]
+
+
+def seed_default_patterns() -> int:
+    """큐레이션된 기본 패턴을 global 스코프로 등록 (멱등 — id 중복 시 건너뜀).
+
+    추가된 패턴 수 반환. 학원장이 /admin에서 한 번 눌러 초기 품질을 끌어올리는 용도.
+    """
+    patterns = _load_patterns()
+    existing = {p.get("id") for p in patterns}
+    now = datetime.now().isoformat(timespec="seconds")
+    added = 0
+    for sp in DEFAULT_SEED_PATTERNS:
+        if sp["id"] in existing:
+            continue
+        patterns.append({
+            "id":            sp["id"],
+            "source_cid":    "seed",
+            "scope":         "global",
+            "scope_value":   "",
+            "original_text": sp["original_text"],
+            "corrected_text": sp["corrected_text"],
+            "note":          sp["note"],
+            "active":        True,
+            "created_at":    now,
+        })
+        added += 1
+    if added:
+        _save_patterns(patterns)
+    return added
+
+
 def get_active_patterns(school: str = "", subject: str = "") -> list[dict]:
     """변환 시 프롬프트에 주입할 패턴 반환 (전역 + 학교별 + 과목별)."""
     all_p = _load_patterns()
