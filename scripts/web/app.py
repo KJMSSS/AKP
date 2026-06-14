@@ -1127,6 +1127,9 @@ def api_figure_apply(key: str, request: Request):
 
         counts = apply_figure_decisions(tmp_out, items)
 
+        # 그림 반영본도 2단 타이퍼 양식으로 (최종 출력 = 2단)
+        _finalize_2dan(tmp_out, key)
+
         shutil.move(str(tmp_out), str(target))
         jid = f"{job_id}_reviewed" if is_reviewed else job_id
         if jid in _jobs:
@@ -1619,6 +1622,9 @@ async def review_submit(job_id: str, request: Request):
                     _figq_mark_applied(_fig_key, _fig_items, _fc, out_hwpx.name)
         except Exception as _fe:
             print(f"  [그림] 검수본 그림 반영 실패 (계속 진행): {_fe}")
+
+        # 검수완 HWPX도 2단 타이퍼 양식으로 (최종 출력 = 2단)
+        _finalize_2dan(out_hwpx, _fig_key or job_id)
     finally:
         if _fig_key:
             with _figq_apply_busy_lock:
@@ -1700,6 +1706,41 @@ def _render_pdf_pages(pdf_path: Path, job_id: str) -> int:
     n = doc.page_count
     doc.close()
     return n
+
+
+def _finalize_2dan(one_dan_path: Path, reg_key: str) -> bool:
+    """1단 HWPX를 2단 타이퍼 양식으로 제자리 변환 (학원장 요청: 최종이 2단).
+
+    내용 손실(수식·그림 수 감소)·검증 실패·예외 시 1단을 그대로 유지(폴백).
+    제자리 교체 성공 시 True.
+    """
+    import zipfile as _zf
+    try:
+        from src.text_only.typer_builder import build_typer_hwpx
+
+        def _counts(p: Path) -> tuple[int, int]:
+            x = _zf.ZipFile(p).read("Contents/section0.xml").decode("utf-8")
+            return x.count("<hp:equation"), x.count("<hp:pic")
+
+        eq1, pic1 = _counts(one_dan_path)
+        tmp2 = one_dan_path.with_name(one_dan_path.stem + "_2dan.hwpx")
+        build_typer_hwpx(one_dan_path, reg_key or one_dan_path.stem, tmp2)
+        eq2, pic2 = _counts(tmp2)
+        if eq2 < eq1 or pic2 < pic1:
+            tmp2.unlink(missing_ok=True)
+            print(f"  [2단] 내용 손실 감지(수식 {eq1}→{eq2}, 그림 {pic1}→{pic2}) — 1단 유지")
+            return False
+        errs = validate_hwpx(str(tmp2))
+        if errs:
+            tmp2.unlink(missing_ok=True)
+            print(f"  [2단] 검증 실패 — 1단 유지: {errs[0]}")
+            return False
+        shutil.move(str(tmp2), str(one_dan_path))
+        print("  [2단] 타이퍼 양식 변환 완료")
+        return True
+    except Exception as e:
+        print(f"  [2단] 변환 실패 — 1단 유지: {e}")
+        return False
 
 
 def _save_review_data(
@@ -1882,6 +1923,10 @@ def _run_conversion(
                 pass
             except Exception:
                 pass
+
+        # ── 2단 타이퍼 양식으로 변환 (최종 출력 = 2단) ────────────────────
+        # 그림 큐 등록(crop) 이후, Drive 업로드 전에 제자리 변환.
+        _finalize_2dan(out_hwpx, _reg_key)
 
         # ── Google Drive 업로드 ──────────────────────────────────────────
         _drive_file_id = ""

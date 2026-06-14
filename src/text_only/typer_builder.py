@@ -403,6 +403,10 @@ class _TyprWriter:
         # lineseg horzsize → 2단 열폭
         xml = re.sub(r'horzsize="\d+"', f'horzsize="{_COL_W}"', xml)
 
+        # 그림(hp:pic) 단락은 기하를 열폭에 맞게 따로 스케일 (표/수식 규칙 미적용)
+        if '<hp:pic' in xml:
+            return self._scale_pic_para(xml)
+
         # 수식 ID/zOrder 재발급
         def _renumber_eq(m: re.Match) -> str:
             s = m.group(0)
@@ -426,6 +430,32 @@ class _TyprWriter:
         xml = re.sub(r'<hp:cellSz width="(\d+)"', _scale_cell, xml)
 
         return xml
+
+    def _scale_pic_para(self, xml: str) -> str:
+        """그림 단락 기하를 2단 열폭에 맞게 비율 유지 축소.
+
+        열폭(여백 6% 차감)보다 넓은 그림만 줄이고, 작으면 원본 크기 유지.
+        폭·높이·좌표를 동일 배율로 일괄 조정해 왜곡을 막는다. zOrder는
+        섹션 단위 재발급(_renumber_zorders)이 처리하므로 여기선 건드리지 않음.
+        """
+        m = re.search(r'<hp:orgSz width="(\d+)" height="(\d+)"', xml)
+        if not m:
+            return xml
+        w0 = int(m.group(1))
+        usable = round(_COL_W * 0.94)
+        if w0 <= usable:
+            return xml  # 이미 열 안에 들어감 — 원본 유지
+
+        f = usable / w0
+
+        def _sc(mm: "re.Match") -> str:
+            return f'{mm.group(1)}="{round(int(mm.group(2)) * f)}"'
+
+        # 그림 기하·세로줄 높이를 동일 배율로 (가로 horzsize는 이미 _COL_W)
+        return re.sub(
+            r'\b(width|height|x|y|right|bottom|dimwidth|dimheight'
+            r'|centerX|centerY|vertsize|textheight|baseline)="(\d+)"',
+            _sc, xml)
 
     # ── 전체 섹션 XML ────────────────────────────────────────────────
 
@@ -466,7 +496,9 @@ class _TyprWriter:
             parts.append(self._meta_table_para(school, prob_no, exam_code, difficulty, score))
             for p in paras:
                 # 내용 없는 순수 빈 단락은 제외 (메타 표가 구분자 역할)
-                if not _para_text(p) and '<hp:equation' not in p and '<hp:tbl' not in p:
+                # ★ 그림(hp:pic) 단락은 텍스트·수식·표가 없어도 보존해야 함
+                if (not _para_text(p) and '<hp:equation' not in p
+                        and '<hp:tbl' not in p and '<hp:pic' not in p):
                     continue
                 parts.append(self._adapt_para(p))
 
@@ -520,6 +552,13 @@ def build_typer_hwpx(
             for name in zf.namelist()
             if name.startswith('BinData/')
         }
+
+    # 멱등 가드: 이미 2단 타이퍼 양식(2단 colCount 또는 1×6 메타표)이면
+    # 이중 변환하지 않고 그대로 복사 — 본 변환이 2단을 내보내므로 필요.
+    if 'colCount="2"' in one_dan_xml or 'rowCnt="1" colCnt="6"' in one_dan_xml:
+        if Path(one_dan_path) != Path(out_path):
+            shutil.copyfile(one_dan_path, out_path)
+        return out_path
 
     # 2단 헤더 읽기 (스타일/폰트 정의)
     with zipfile.ZipFile(ref_template, 'r') as zf:
