@@ -68,15 +68,43 @@ _DEFAULT_SUBJECTS = [
     {"id": "미적2", "name": "미적분2",   "grade": "3", "sem": "1"},
 ]
 
+# 레포에 커밋된 번들 config (학교·과목 목록) — 신규 DATA_DIR 볼륨 부트스트랩용.
+# Railway 볼륨(/data)은 git과 분리돼 비어 시작하므로, 비어 있으면 이 시드로 채운다.
+_SEED_CONFIG_FILE = _HERE / "data" / "matrix_config.json"
+
+def _load_seed_config() -> dict | None:
+    """번들 시드 config 로드. _CONFIG_FILE과 같은 경로(로컬)면 시드 의미 없으므로 None."""
+    if _SEED_CONFIG_FILE == _CONFIG_FILE or not _SEED_CONFIG_FILE.exists():
+        return None
+    try:
+        return json.loads(_SEED_CONFIG_FILE.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+
 def _load_mconfig() -> dict:
     with _config_lock:
-        if _CONFIG_FILE.exists():
+        existed = _CONFIG_FILE.exists()
+        cfg: dict | None = None
+        if existed:
             try:
-                return json.loads(_CONFIG_FILE.read_text(encoding="utf-8"))
+                cfg = json.loads(_CONFIG_FILE.read_text(encoding="utf-8"))
             except Exception:
-                pass
-        cfg = {"subjects": _DEFAULT_SUBJECTS, "schools": []}
-        _CONFIG_FILE.write_text(json.dumps(cfg, ensure_ascii=False, indent=2), encoding="utf-8")
+                cfg = None
+        need_write = (cfg is None) or (not existed)
+        if cfg is None:
+            cfg = {"subjects": _DEFAULT_SUBJECTS, "schools": []}
+
+        # 학교 목록이 비어 있으면(신규 Railway 볼륨 등) 번들 시드로 부트스트랩
+        if not cfg.get("schools"):
+            seed = _load_seed_config()
+            if seed and seed.get("schools"):
+                cfg["schools"]  = seed["schools"]
+                cfg["subjects"] = seed.get("subjects") or cfg.get("subjects") or _DEFAULT_SUBJECTS
+                need_write = True
+                print(f"  [config] 번들 시드 부트스트랩 — 학교 {len(cfg['schools'])}개 등록")
+
+        if need_write:
+            _CONFIG_FILE.write_text(json.dumps(cfg, ensure_ascii=False, indent=2), encoding="utf-8")
         return cfg
 
 def _save_mconfig(cfg: dict) -> None:
