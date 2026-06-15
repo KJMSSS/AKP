@@ -167,9 +167,39 @@ def delete_pattern(pid: str) -> bool:
     return True
 
 
+def _dup_key(e: dict) -> tuple:
+    """중복 판정 키 — 같은 잡·문제·메모·교정텍스트면 동일 항목.
+    같은 문제라도 메모/교정 내용이 다르면 다른 항목으로 본다."""
+    return (
+        e.get("job_id", ""),
+        str(e.get("problem_number", "")),
+        (e.get("correction_note") or "").strip(),
+        (e.get("corrected_text") or "").strip(),
+    )
+
+
 def append_correction(entry: dict) -> str:
-    """수정 항목 저장. 생성된 id 반환."""
+    """수정 항목 저장. 생성된 id 반환.
+
+    재제출 등으로 '같은 문제 + 같은 메모 + 같은 교정'이 다시 들어오면
+    중복으로 보고 새로 쓰지 않고 기존 id를 반환한다 (reverted 제외).
+    """
     _LOG_DIR.mkdir(parents=True, exist_ok=True)
+
+    # 중복 검사 (활성 항목만 — 되돌린 항목은 다시 등록 허용)
+    key = _dup_key(entry)
+    if _LOG_FILE.exists():
+        for line in _LOG_FILE.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                e = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if e.get("status") != "reverted" and _dup_key(e) == key:
+                return e.get("id", "")
+
     cid = uuid.uuid4().hex[:12]
     entry = {
         "id":     cid,
@@ -180,6 +210,38 @@ def append_correction(entry: dict) -> str:
     with _LOG_FILE.open("a", encoding="utf-8") as f:
         f.write(json.dumps(entry, ensure_ascii=False) + "\n")
     return cid
+
+
+def dedupe_corrections() -> int:
+    """기존 로그의 중복 항목 정리 (같은 키의 활성 항목은 첫 것만 유지).
+    reverted 항목과 키가 다른 항목은 보존. 제거한 줄 수 반환."""
+    if not _LOG_FILE.exists():
+        return 0
+    lines = _LOG_FILE.read_text(encoding="utf-8").splitlines()
+    seen: set = set()
+    kept: list[str] = []
+    removed = 0
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            e = json.loads(line)
+        except json.JSONDecodeError:
+            kept.append(line)
+            continue
+        if e.get("status") == "reverted":
+            kept.append(line)  # 되돌린 항목은 그대로 보존
+            continue
+        key = _dup_key(e)
+        if key in seen:
+            removed += 1
+            continue
+        seen.add(key)
+        kept.append(line)
+    if removed:
+        _LOG_FILE.write_text("\n".join(kept) + "\n", encoding="utf-8")
+    return removed
 
 
 def read_corrections(days: int = 30) -> list[dict]:

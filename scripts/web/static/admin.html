@@ -403,7 +403,11 @@
   <div class="card">
     <div class="corrections-header">
       <div class="card-title" style="margin-bottom:0;">직원 검수 수정 로그</div>
-      <span id="corrections-summary" style="font-size:0.82rem;color:#64748b;"></span>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span id="corrections-summary" style="font-size:0.82rem;color:#64748b;"></span>
+        <button onclick="dedupeCorrections()" title="같은 문제·같은 메모로 중복 등록된 항목 정리"
+          style="padding:5px 11px;border:1px solid #cbd5e1;border-radius:6px;background:#fff;color:#475569;font-size:0.78rem;font-weight:600;cursor:pointer;white-space:nowrap;">중복 정리</button>
+      </div>
     </div>
 
     <!-- 직원별 통계 -->
@@ -1053,6 +1057,17 @@
 
   window.closePatternModal = function () {
     document.getElementById('pattern-modal').style.display = 'none';
+  };
+
+  /* 검수 로그 중복 정리 */
+  window.dedupeCorrections = function () {
+    apiFetch('/api/admin/corrections/dedupe', { method: 'POST' })
+      .then(function (data) {
+        var n = (data && data.removed != null) ? data.removed : 0;
+        showToast(n > 0 ? (n + '개 중복 제거됨') : '중복 없음');
+        if (typeof loadCorrections === 'function') loadCorrections();
+      })
+      .catch(function (err) { showToast('중복 정리 실패: ' + (err.message || err), true); });
   };
 
   /* 기본 패턴 일괄 등록 (멱등) */

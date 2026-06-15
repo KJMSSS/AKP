@@ -196,7 +196,7 @@ from scripts.web.usage_log import (                                 # noqa: E402
 )
 from scripts.web.corrections_log import (                           # noqa: E402
     append_correction, read_corrections, revert_correction,
-    corrections_summary,
+    corrections_summary, dedupe_corrections,
     approve_as_pattern, get_active_patterns,
     list_patterns, toggle_pattern, delete_pattern,
     seed_default_patterns,
@@ -1236,6 +1236,14 @@ async def api_corrections(request: Request, days: int = 30):
         "corrections": read_corrections(days=days),
         "summary":     corrections_summary(days=7),
     })
+
+
+@app.post("/api/admin/corrections/dedupe")
+async def api_dedupe_corrections(request: Request):
+    """검수 로그의 중복 항목 정리 (같은 잡·문제·메모·교정 = 중복)."""
+    _require_admin(request)
+    removed = dedupe_corrections()
+    return JSONResponse({"ok": True, "removed": removed})
 
 
 @app.patch("/api/admin/corrections/{cid}/revert")
