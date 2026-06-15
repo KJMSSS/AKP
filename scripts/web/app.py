@@ -1708,13 +1708,26 @@ def _render_pdf_pages(pdf_path: Path, job_id: str) -> int:
     return n
 
 
+def _highlight_markers(path: Path) -> None:
+    """출력 HWPX의 【★ 확인 필요】·손상 마커를 빨강으로 강조 (실패 무시)."""
+    try:
+        from src.common.hwpx_marker_highlighter import highlight_markers
+        n = highlight_markers(path)
+        if n:
+            print(f"  [마커] 확인필요·손상 마커 {n}개 빨강 강조")
+    except Exception as e:
+        print(f"  [마커] 강조 실패 (무시): {e}")
+
+
 def _finalize_2dan(one_dan_path: Path, reg_key: str) -> bool:
     """1단 HWPX를 2단 타이퍼 양식으로 제자리 변환 (학원장 요청: 최종이 2단).
 
-    내용 손실(수식·그림 수 감소)·검증 실패·예외 시 1단을 그대로 유지(폴백).
+    변환 후 검수 마커를 빨강 강조한다. 내용 손실(수식·그림 수 감소)·검증
+    실패·예외 시 1단을 그대로 유지(폴백)하되 마커 강조는 그대로 적용.
     제자리 교체 성공 시 True.
     """
     import zipfile as _zf
+    ok = False
     try:
         from src.text_only.typer_builder import build_typer_hwpx
 
@@ -1729,18 +1742,21 @@ def _finalize_2dan(one_dan_path: Path, reg_key: str) -> bool:
         if eq2 < eq1 or pic2 < pic1:
             tmp2.unlink(missing_ok=True)
             print(f"  [2단] 내용 손실 감지(수식 {eq1}→{eq2}, 그림 {pic1}→{pic2}) — 1단 유지")
-            return False
-        errs = validate_hwpx(str(tmp2))
-        if errs:
-            tmp2.unlink(missing_ok=True)
-            print(f"  [2단] 검증 실패 — 1단 유지: {errs[0]}")
-            return False
-        shutil.move(str(tmp2), str(one_dan_path))
-        print("  [2단] 타이퍼 양식 변환 완료")
-        return True
+        else:
+            errs = validate_hwpx(str(tmp2))
+            if errs:
+                tmp2.unlink(missing_ok=True)
+                print(f"  [2단] 검증 실패 — 1단 유지: {errs[0]}")
+            else:
+                shutil.move(str(tmp2), str(one_dan_path))
+                print("  [2단] 타이퍼 양식 변환 완료")
+                ok = True
     except Exception as e:
         print(f"  [2단] 변환 실패 — 1단 유지: {e}")
-        return False
+
+    # 2단 여부와 무관하게 최종 파일에 마커 빨강 강조
+    _highlight_markers(one_dan_path)
+    return ok
 
 
 def _save_review_data(
