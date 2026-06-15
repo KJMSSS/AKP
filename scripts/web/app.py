@@ -1321,6 +1321,12 @@ async def matrix_page(request: Request):
     return HTMLResponse((_HERE / "static" / "matrix.html").read_text(encoding="utf-8"))
 
 
+@app.get("/guide", response_class=HTMLResponse)
+async def guide_page():
+    """직원용 사용설명서 (로그인 없이도 열람 가능)."""
+    return HTMLResponse((_HERE / "static" / "guide.html").read_text(encoding="utf-8"))
+
+
 @app.get("/api/config")
 async def api_get_config(request: Request):
     _require_login(request)
