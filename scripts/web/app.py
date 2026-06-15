@@ -196,7 +196,7 @@ from scripts.web.usage_log import (                                 # noqa: E402
 )
 from scripts.web.corrections_log import (                           # noqa: E402
     append_correction, read_corrections, revert_correction,
-    corrections_summary, dedupe_corrections,
+    corrections_summary, dedupe_corrections, analyze_corrections,
     approve_as_pattern, get_active_patterns,
     list_patterns, toggle_pattern, delete_pattern,
     seed_default_patterns,
@@ -1244,6 +1244,13 @@ async def api_dedupe_corrections(request: Request):
     _require_admin(request)
     removed = dedupe_corrections()
     return JSONResponse({"ok": True, "removed": removed})
+
+
+@app.get("/api/admin/corrections/analysis")
+async def api_corrections_analysis(request: Request, days: int = 90):
+    """반복 교정 분석 — 비슷한 오류를 묶어 패턴화 우선순위 제시."""
+    _require_admin(request)
+    return JSONResponse(analyze_corrections(days=days))
 
 
 @app.patch("/api/admin/corrections/{cid}/revert")

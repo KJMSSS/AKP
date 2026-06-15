@@ -401,6 +401,16 @@
 
   <!-- 직원 검수 수정 로그 -->
   <div class="card">
+    <!-- 반복 교정 분석 (검수 → 개선 루프) -->
+    <div style="background:#f5f3ff;border:1px solid #ddd6fe;border-radius:8px;padding:14px 16px;margin-bottom:16px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:8px;">
+        <div style="font-size:0.92rem;font-weight:700;color:#5b21b6;">🔁 반복 교정 분석 <span style="font-weight:400;font-size:0.78rem;color:#7c3aed;">— 여러 번 나온 오류를 패턴으로 등록하면 다음 변환부터 자동 교정</span></div>
+        <button onclick="loadAnalysis()" style="padding:5px 11px;border:1px solid #c4b5fd;border-radius:6px;background:#fff;color:#6d28d9;font-size:0.78rem;font-weight:600;cursor:pointer;">새로고침</button>
+      </div>
+      <div id="analysis-themes" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;"></div>
+      <div id="analysis-groups"></div>
+    </div>
+
     <div class="corrections-header">
       <div class="card-title" style="margin-bottom:0;">직원 검수 수정 로그</div>
       <div style="display:flex;align-items:center;gap:10px;">
@@ -557,6 +567,7 @@
         document.getElementById('main-content').style.display = 'flex';
 
         loadUsers();
+        loadAnalysis();
         loadCorrections();
         loadPatterns();
       })
@@ -1059,6 +1070,82 @@
     document.getElementById('pattern-modal').style.display = 'none';
   };
 
+  /* 반복 교정 분석 — 검수→개선 루프 */
+  window.loadAnalysis = function () {
+    apiFetch('/api/admin/corrections/analysis?days=180')
+      .then(renderAnalysis)
+      .catch(function (err) {
+        document.getElementById('analysis-groups').innerHTML =
+          '<div style="color:#94a3b8;font-size:0.83rem;">분석 로드 실패: ' + escHtml(err.message || '' + err) + '</div>';
+      });
+  };
+
+  function renderAnalysis(data) {
+    var themesEl = document.getElementById('analysis-themes');
+    var groupsEl = document.getElementById('analysis-groups');
+    var themes = (data && data.themes) || [];
+    var groups = (data && data.groups) || [];
+
+    // 테마 칩 (2회 이상 강조)
+    themesEl.innerHTML = themes.length
+      ? themes.map(function (t) {
+          var hot = t.count >= 2;
+          return '<span style="font-size:0.76rem;padding:2px 9px;border-radius:14px;font-weight:600;'
+            + (hot ? 'background:#ede9fe;color:#6d28d9;border:1px solid #c4b5fd;'
+                   : 'background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0;') + '">'
+            + escHtml(t.keyword) + ' ' + t.count + '회</span>';
+        }).join('')
+      : '<span style="font-size:0.8rem;color:#94a3b8;">교정 데이터 없음</span>';
+
+    // 반복 그룹 (count 내림차순). count≥2를 우선 노출.
+    var recurring = groups.filter(function (g) { return g.count >= 2; });
+    var singles   = groups.filter(function (g) { return g.count < 2; });
+
+    if (!groups.length) {
+      groupsEl.innerHTML = '<div style="font-size:0.83rem;color:#94a3b8;">아직 검수 교정이 없습니다. 직원이 검수에서 오류 메모를 남기면 여기 모입니다.</div>';
+      return;
+    }
+
+    function groupRow(g, hot) {
+      var occ = g.occurrences || [];
+      var first = occ[0] || {};
+      var locs = occ.slice(0, 6).map(function (o) {
+        return (o.problem_number != null ? o.problem_number + '번' : '?')
+          + (o.pdf_name ? ' · ' + escHtml(String(o.pdf_name).slice(0, 18)) : '');
+      }).join(' / ');
+      var spanBadge = g.job_span >= 2
+        ? '<span style="font-size:0.72rem;background:#fee2e2;color:#b91c1c;border-radius:10px;padding:1px 7px;margin-left:6px;">시험지 ' + g.job_span + '개에서</span>'
+        : '';
+      var corrFlag = g.has_corrected
+        ? '<span style="font-size:0.72rem;color:#15803d;margin-left:6px;">✓교정텍스트 있음</span>'
+        : '<span style="font-size:0.72rem;color:#b45309;margin-left:6px;">메모만</span>';
+      // 패턴 등록: 첫 occurrence의 id/원문/교정 + 그룹 메모로 모달 프리필
+      var regBtn = '<button onclick="openPatternModal('
+        + "'" + escAttr(String(first.id || 'manual')) + "','" + escAttr(first.problem_text || '')
+        + "','" + escAttr(first.corrected_text || '') + "','" + escAttr(g.note || '') + "')"
+        + '" style="font-size:0.74rem;padding:3px 10px;background:#6d28d9;color:#fff;border:none;border-radius:5px;cursor:pointer;white-space:nowrap;">패턴 등록</button>';
+      return '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;'
+        + 'padding:8px 10px;border-radius:6px;margin-bottom:6px;'
+        + (hot ? 'background:#fff;border:1px solid #ddd6fe;' : 'background:#fafafa;border:1px solid #f1f5f9;') + '">'
+        + '<div style="min-width:0;">'
+        + '<div style="font-size:0.85rem;color:#1e293b;"><strong>' + (hot ? '🔴 ' : '') + g.count + '회</strong> '
+        + escHtml(g.note) + spanBadge + corrFlag + '</div>'
+        + '<div style="font-size:0.74rem;color:#94a3b8;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + locs + '</div>'
+        + '</div>' + regBtn + '</div>';
+    }
+
+    var html = '';
+    if (recurring.length) {
+      html += '<div style="font-size:0.8rem;font-weight:700;color:#5b21b6;margin:4px 0 6px;">반복 오류 ' + recurring.length + '종 (우선 패턴화 권장)</div>';
+      html += recurring.map(function (g) { return groupRow(g, true); }).join('');
+    }
+    if (singles.length) {
+      html += '<details style="margin-top:8px;"><summary style="font-size:0.78rem;color:#64748b;cursor:pointer;">단발 교정 ' + singles.length + '종 펼치기</summary><div style="margin-top:6px;">'
+        + singles.map(function (g) { return groupRow(g, false); }).join('') + '</div></details>';
+    }
+    groupsEl.innerHTML = html;
+  }
+
   /* 검수 로그 중복 정리 */
   window.dedupeCorrections = function () {
     apiFetch('/api/admin/corrections/dedupe', { method: 'POST' })
@@ -1066,6 +1153,7 @@
         var n = (data && data.removed != null) ? data.removed : 0;
         showToast(n > 0 ? (n + '개 중복 제거됨') : '중복 없음');
         if (typeof loadCorrections === 'function') loadCorrections();
+        loadAnalysis();
       })
       .catch(function (err) { showToast('중복 정리 실패: ' + (err.message || err), true); });
   };
@@ -1115,6 +1203,7 @@
       showToast('패턴 등록 완료 — 다음 변환부터 Claude에 주입됩니다');
       closePatternModal();
       loadPatterns();
+      loadAnalysis();
     }).catch(function (err) { showToast('등록 실패: ' + (err.message || err), true); });
   };
 

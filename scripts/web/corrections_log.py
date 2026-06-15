@@ -21,7 +21,9 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import uuid
+from collections import Counter
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -285,6 +287,64 @@ def revert_correction(cid: str) -> bool:
     if found:
         _LOG_FILE.write_text("\n".join(new_lines) + "\n", encoding="utf-8")
     return found
+
+
+# 수학 시험지 OCR에서 자주 문제되는 테마 (메모에서 이 키워드를 찾아 빈도 집계)
+_THEME_KEYWORDS = [
+    "집합", "루트", "분수", "지수", "첨자", "적분", "미분", "극한", "수열",
+    "확률", "통계", "벡터", "행렬", "로그", "삼각", "도형", "그림", "표",
+    "기호", "바", "괄호", "등호", "부등호", "절댓값", "수식", "조건", "보기",
+]
+
+
+def analyze_corrections(days: int = 90) -> dict:
+    """검수 교정을 묶어 '반복되는 오류'를 surface — 검수→개선 루프 자동화.
+
+    반환:
+      themes: [{keyword, count}]  메모에 등장한 테마 키워드 빈도 (내림차순)
+      groups: [{note, count, has_corrected, occurrences:[...]}]
+              정규화된 메모로 묶은 그룹 (count 내림차순). count≥2가 체계적 오류 신호.
+      total:  분석 대상 교정 수
+    """
+    rows = [e for e in read_corrections(days=days) if e.get("status") != "reverted"]
+
+    theme = Counter()
+    for e in rows:
+        note = e.get("correction_note", "") or ""
+        for k in _THEME_KEYWORDS:
+            if k in note:
+                theme[k] += 1
+    themes = [{"keyword": k, "count": c} for k, c in theme.most_common()]
+
+    def _norm(s: str) -> str:
+        return re.sub(r"\s+", " ", (s or "").strip())
+
+    groups: dict[str, dict] = {}
+    for e in rows:
+        key = _norm(e.get("correction_note", ""))
+        if not key:
+            continue
+        g = groups.setdefault(key, {
+            "note": key, "count": 0, "has_corrected": False, "occurrences": [],
+        })
+        g["count"] += 1
+        if (e.get("corrected_text") or "").strip():
+            g["has_corrected"] = True
+        g["occurrences"].append({
+            "id":             e.get("id"),
+            "problem_number": e.get("problem_number"),
+            "pdf_name":       e.get("pdf_name", ""),
+            "job_id":         e.get("job_id", ""),
+            "problem_text":   e.get("problem_text", ""),
+            "corrected_text": e.get("corrected_text", ""),
+        })
+
+    # 여러 시험지(job)에 걸쳐 나오면 더 체계적 — span 계산
+    for g in groups.values():
+        g["job_span"] = len({o["job_id"] for o in g["occurrences"] if o["job_id"]})
+
+    group_list = sorted(groups.values(), key=lambda g: (g["count"], g["job_span"]), reverse=True)
+    return {"themes": themes, "groups": group_list, "total": len(rows)}
 
 
 def corrections_summary(days: int = 7) -> dict:
