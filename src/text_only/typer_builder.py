@@ -407,27 +407,40 @@ class _TyprWriter:
         if '<hp:pic' in xml:
             return self._scale_pic_para(xml)
 
-        # 수식 ID/zOrder 재발급
+        ratio = _COL_W / _1DAN_TW
+
+        # 수식: ID/zOrder 재발급 + 2단 폰트에 맞춰 sz 비례 축소 (수식 블록 한정)
         def _renumber_eq(m: re.Match) -> str:
             s = m.group(0)
             s = re.sub(r'(?<=\s)id="[^"]*"', f'id="{self._eid()}"', s, count=1)
             s = re.sub(r'zOrder="[^"]*"',    f'zOrder="{self._ez()}"', s, count=1)
+            s = re.sub(
+                r'<hp:sz width="(\d+)"',
+                lambda mm: (f'<hp:sz width="{round(int(mm.group(1)) * ratio)}"'
+                            if int(mm.group(1)) <= _1DAN_TW else mm.group(0)),
+                s)
             return s
         xml = re.sub(r'<hp:equation\b.*?</hp:equation>', _renumber_eq, xml, flags=re.DOTALL)
 
-        # 표 너비 스케일링 (1단→2단 열폭 비율)
-        ratio = _COL_W / _1DAN_TW
-
-        def _scale_sz(m: re.Match) -> str:
-            w = int(m.group(1))
-            return f'<hp:sz width="{round(w * ratio)}"' if w <= _1DAN_TW else m.group(0)
-
-        def _scale_cell(m: re.Match) -> str:
-            w = int(m.group(1))
-            return f'<hp:cellSz width="{round(w * ratio)}"' if w <= _1DAN_TW else m.group(0)
-
-        xml = re.sub(r'<hp:sz width="(\d+)"',     _scale_sz,   xml)
-        xml = re.sub(r'<hp:cellSz width="(\d+)"', _scale_cell, xml)
+        # 표(조건/보기/데이터): 단 폭을 '넘을 때만' 비례 축소(fit).
+        # 이미 단보다 좁으면 자연 크기 유지 — 1단 비율로 과소축소(예: 60%)하지 않고
+        # 단을 제대로 채운다. 표 자신의 sz(첫 출현)와 모든 cellSz를 동일 배율로.
+        def _fit_table(mt: re.Match) -> str:
+            block = mt.group(0)
+            sm = re.search(r'<hp:sz width="(\d+)"', block)
+            if not sm:
+                return block
+            tw = int(sm.group(1))
+            if tw <= _COL_W:
+                return block  # 이미 단에 들어감
+            f = _COL_W / tw
+            block = re.sub(r'<hp:sz width="\d+"',
+                           f'<hp:sz width="{round(tw * f)}"', block, count=1)
+            block = re.sub(
+                r'<hp:cellSz width="(\d+)"',
+                lambda mm: f'<hp:cellSz width="{round(int(mm.group(1)) * f)}"', block)
+            return block
+        xml = re.sub(r'<hp:tbl\b.*?</hp:tbl>', _fit_table, xml, flags=re.DOTALL)
 
         return xml
 

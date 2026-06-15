@@ -79,6 +79,38 @@ def test_typer_idempotent_on_2dan(tmp_path):
     assert cols3 == {"2"} and pic3 == 1
 
 
+def test_condition_box_fills_column_not_overshrunk(tmp_path):
+    # 조건표가 1단 비율(약 60%)로 과소축소되지 않고 자연 크기로 단을 채워야 함
+    from src.common.hwpx_table_inserter import replace_condition_tables
+    from src.text_only.typer_builder import _COL_W
+    md = "\n".join([
+        "1. 다음 조건을 만족시키는 함수의 개수는? [4점]",
+        "【★ 조건시작:1번】",
+        "(가) $f(0)=1$",
+        "(나) 모든 실수에서 연속",
+        "【★ 조건끝:1번】",
+        "① 1", "② 2", "③ 3", "④ 4", "⑤ 5",
+    ])
+    one = tmp_path / "one.hwpx"
+    build_from_markdown(md, one, _TEMPLATE)
+    replace_condition_tables(one)
+
+    def _box_w(path):
+        xml = zipfile.ZipFile(path).read("Contents/section0.xml").decode("utf-8")
+        m = re.search(r'<hp:tbl\b[^>]*rowCnt="1" colCnt="1"[\s\S]{0,200}?<hp:sz width="(\d+)"', xml)
+        return int(m.group(1)) if m else 0
+
+    w1 = _box_w(one)
+    assert 0 < w1 <= _COL_W, f"1단 조건표가 열폭 이하여야 함 (w1={w1})"
+
+    two = tmp_path / "two.hwpx"
+    build_typer_hwpx(one, "2026_2_1_a_공수1_테스트고", two)
+    w2 = _box_w(two)
+    # 이미 열폭 이하 → 자연 크기 유지 (이전 일괄 0.673 축소면 ~60%로 줄었음)
+    assert w2 == w1, f"조건표가 자연 크기로 유지돼야 함 (1단 {w1} → 2단 {w2})"
+    assert w2 / _COL_W > 0.7, f"조건표가 단을 충분히 채워야 함 ({w2/_COL_W:.0%})"
+
+
 def test_wide_figure_scaled_into_column(tmp_path):
     # 열폭(_COL_W=32456 HWPUNIT)보다 넓은 그림은 축소돼야 함
     from src.text_only.typer_builder import _COL_W
