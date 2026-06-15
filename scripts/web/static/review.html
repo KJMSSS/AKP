@@ -337,11 +337,13 @@
       transition: max-height .35s ease, opacity .25s;
       opacity: 0;
     }
-    .text-edit-wrap.open { max-height: 600px; opacity: 1; }
+    /* 팔레트+미리보기까지 들어가 길어졌으므로 클리핑 안 되게 충분히 + 열리면 overflow 해제 */
+    .text-edit-wrap.open { max-height: 2400px; opacity: 1; overflow: visible; }
     .text-edit-form {
       padding: 10px 14px 14px;
       border-top: 1px solid #e2e8f0;
       background: #f0f9ff;
+      scroll-margin-top: 60px;  /* 스크롤 시 상단바(52px)에 안 가리게 */
     }
     .text-edit-form label {
       display: block;
@@ -1083,7 +1085,12 @@
         taNoteEl.value = prob.note || '';
         textEditWrap.classList.add('open');
         renderMathPreview(taEditEl.value, mathPrevEl);
-        setTimeout(() => taEditEl.focus(), 50);
+        // 입력칸으로 자동 스크롤하면 팔레트가 위로 밀려 잘리므로,
+        // 팔레트(폼 상단)가 보이게 스크롤 (입력칸 자동 포커스 안 함)
+        setTimeout(() => {
+          const form = card.querySelector('.text-edit-form');
+          if (form) form.scrollIntoView({ block: 'start', behavior: 'smooth' });
+        }, 60);
       }
     });
 
