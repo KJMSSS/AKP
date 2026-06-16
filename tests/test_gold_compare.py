@@ -10,7 +10,9 @@ from pathlib import Path
 
 import pytest
 
-from scripts.gold_compare import extract_text, normalize, similarity, doc_metrics
+from scripts.gold_compare import (
+    extract_text, normalize, similarity, doc_metrics, content_overlap, _MISMATCH_TH,
+)
 
 
 def _make(tmp_path: Path, section_body: str) -> Path:
@@ -71,3 +73,13 @@ def test_self_similarity_full(tmp_path):
     p = _make(tmp_path, body)
     m = doc_metrics(p)
     assert similarity(m["_norm"], m["_norm"]) == 1.0
+
+
+def test_content_overlap_same_vs_different(tmp_path):
+    same = "전체집합 부분집합 방정식 함수 그래프 최솟값 자연수 경우의수"
+    (tmp_path / "a").mkdir(); (tmp_path / "b").mkdir(); (tmp_path / "c").mkdir()
+    a     = _make(tmp_path / "a", f'<hp:p><hp:run><hp:t>{same}</hp:t></hp:run></hp:p>')
+    a_dup = _make(tmp_path / "b", f'<hp:p><hp:run><hp:t>{same}</hp:t></hp:run></hp:p>')
+    diff  = _make(tmp_path / "c", '<hp:p><hp:run><hp:t>교복 바자회 재택근무 설문조사 동아리 좌석</hp:t></hp:run></hp:p>')
+    assert content_overlap(a, a_dup) == 1.0          # 같은 내용 → 1.0
+    assert content_overlap(a, diff) < _MISMATCH_TH    # 다른 시험지 → 문턱 미만
