@@ -27,6 +27,38 @@ def _set_tesseract_cmd(pytesseract) -> None:
             pytesseract.pytesseract.tesseract_cmd = default
 
 
+_osd_warned = False
+
+
+def _osd_tessdata_dir() -> str | None:
+    """`osd.traineddata` 를 가진 tessdata 디렉터리를 찾는다.
+
+    ★ 중요: `.env` 의 TESSDATA_PREFIX 가 프로젝트 로컬 `.tessdata`(equ 등만 담고
+       osd 누락)를 가리키면 image_to_osd 가 실패해 회전 보정이 조용히 꺼진다.
+       그 경우 시스템 Tesseract tessdata 로 폴백해 OSD 만은 살린다.
+    못 찾으면 None — 호출자가 --tessdata-dir 없이 기본 검색에 맡긴다.
+    """
+    cands: list[Path] = []
+    env = os.environ.get("TESSDATA_PREFIX", "")
+    if env:
+        cands.append(Path(env))
+    # 시스템 Tesseract tessdata (cmd 경로 이웃 + Windows 기본)
+    tess_cmd = os.environ.get("TESSERACT_CMD", "")
+    if tess_cmd:
+        cands.append(Path(tess_cmd).parent / "tessdata")
+    if os.name == "nt":
+        cands.append(Path(r"C:\Program Files\Tesseract-OCR\tessdata"))
+    cands.append(Path("/usr/share/tesseract-ocr/4.00/tessdata"))  # Linux(Railway)
+    cands.append(Path("/usr/share/tessdata"))
+    for d in cands:
+        try:
+            if (d / "osd.traineddata").exists():
+                return str(d)
+        except OSError:
+            continue
+    return None
+
+
 def _classify_page_rotation(page, dpi: int = 150) -> tuple[str, int | None]:
     """
     페이지의 회전 상태를 분류한다 (메타 rotation=0 페이지 대상).
@@ -69,12 +101,31 @@ def _classify_page_rotation(page, dpi: int = 150) -> tuple[str, int | None]:
         return ("blank", 0)
 
     # OSD: 'rotate' = 정상으로 만들기 위해 시계방향으로 돌릴 각도
+    # ★ TESSDATA_PREFIX(.env)가 osd 빠진 .tessdata를 가리키면 image_to_osd가
+    #   실패해 회전 보정이 통째로 꺼진다. osd 가진 디렉터리를 찾아 OSD 호출
+    #   동안만 TESSDATA_PREFIX를 갈아끼운다(--tessdata-dir는 공백·따옴표 파싱
+    #   문제가 있어 환경변수 교체가 안전). 호출 후 원복.
+    osd_dir = _osd_tessdata_dir()
+    _prev_prefix = os.environ.get("TESSDATA_PREFIX")
+    if osd_dir:
+        os.environ["TESSDATA_PREFIX"] = osd_dir
     try:
         osd = pytesseract.image_to_osd(img, output_type=Output.DICT)
         rotate = int(osd.get("rotate", 0)) % 360
         conf = float(osd.get("orientation_conf", 0) or 0)
-    except Exception:
+    except Exception as e:
         rotate, conf = -1, 0.0
+        global _osd_warned
+        if not _osd_warned:
+            _osd_warned = True
+            print(f"  [경고] Tesseract OSD 실패 — 회전 보정이 제한됩니다. "
+                  f"osd.traineddata 확인 필요. ({str(e)[:90]})")
+    finally:
+        if osd_dir:
+            if _prev_prefix is None:
+                os.environ.pop("TESSDATA_PREFIX", None)
+            else:
+                os.environ["TESSDATA_PREFIX"] = _prev_prefix
 
     if conf >= _OSD_CONF_MIN and rotate in (0, 90, 180, 270):
         return ("osd", rotate)
@@ -83,6 +134,31 @@ def _classify_page_rotation(page, dpi: int = 150) -> tuple[str, int | None]:
     if W > H:
         return ("uncertain", None)
     return ("osd", 0)
+
+
+def _plan_rotations(raw: list[tuple[str, int | None, int]]) -> list[tuple[str, int]]:
+    """원시 분류 [(kind, 추가각, 메타 base)] → 페이지별 (action, 최종 회전각).
+
+    핵심 규칙:
+      최종 회전각 = (메타 base + 내용 추가각) % 360.
+      ★ 양면 스캔은 메타가 일정(예: 270)이어도 뒷면이 물리적으로 180° 뒤집혀
+        있어, base 만으로는 짝수 페이지가 거꾸로 남는다. 내용 추가각을 더해야
+        정방향이 된다.
+      uncertain(가로 OSD 실패) 페이지는 확정된 추가각의 최빈값으로 보간.
+      action 은 'bake'(렌더해 굽기) 또는 'copy'(보정 불필요 — 원본 복사).
+    """
+    known = [a for k, a, _ in raw if k == "osd" and a in (90, 180, 270)]
+    fallback = Counter(known).most_common(1)[0][0] if known else 0
+
+    plans: list[tuple[str, int]] = []
+    for kind, add, base in raw:
+        if kind == "blank":
+            plans.append(("copy", base))
+        else:
+            a = fallback if kind == "uncertain" else (add or 0)
+            final = (base + a) % 360
+            plans.append(("bake", final) if (base or a) else ("copy", base))
+    return plans
 
 
 def _insert_rendered_page(new_doc, pix, dpi: int = _RENDER_DPI) -> None:
@@ -133,18 +209,8 @@ def normalize_pdf_rotation(src_path: Path, use_content_detection: bool = True) -
             kind, add = ("osd", 0)
         raw.append((kind, add, base))
 
-    # 2패스: 불확실(가로 OSD 실패) 페이지는 확정된 추가각 최빈값으로 보간
-    known = [a for k, a, _ in raw if k == "osd" and a in (90, 180, 270)]
-    fallback = Counter(known).most_common(1)[0][0] if known else 0
-
-    plans: list[tuple[str, int]] = []   # (action 'bake'|'copy', 최종 회전각)
-    for kind, add, base in raw:
-        if kind == "blank":
-            plans.append(("copy", base))
-        else:
-            a = fallback if kind == "uncertain" else (add or 0)
-            final = (base + a) % 360
-            plans.append(("bake", final) if (base or a) else ("copy", base))
+    # 2패스: 원시 분류 → 페이지별 (action, 최종 회전각)
+    plans = _plan_rotations(raw)
 
     needs_fix = any(act == "bake" for act, _ in plans)
     if not needs_fix:
