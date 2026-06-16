@@ -293,13 +293,11 @@ def main():
             if our is None:
                 rows.append((school, None, "변환 실패")); continue
             ov = content_overlap(our, gold)
-            if ov < _MISMATCH_TH:
-                # 골드 짝 불일치(다른 시험지) — 측정·판정에서 제외
-                rows.append((school, None, f"⛔ 골드 짝 불일치(내용겹침 {ov:.2f}) — PDF≠HWPX 확인 필요"))
-                continue
             gm = doc_metrics(gold)
             om = doc_metrics(our)
             sim = similarity(om["_norm"], gm["_norm"])
+            # 내용겹침이 낮으면 '변환 품질 심각'(문제 유실 등) 신호 — 제외하지 말고
+            # 경고만. (짝 오류일 수도 있으나, 보통은 어려운 스캔의 최악 변환 케이스)
             rows.append((school, sim, {
                 "eq_our": om["equations"], "eq_gold": gm["equations"],
                 "markers": om["markers"], "chars_our": om["chars"], "chars_gold": gm["chars"],
@@ -313,10 +311,11 @@ def main():
             rows.append((school, None, f"오류: {e}"))
 
     # ── 리포트 ──
-    print(f"{'학교':<12} {'유사도':>7}  {'수식(우/정)':>12}  {'미해결':>6}  {'회귀':>10}")
-    print("-" * 60)
+    print(f"{'학교':<12} {'유사도':>7}  {'수식(우/정)':>12}  {'겹침':>5}  {'회귀':>9}")
+    print("-" * 62)
     scores = {}
     sims = []
+    low_overlap = []
     for school, sim, info in rows:
         if sim is None:
             print(f"{school:<12} {'--':>7}  {info}")
@@ -324,7 +323,10 @@ def main():
         scores[school] = round(sim, 4)
         sims.append(sim)
         eq = f"{info['eq_our']}/{info['eq_gold']}"
-        # 회귀: 기준선 대비 3%p 이상 하락
+        ov = info.get("overlap", 1.0)
+        ovflag = f"{ov:.2f}" + ("⚠️" if ov < _MISMATCH_TH else "")
+        if ov < _MISMATCH_TH:
+            low_overlap.append((school, ov))
         reg = ""
         if school in baseline:
             d = sim - baseline[school]
@@ -334,14 +336,19 @@ def main():
                 reg = f"🟢 +{d*100:.0f}%p"
             else:
                 reg = "≈"
-        print(f"{school:<12} {sim*100:>6.1f}%  {eq:>12}  {info['markers']:>6}  {reg:>10}")
+        print(f"{school:<12} {sim*100:>6.1f}%  {eq:>12}  {ovflag:>7}  {reg:>9}")
 
     if sims:
         avg = sum(sims) / len(sims)
-        print("-" * 60)
-        print(f"{'평균':<12} {avg*100:>6.1f}%   (낮은 학교일수록 우리 변환이 정답과 다름 = 약점)")
+        print("-" * 62)
+        print(f"{'평균':<12} {avg*100:>6.1f}%   (낮을수록 정답과 다름 = 약점)")
         worst = sorted([(s, sc) for s, sc in scores.items()], key=lambda x: x[1])[:3]
         print(f"약한 학교 Top3: " + ", ".join(f"{s} {sc*100:.0f}%" for s, sc in worst))
+    if low_overlap:
+        print(f"\n⚠️  내용겹침 낮음({_MISMATCH_TH:.2f} 미만) — 변환 품질 심각(문제 유실 등) 의심, "
+              f"또는 골드 짝 확인:")
+        for s, ov in sorted(low_overlap, key=lambda x: x[1]):
+            print(f"     {s}: {ov:.2f}")
 
     # ── LLM 판정: 고칠 목록 (유형별 집계) ──
     if judged:
