@@ -50,6 +50,7 @@ _SYSTEM = """\
 - 부등호: $\\leq$, $\\geq$, $\\neq$
 - 집합 기호: $\\in$, $\\subset$, $\\cup$, $\\cap$
 - 도형·관계 기호: $\\angle$(각), $\\triangle$(삼각형), $\\overline{AB}$(선분), $\\vec{AB}$(벡터), $\\parallel$(평행), $\\perp$(수직), $\\sim$(닮음), $\\equiv$(합동)
+- 함수·확통: 합성함수 $f \\circ g$, 역함수 $f^{-1}$, 도함수 $f'(x)$, 순열 ${}_{n}P_{r}$, 조합 ${}_{n}C_{r}$, 경우나누기 $\\begin{cases} ... \\end{cases}$
 - 절댓값·괄호: $\\left| \\frac{a}{b} \\right|$, $\\left( \\right)$
 - 조합: $\\binom{n}{r}$  또는  ${}_{n}C_{r}$
 - cases 환경: $f(x) = \\begin{cases} ... \\end{cases}$
@@ -103,6 +104,7 @@ _SYSTEM_FULL = r"""\
 - 조합: \binom{n}{r}  또는 {}_{n}C_{r}
 - 벡터·절댓값: \vec{AB}, |x|, \left| \dfrac{a}{b} \right|  (\overrightarrow는 변환 미지원 — \vec 사용)
 - 도형·관계 기호: \angle(각), \triangle(삼각형), \overline{AB}(선분), \parallel(평행), \perp(수직), \sim(닮음), \equiv(합동)
+- 함수·확통: 합성 f \circ g, 역함수 f^{-1}, 도함수 f'(x), 순열 {}_{n}P_{r}, 조합 {}_{n}C_{r}, 경우나누기 \begin{cases} ... \end{cases}
 - 삼각함수: \sin, \cos, \tan, \log (백슬래시 필수)
 - 그리스 문자: \alpha, \beta, \pi, \theta 등
 - 부등호: \leq, \geq, \neq
