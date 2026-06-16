@@ -120,57 +120,54 @@ def normalize_pdf_rotation(src_path: Path, use_content_detection: bool = True) -
 
     doc = fitz.open(str(src_path))
 
-    # 1패스: 페이지별 원시 분류
-    raw: list[tuple[str, int | None]] = []
+    # 1패스: 모든 페이지를 '메타 회전 적용 후' 내용(OSD)으로 분류.
+    # ★ 핵심: 메타 회전이 있어도(예: 양면 스캔 270) 뒷면은 거꾸로일 수 있다.
+    #   _classify_page_rotation은 메타 적용 렌더 기준이므로, 반환각은 메타 위에
+    #   '추가로' 돌려야 할 각도다. 최종 회전 = (메타 base + 추가각) % 360.
+    raw: list[tuple[str, int | None, int]] = []   # (kind, 추가각, 메타 base)
     for page in doc:
-        if page.rotation != 0:
-            raw.append(("meta", page.rotation))
-        elif use_content_detection:
-            raw.append(_classify_page_rotation(page))
+        base = page.rotation
+        if use_content_detection:
+            kind, add = _classify_page_rotation(page)
         else:
-            raw.append(("osd", 0))
+            kind, add = ("osd", 0)
+        raw.append((kind, add, base))
 
-    # 2패스: 불확실 페이지를 확정 보정각의 최빈값으로 보간
-    known = [a for k, a in raw if k in ("meta", "osd") and a in (90, 180, 270)]
+    # 2패스: 불확실(가로 OSD 실패) 페이지는 확정된 추가각 최빈값으로 보간
+    known = [a for k, a, _ in raw if k == "osd" and a in (90, 180, 270)]
     fallback = Counter(known).most_common(1)[0][0] if known else 0
 
-    plans: list[tuple[str, int]] = []
-    for kind, ang in raw:
-        if kind == "uncertain":
-            plans.append(("content", fallback) if fallback else ("none", 0))
-        elif kind == "meta":
-            plans.append(("meta", ang or 0))
-        elif kind == "blank":
-            plans.append(("none", 0))
-        else:  # osd
-            plans.append(("content", ang) if ang else ("none", 0))
+    plans: list[tuple[str, int]] = []   # (action 'bake'|'copy', 최종 회전각)
+    for kind, add, base in raw:
+        if kind == "blank":
+            plans.append(("copy", base))
+        else:
+            a = fallback if kind == "uncertain" else (add or 0)
+            final = (base + a) % 360
+            plans.append(("bake", final) if (base or a) else ("copy", base))
 
-    needs_fix = any(k == "meta" or (k == "content" and a) for k, a in plans)
+    needs_fix = any(act == "bake" for act, _ in plans)
     if not needs_fix:
         doc.close()
         return src_path
 
-    meta_pages    = [i + 1 for i, (k, _) in enumerate(plans) if k == "meta"]
-    content_pages = [(i + 1, a) for i, (k, a) in enumerate(plans) if k == "content"]
-    interp_pages  = [i + 1 for i, (k, _) in enumerate(raw) if k == "uncertain"]
-    print(f"  [회전 감지] 메타:{meta_pages} 내용:{content_pages} → 보정 중...")
+    fixes = [(i + 1, f) for i, (act, f) in enumerate(plans) if act == "bake"]
+    interp_pages = [i + 1 for i, (k, _, _) in enumerate(raw) if k == "uncertain"]
+    print(f"  [회전 감지] 보정 페이지(최종각): {fixes} → 보정 중...")
     if interp_pages:
-        print(f"  [회전 보간] OSD 실패 가로 페이지 {interp_pages} → 최빈각 {fallback} 적용")
+        print(f"  [회전 보간] OSD 실패 가로 페이지 {interp_pages} → 최빈 추가각 {fallback}")
 
     new_doc = fitz.open()
     mat = fitz.Matrix(_RENDER_DPI / 72, _RENDER_DPI / 72)
 
     for i, page in enumerate(doc):
-        kind, ang = plans[i]
-        if kind == "meta":
-            # 메타 회전은 get_pixmap이 자동 반영
-            _insert_rendered_page(new_doc, page.get_pixmap(matrix=mat))
-        elif kind == "content":
-            # 내용 회전 강제 적용 후 렌더 (정방향으로 굽기)
-            page.set_rotation(ang)
+        act, final = plans[i]
+        if act == "bake":
+            # 최종 회전 강제 적용 후 렌더 (정방향으로 굽기)
+            page.set_rotation(final)
             _insert_rendered_page(new_doc, page.get_pixmap(matrix=mat))
         else:
-            # 회전 없음 — 벡터 내용 그대로 복사 (품질 보존)
+            # 보정 불필요 — 벡터 내용 그대로 복사 (품질 보존)
             new_doc.insert_pdf(doc, from_page=i, to_page=i)
 
     fixed_path = src_path.with_name(src_path.stem + "_rotfix.pdf")

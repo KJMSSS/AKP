@@ -58,5 +58,17 @@
     "pdf_name": "(광주)[2025_3_1_b_미적분_수완고].pdf",
     "created_at": "2026-06-12T12:03:44",
     "updated_at": "2026-06-12T12:26:53"
+  },
+  "2025_1_2_b_공수2_광덕고": {
+    "job_id": "776669c1b3d0",
+    "status": "done",
+    "review_status": "completed",
+    "reviewer_name": "배나온쫑",
+    "reviewed_at": "2026-06-16 00:31",
+    "subject": "공수2",
+    "school": "광덕고",
+    "pdf_name": "(광주)[2025_1_2_a_공수2_광덕고].pdf",
+    "created_at": "2026-06-15T09:07:15",
+    "updated_at": "2026-06-16T00:31:43"
   }
 }

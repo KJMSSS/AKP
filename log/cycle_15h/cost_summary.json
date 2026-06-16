@@ -39,5 +39,14 @@
     "claude_pdf": 0.11463,
     "latex_corrector": 0.023954,
     "web": 0.1386
+  },
+  "2026-06-15": {
+    "claude_pdf": 0.148146,
+    "latex_corrector": 0.032948,
+    "web": 0.1811
+  },
+  "2026-06-16": {
+    "claude_pdf": 1.755957,
+    "latex_corrector": 0.368861
   }
 }
