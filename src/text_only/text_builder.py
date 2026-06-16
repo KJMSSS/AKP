@@ -72,6 +72,37 @@ _KOREAN_RE       = re.compile('[가-힣]')
 _CHOICE_BULLET_RE = re.compile(r'^(?:[①②③④⑤]|\((?:10|[1-9])\)|（[1-5]）)\s*')
 # [N점] 패턴 — plain text 강제
 _SCORE_PAT_RE    = re.compile(r'\[\d+(?:\.\d+)?점\]')
+# 원문자 마커 (한 줄 다중 선택지 분리용) — 마커는 텍스트, 각 보기 값은 개별 수식
+_CIRCLED_RE      = re.compile(r'([①②③④⑤⑥⑦⑧⑨⑩])')
+
+
+def _choice_line_segs(line: str) -> tuple[list[tuple[str, str]], int]:
+    """'① 4 ② 8 ③ 12 …' 처럼 한 줄에 여러 선택지가 있을 때,
+    동그라미 마커마다 쪼개 [마커=text, 값=수식] 으로 분해.
+    (마커가 수식 안에 갇히는 것을 막아 정답 양식과 일치시킴)
+    반환: (segs, 수식화 건수)
+    """
+    pieces = _CIRCLED_RE.split(line)   # [pre, '①', c1, '②', c2, ...]
+    segs: list[tuple[str, str]] = []
+    eq = 0
+    if pieces and pieces[0].strip():
+        segs.extend(_parse_segments(pieces[0]))
+    i = 1
+    while i < len(pieces):
+        marker = pieces[i]
+        content = pieces[i + 1] if i + 1 < len(pieces) else ''
+        # 마커 + (값 앞 공백 1칸) 을 텍스트로
+        segs.append(('text', marker + (' ' if content.strip() else '')))
+        c = content.strip()
+        if c:
+            cs = _parse_segments(content)
+            if all(k == 'text' for k, _ in cs):
+                segs.append(('inline', c))   # 값 전체를 수식으로
+                eq += 1
+            else:
+                segs.extend(cs)              # 이미 $…$ 섞임 → 그대로
+        i += 2
+    return segs, eq
 
 
 def _strip_eq_to_korean_space(segs: list[tuple[str, str]]) -> list[tuple[str, str]]:
@@ -489,6 +520,12 @@ class _HwpxWriter:
             # ── 선택지 줄 처리 (v7) ──────────────────────────────────
             cm = _CHOICE_BULLET_RE.match(line)
             if cm:
+                # 한 줄에 동그라미 선택지가 여럿이면 마커마다 쪼개 각 값을 개별 수식으로
+                if len(_CIRCLED_RE.findall(line)) >= 2 and not _SCORE_PAT_RE.search(line):
+                    segs, neq = _choice_line_segs(line)
+                    self._choice_eq += neq
+                    paras.append(self._para(segs, cpr=0))
+                    continue
                 bullet  = cm.group(0)
                 content = line[cm.end():]
                 if content.strip() and not _SCORE_PAT_RE.search(content):
