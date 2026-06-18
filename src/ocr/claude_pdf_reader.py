@@ -11,10 +11,12 @@ from __future__ import annotations
 
 import base64
 import os
+import threading
 import time
 from pathlib import Path
 
 import anthropic
+import httpx
 from dotenv import load_dotenv
 
 from src.ocr.cost_guard import CostGuard
@@ -31,6 +33,12 @@ _MAX_TOKENS_FULL = 32000  # 정답·해설 포함 시 더 긴 출력 필요
 _MAX_CONTINUE    = 4      # max_tokens 절단 시 이어쓰기 최대 횟수
 _PAGE_CHUNK    = 10          # 청크당 최대 페이지 수
 _MAX_PDF_BYTES = 18 * 1024 * 1024  # 단일 호출 최대 PDF 크기 (18MB, base64 후 ~24MB)
+# 타임아웃 — 무한 행 방지. 스트리밍은 서버 keepalive ping이 오면 httpx 읽기
+# 타임아웃이 갱신돼 데이터 없이도 무한 대기할 수 있어, 스트림 1회 하드 데드라인을
+# 타이머로 별도 강제한다(거대 PDF 1건이 12시간 행 건 사고 재발 방지).
+_HTTP_READ_TIMEOUT = 90.0   # 데이터 끊김(읽기) 감지
+_STREAM_DEADLINE   = 240.0  # 스트림 1회 전체 상한 (정상 1회 ~80s, 3배 여유)
+_API_MAX_RETRIES   = 2
 
 # ── 시스템 프롬프트 (문제만) ────────────────────────────────────────────
 _SYSTEM = """\
@@ -255,7 +263,11 @@ def _call_api(
     이어쓰기 한도(_MAX_CONTINUE)를 넘겨도 잘려 있으면 명시적으로 실패시킨다.
     """
     b64 = base64.standard_b64encode(pdf_bytes).decode()
-    client = anthropic.Anthropic(api_key=api_key)
+    client = anthropic.Anthropic(
+        api_key=api_key,
+        timeout=httpx.Timeout(_HTTP_READ_TIMEOUT, connect=15.0),
+        max_retries=_API_MAX_RETRIES,
+    )
 
     user_msg = {
         "role": "user",
@@ -283,14 +295,26 @@ def _call_api(
             messages.append({"role": "assistant", "content": full_text})
 
         t0 = time.time()
-        # 긴 출력은 비스트리밍 한도를 넘으므로 스트리밍으로 수신
+        # 긴 출력은 비스트리밍 한도를 넘으므로 스트리밍으로 수신.
+        # 스트림 1회 하드 데드라인: 타이머가 stream.close()를 호출하면
+        # get_final_message()가 중단돼 예외로 빠진다(keepalive ping 무한대기 방지).
         with client.messages.stream(
             model=_MODEL,
             max_tokens=max_tokens,
             system=system,
             messages=messages,
         ) as stream:
-            resp = stream.get_final_message()
+            watchdog = threading.Timer(_STREAM_DEADLINE, stream.close)
+            watchdog.start()
+            try:
+                resp = stream.get_final_message()
+            except Exception as e:
+                raise RuntimeError(
+                    f"Claude OCR 스트림 중단 — {_STREAM_DEADLINE:.0f}s 데드라인 초과 또는 "
+                    f"연결 끊김({type(e).__name__}). 무한 행 방지를 위해 실패 처리."
+                ) from e
+            finally:
+                watchdog.cancel()
 
         elapsed = time.time() - t0
         in_tok  = resp.usage.input_tokens

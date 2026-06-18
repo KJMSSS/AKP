@@ -40,6 +40,9 @@ class _Stream:
     def __exit__(self, *a):
         return False
 
+    def close(self):          # 워치독 타이머가 호출 (정상 종료 시 cancel됨)
+        pass
+
     def get_final_message(self):
         return self._resp
 
@@ -63,7 +66,9 @@ def fake_client(monkeypatch):
 
     def _factory(responses):
         client = _FakeClient(responses)
-        monkeypatch.setattr(reader.anthropic, "Anthropic", lambda api_key=None: client)
+        # 실제 코드가 timeout·max_retries 도 넘기므로 임의 kwargs 허용
+        monkeypatch.setattr(reader.anthropic, "Anthropic",
+                            lambda api_key=None, **kw: client)
         holder["client"] = client
         return client
 
@@ -97,4 +102,24 @@ def test_still_truncated_raises(fake_client):
     n_calls = reader._MAX_CONTINUE + 1
     fake_client([_Resp(f"부분{i}", "max_tokens") for i in range(n_calls)])
     with pytest.raises(RuntimeError, match="잘렸습니다"):
+        reader._call_api(b"%PDF", "key", 32000, "sys", "prompt")
+
+
+def test_stream_stall_raises_not_hang(monkeypatch):
+    """회귀: OCR 스트림이 끊기면(거대 PDF·네트워크 스톨) 무한 행 대신 즉시 실패.
+    (수피아여고 거대 이미지가 12시간 행 건 사고 방지)"""
+    class _StallStream(_Stream):
+        def get_final_message(self):
+            raise RuntimeError("connection reset / 데드라인 초과")
+
+    class _Client:
+        def __init__(self):
+            self.messages = self
+
+        def stream(self, **kw):
+            return _StallStream(None)
+
+    monkeypatch.setattr(reader.anthropic, "Anthropic",
+                        lambda api_key=None, **kw: _Client())
+    with pytest.raises(RuntimeError, match="스트림 중단"):
         reader._call_api(b"%PDF", "key", 32000, "sys", "prompt")
