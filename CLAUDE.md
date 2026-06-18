@@ -17,7 +17,9 @@ OCR 파이프라인 자체의 품질이 전부 — 사람이 고쳐줄 거라는
 3. **학원장 PDF 원본 = 진짜 정답** — LLM/OCR 결과보다 원본 PDF 우선
 4. **크롭 OCR 표준 순서** — 전체 OCR 후 공란 발견해서 재빌드 금지.
    반드시 `크롭 OCR → raw.md 완성 → 빌드 1회`
-5. **git push 금지** — 학원장 명시 요청 없이 `git push` 실행 금지
+5. **origin/main push만 금지** — `origin/main` 푸시는 학원장 명시 요청 시에만 실행.
+   피처/작업 브랜치(`claude/*` 등) push는 허용(검토 공유 등). 미커밋 작업은 피처
+   브랜치에 커밋해 main 자동 반영을 차단한다.
 6. **HWPX 수식 직접 편집 금지** — XML 조립으로 `hp:equation` 만들지 않는다.
    항상 `build_from_markdown()` 파이프라인 경유. 상세: [docs/PLAN.md](docs/PLAN.md) 7-1절
 7. **단순 replace 금지** — 한국어 조사(을/를 등) 단순 치환은 안전 정책 위반
