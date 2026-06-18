@@ -109,10 +109,39 @@ def content_overlap(our_hwpx: Path, gold_hwpx: Path) -> float:
 _MISMATCH_TH = 0.40   # 이 미만이면 골드 짝 불일치로 판단 (측정·판정 제외)
 
 
+# ── 문제만 척도 = 포함도(containment) ─────────────────────────────────────
+# 우리 OCR 출력은 '문제만'(full_content=False)인데, 일부 골드(특히 2024 수하/수상)는
+# 문제마다 [출처]…[정답]X[해설] 스캐폴딩 + 풀이 본문이 인라인으로 섞여 있어
+# 단순 대칭 유사도가 부당하게 낮게 나온다(scope 불일치).
+#
+# 해결: '포함도'(우리 chars 기준 recall). 분모가 우리 출력 길이라서 골드에 풀이·정답이
+# 더 있어도 무감점 → 골드를 인위로 자를 필요 없이 '문제만 vs 문제만'을 공정하게 측정.
+# (정답·해설 스캐폴딩을 골드에서 제거하는 방식은 질문 선택지까지 깎아 오히려 부당
+#  감점됨 — 검증 결과 2024 평균 62%→60% 악화 → 채택 안 함.)
+def containment(our_norm: str, gold_norm: str) -> float:
+    """포함도 = 우리 출력이 골드에 얼마나 들어있나 (scope-robust recall, 공정 헤드라인).
+    골드에 풀이가 더 있어도 감점 안 됨. 놓치는 실패(문제 통째 유실)는 problem_count 가드로 보완."""
+    if not our_norm:
+        return 0.0
+    sm = difflib.SequenceMatcher(None, our_norm, gold_norm, autojunk=False)
+    m = sum(b.size for b in sm.get_matching_blocks())
+    return m / len(our_norm)
+
+
+def problem_count(text: str) -> int:
+    """문항 수 프록시. 2024 풀이포함 골드는 [출처] 블록 = 진짜 문항수
+    (① 는 풀이 단계 enumerator까지 세어 부풀려짐). 그 외는 첫 선택지 ① 개수."""
+    src = text.count("[출처]")
+    if src >= 3:
+        return src
+    return text.count("①")
+
+
 # ── 우리 파이프라인으로 PDF → HWPX ─────────────────────────────────────────
 
-def convert_pdf(pdf: Path, reg_key: str, reocr: bool) -> Path | None:
-    """현재 파이프라인으로 변환. OCR 마크다운은 캐시. 실패 시 None."""
+def convert_pdf(pdf: Path, reg_key: str, reocr: bool, cache_only: bool = False) -> Path | None:
+    """현재 파이프라인으로 변환. OCR 마크다운은 캐시. 실패 시 None.
+    cache_only=True 면 캐시 없는 쌍은 OCR(과금) 대신 건너뛴다(None)."""
     from src.ocr.claude_pdf_reader import read_pdf_as_markdown
     from src.ocr.latex_corrector import correct_latex
     from src.text_only.ocr_fallback import apply_fallback
@@ -129,6 +158,9 @@ def convert_pdf(pdf: Path, reg_key: str, reocr: bool) -> Path | None:
 
     if md_cache.exists() and not reocr:
         md = md_cache.read_text(encoding="utf-8")
+    elif cache_only:
+        print(f"    [건너뜀] {reg_key} — 캐시 없음(cache-only, 무과금)")
+        return None
     else:
         try:
             src_pdf = normalize_pdf_rotation(pdf)
@@ -270,6 +302,10 @@ def main():
     ap.add_argument("--refresh-judge", action="store_true", help="판정 캐시 무시하고 재판정")
     ap.add_argument("--gold-dir", default=str(_GOLD_DIR),
                     help="골드 PDF+HWPX 폴더 (기본: samples/11b). 예: samples/2024")
+    ap.add_argument("--cache-only", action="store_true",
+                    help="캐시 있는 쌍만 비교(무과금 보장). 캐시 없으면 건너뜀")
+    ap.add_argument("--limit", type=int, default=0,
+                    help="처리할 최대 쌍 수 (소수 샘플 감시용, 0=전체)")
     args = ap.parse_args()
 
     gold_dir = Path(args.gold_dir)
@@ -283,6 +319,8 @@ def main():
     if args.schools:
         want = [s.strip() for s in args.schools.split(",") if s.strip()]
         pairs = [(p, g) for p, g in pairs if any(w in p.stem for w in want)]
+    if args.limit > 0:
+        pairs = pairs[:args.limit]
 
     baseline = {}
     if _BASELINE.exists():
@@ -299,19 +337,22 @@ def main():
         key = _reg_key(gold)
         school = key.split("_")[-1]
         try:
-            our = convert_pdf(pdf, key, args.reocr)
+            our = convert_pdf(pdf, key, args.reocr, cache_only=args.cache_only)
             if our is None:
-                rows.append((school, None, "변환 실패")); continue
+                rows.append((school, None, "건너뜀/변환 실패")); continue
             ov = content_overlap(our, gold)
             gm = doc_metrics(gold)
             om = doc_metrics(our)
             sim = similarity(om["_norm"], gm["_norm"])
+            # 포함도(문제만 공정 척도): 우리⊆골드 recall — 골드의 풀이 scope에 무감점.
+            cover = containment(om["_norm"], gm["_norm"])
+            pc_o, pc_g = problem_count(extract_text(our)), problem_count(extract_text(gold))
             # 내용겹침이 낮으면 '변환 품질 심각'(문제 유실 등) 신호 — 제외하지 말고
             # 경고만. (짝 오류일 수도 있으나, 보통은 어려운 스캔의 최악 변환 케이스)
             rows.append((school, sim, {
                 "eq_our": om["equations"], "eq_gold": gm["equations"],
                 "markers": om["markers"], "chars_our": om["chars"], "chars_gold": gm["chars"],
-                "overlap": ov,
+                "overlap": ov, "cover": cover, "pc_our": pc_o, "pc_gold": pc_g,
             }))
             if args.judge:
                 print(f"    [판정] {school} (Opus)...")
@@ -321,22 +362,35 @@ def main():
             rows.append((school, None, f"오류: {e}"))
 
     # ── 리포트 ──
-    print(f"{'학교':<12} {'유사도':>7}  {'수식(우/정)':>12}  {'겹침':>5}  {'회귀':>9}")
-    print("-" * 62)
+    # 포함도 = 문제만 척도의 공정 헤드라인(우리⊆골드 recall, 골드 풀이에 무감점).
+    # 유사도 = 기존 대칭(raw) — 기준선 회귀 연속성 유지용.
+    print(f"{'학교':<12} {'포함도':>6} {'유사도':>6}  {'수식(우/정)':>11}  {'문항우/정':>8}  {'회귀':>8}")
+    print("-" * 66)
     scores = {}
     sims = []
+    covers = []
     low_overlap = []
+    drop_suspect = []
     for school, sim, info in rows:
         if sim is None:
-            print(f"{school:<12} {'--':>7}  {info}")
+            print(f"{school:<12} {'--':>6}  {info}")
             continue
         scores[school] = round(sim, 4)
         sims.append(sim)
+        cover = info.get("cover", 0.0)
+        covers.append(cover)
         eq = f"{info['eq_our']}/{info['eq_gold']}"
         ov = info.get("overlap", 1.0)
-        ovflag = f"{ov:.2f}" + ("⚠️" if ov < _MISMATCH_TH else "")
-        if ov < _MISMATCH_TH:
+        # 겹침 낮아도 포함도 높으면 짝은 정상(골드에 풀이만 더 있는 것) — 오경보 억제
+        if ov < _MISMATCH_TH and cover < 0.60:
             low_overlap.append((school, ov))
+        pc_o, pc_g = info.get("pc_our", 0), info.get("pc_gold", 0)
+        pc = f"{pc_o}/{pc_g}"
+        # 유실 의심: 포함도는 높은데(=가진 건 맞음) 문항수가 골드보다 크게 적음
+        drop = pc_g >= 5 and pc_o < 0.7 * pc_g and cover >= 0.6
+        if drop:
+            pc += "⚠"
+            drop_suspect.append((school, pc_o, pc_g))
         reg = ""
         if school in baseline:
             d = sim - baseline[school]
@@ -346,14 +400,20 @@ def main():
                 reg = f"🟢 +{d*100:.0f}%p"
             else:
                 reg = "≈"
-        print(f"{school:<12} {sim*100:>6.1f}%  {eq:>12}  {ovflag:>7}  {reg:>9}")
+        print(f"{school:<12} {cover*100:>5.0f}% {sim*100:>5.0f}%  {eq:>11}  {pc:>8}  {reg:>8}")
 
     if sims:
         avg = sum(sims) / len(sims)
-        print("-" * 62)
-        print(f"{'평균':<12} {avg*100:>6.1f}%   (낮을수록 정답과 다름 = 약점)")
+        avgc = sum(covers) / len(covers)
+        print("-" * 66)
+        print(f"{'평균':<12} {avgc*100:>5.0f}% {avg*100:>5.0f}%   "
+              f"(포함도=문제만 공정척도 / 유사도=raw 대칭)")
         worst = sorted([(s, sc) for s, sc in scores.items()], key=lambda x: x[1])[:3]
-        print(f"약한 학교 Top3: " + ", ".join(f"{s} {sc*100:.0f}%" for s, sc in worst))
+        print(f"raw 약한 학교 Top3: " + ", ".join(f"{s} {sc*100:.0f}%" for s, sc in worst))
+    if drop_suspect:
+        print(f"\n⚠️  문제 유실 의심(포함도↑·문항↓) — 우리 출력에 빠진 문항:")
+        for s, o, g in sorted(drop_suspect, key=lambda x: x[1] - x[2]):
+            print(f"     {s}: {o}/{g}문항")
     if low_overlap:
         print(f"\n⚠️  내용겹침 낮음({_MISMATCH_TH:.2f} 미만) — 변환 품질 심각(문제 유실 등) 의심, "
               f"또는 골드 짝 확인:")
