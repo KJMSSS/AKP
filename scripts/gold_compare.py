@@ -167,9 +167,14 @@ def convert_pdf(pdf: Path, reg_key: str, reocr: bool) -> Path | None:
 
 # ── 메인 ──────────────────────────────────────────────────────────────────
 
+_KEY_PAT = re.compile(r"\d{4}_\d_\d_[ab]_[^_\]\[]+_[^_\]\[]+")
+
+
 def _reg_key(gold_hwpx: Path) -> str:
-    # [2025_1_1_b_공수1_경신여고].hwpx → 2025_1_1_b_공수1_경신여고
-    return gold_hwpx.stem.strip("[]")
+    # [2025_1_1_b_공수1_경신여고].hwpx          → 2025_1_1_b_공수1_경신여고
+    # (광주)[2024_2_1_a_수1_금호고][지수~..].hwpx → 2024_2_1_a_수1_금호고
+    m = _KEY_PAT.search(gold_hwpx.stem)
+    return m.group(0) if m else gold_hwpx.stem.strip("[]")
 
 
 # ── LLM 판정기 (Opus 4.8) — 실오류만 분류해 '고칠 목록' 생성 ────────────────
@@ -263,10 +268,15 @@ def main():
     ap.add_argument("--judge", action="store_true",
                     help="Opus 4.8 LLM 판정기로 실오류 진단 (과금, 캐시됨)")
     ap.add_argument("--refresh-judge", action="store_true", help="판정 캐시 무시하고 재판정")
+    ap.add_argument("--gold-dir", default=str(_GOLD_DIR),
+                    help="골드 PDF+HWPX 폴더 (기본: samples/11b). 예: samples/2024")
     args = ap.parse_args()
 
+    gold_dir = Path(args.gold_dir)
     pairs = []
-    for pdf in sorted(_GOLD_DIR.glob("*.pdf")):
+    for pdf in sorted(gold_dir.glob("*.pdf")):
+        if "_rotfix" in pdf.stem:          # 보정본은 골드 짝이 아님
+            continue
         gold = pdf.with_suffix(".hwpx")
         if gold.exists():
             pairs.append((pdf, gold))

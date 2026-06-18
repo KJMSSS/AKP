@@ -226,7 +226,7 @@ def normalize_pdf_rotation(src_path: Path, use_content_detection: bool = True) -
     interp_pages = [i + 1 for i, (k, _, _) in enumerate(raw) if k == "uncertain"]
     print(f"  [회전 감지] 보정 페이지(최종각): {fixes} → 보정 중...")
     if interp_pages:
-        print(f"  [회전 보간] OSD 실패 가로 페이지 {interp_pages} → 최빈 추가각 {fallback}")
+        print(f"  [회전 보간] OSD 실패 가로 페이지 {interp_pages} → 최빈 추가각으로 보간")
 
     new_doc = fitz.open()
     mat = fitz.Matrix(_RENDER_DPI / 72, _RENDER_DPI / 72)

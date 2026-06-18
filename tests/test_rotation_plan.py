@@ -67,3 +67,24 @@ def test_osd_tessdata_dir_has_osd_or_none():
     d = _osd_tessdata_dir()
     if d is not None:                       # Tesseract 미설치 CI면 None 허용
         assert (Path(d) / "osd.traineddata").exists()
+
+
+def test_normalize_no_crash_on_landscape(tmp_path):
+    """회귀: _plan_rotations 리팩터 후 로깅 줄이 사라진 fallback 변수를 참조해
+    uncertain(가로 OSD 실패) 페이지가 있으면 NameError 크래시했다(1d5639e).
+    가로 페이지가 든 합성 PDF로 normalize_pdf_rotation이 예외 없이 끝나는지 확인."""
+    import fitz
+    from src.common.pdf_utils import normalize_pdf_rotation
+
+    doc = fitz.open()
+    # 가로 페이지(W>H) + 잉크(백지 임계 초과, 텍스트 아님 → OSD 미확정 유도)
+    page = doc.new_page(width=842, height=595)   # A4 가로
+    for y in range(60, 540, 18):
+        page.draw_rect(fitz.Rect(40, y, 800, y + 6), fill=(0, 0, 0))
+    p2 = doc.new_page(width=595, height=842)      # 세로 백지
+    src = tmp_path / "syn.pdf"
+    doc.save(str(src)); doc.close()
+
+    out = normalize_pdf_rotation(src)             # 크래시 없이 Path 반환이면 통과
+    from pathlib import Path
+    assert isinstance(out, Path) and out.exists()
