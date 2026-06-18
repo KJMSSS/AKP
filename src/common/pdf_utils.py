@@ -19,6 +19,23 @@ _BLANK_INK_RATIO = 0.004
 # 후속 OCR이 청크 분할(문제 절단 위험)되므로 OCR 충분 수준으로 억제
 _RENDER_DPI  = 250
 _JPG_QUALITY = 85
+# 렌더 픽셀 상한 — PIL DecompressionBomb(기본 한도 89,478,485px) 및 메모리 폭주 방지.
+# 거대 페이지(예: 수피아여고 수2 4284×5712pt → 150dpi 106M·250dpi 295M px)는
+# DPI를 자동 축소해 상한 이하로 굽는다. OSD는 방향만 필요하므로 더 낮게 잡는다.
+_OSD_MAX_PX    = 40_000_000
+_RENDER_MAX_PX = 70_000_000
+
+
+def _safe_dpi(page, dpi: float, max_px: int) -> float:
+    """렌더 결과 픽셀 수가 max_px 이하가 되도록 DPI를 축소(필요 시). 최소 72dpi."""
+    r = page.rect
+    w_in, h_in = r.width / 72.0, r.height / 72.0
+    if w_in <= 0 or h_in <= 0:
+        return float(dpi)
+    px = (w_in * dpi) * (h_in * dpi)
+    if px <= max_px:
+        return float(dpi)
+    return max(72.0, dpi * (max_px / px) ** 0.5)
 
 
 def _set_tesseract_cmd(pytesseract) -> None:
@@ -89,7 +106,8 @@ def _classify_page_rotation(page, dpi: int = 150) -> tuple[str, int | None]:
     _set_tesseract_cmd(pytesseract)
 
     try:
-        pix = page.get_pixmap(matrix=fitz.Matrix(dpi / 72, dpi / 72))
+        sdpi = _safe_dpi(page, dpi, _OSD_MAX_PX)   # 거대 페이지 DecompressionBomb 방지
+        pix = page.get_pixmap(matrix=fitz.Matrix(sdpi / 72, sdpi / 72))
         img = Image.open(io.BytesIO(pix.tobytes("png")))
     except Exception:
         return ("osd", 0)
@@ -229,14 +247,16 @@ def normalize_pdf_rotation(src_path: Path, use_content_detection: bool = True) -
         print(f"  [회전 보간] OSD 실패 가로 페이지 {interp_pages} → 최빈 추가각으로 보간")
 
     new_doc = fitz.open()
-    mat = fitz.Matrix(_RENDER_DPI / 72, _RENDER_DPI / 72)
 
     for i, page in enumerate(doc):
         act, final = plans[i]
         if act == "bake":
-            # 최종 회전 강제 적용 후 렌더 (정방향으로 굽기)
+            # 최종 회전 강제 적용 후 렌더 (정방향으로 굽기).
+            # 거대 페이지는 DPI 자동 축소 — 메모리 폭주·DecompressionBomb 방지.
             page.set_rotation(final)
-            _insert_rendered_page(new_doc, page.get_pixmap(matrix=mat))
+            rdpi = _safe_dpi(page, _RENDER_DPI, _RENDER_MAX_PX)
+            pix = page.get_pixmap(matrix=fitz.Matrix(rdpi / 72, rdpi / 72))
+            _insert_rendered_page(new_doc, pix, dpi=rdpi)
         else:
             # 보정 불필요 — 벡터 내용 그대로 복사 (품질 보존)
             new_doc.insert_pdf(doc, from_page=i, to_page=i)

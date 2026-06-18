@@ -186,12 +186,20 @@ def convert_pdf(pdf: Path, reg_key: str, reocr: bool, cache_only: bool = False) 
     replace_condition_tables(out)
     replace_boilerplate_tables(out)
     fix_hwpx_namespaces(str(out))
-    # 2단 타이퍼 양식으로 (골드와 같은 형식). 실패해도 1단으로 비교.
+    # 2단 타이퍼 양식으로 (골드와 같은 형식). 실패/빈 결과면 1단 유지.
+    # 가드: 2단이 본문을 잃으면(서술형 등 미인식 → 문제 0건) 1단을 덮지 않는다.
+    # (app.py:1761 의 eq/pic 가드와 동일 취지 — 조용한 내용 유실 차단.)
     try:
         from src.text_only.typer_builder import build_typer_hwpx
         two = out.with_suffix(".2dan.hwpx")
         build_typer_hwpx(out, reg_key, two)
-        two.replace(out)
+        len1 = len(extract_text(out))
+        len2 = len(extract_text(two))
+        if len2 >= len1 * 0.5:          # 2단이 본문 절반 이상 보존했을 때만 채택
+            two.replace(out)
+        else:
+            two.unlink(missing_ok=True)
+            print(f"    [2단] 본문 유실({len1}→{len2}자) — 1단 유지")
     except Exception as e:
         print(f"    [2단] 스킵({e}) — 1단으로 비교")
     return out

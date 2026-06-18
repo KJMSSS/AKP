@@ -206,10 +206,10 @@ def _has_secpr(para_xml: str) -> bool:
 def _parse_prob_header(para_xml: str) -> tuple[int, float]:
     """
     문제 시작 단락이면 (prob_no, score) 반환, 아니면 (0, 0.0).
-    패턴: 텍스트가 ^[0-9]{1,3}[.．] 로 시작
+    패턴: 텍스트가 ^[0-9]{1,3}[.．)］] 로 시작 (마침표형 "1." / 닫는괄호형 "5)")
     """
     text = _para_text(para_xml)
-    m = re.match(r'^(\d{1,3})[.．]', text)
+    m = re.match(r'^(\d{1,3})[.．)）]', text)
     if not m:
         return 0, 0.0
     prob_no = int(m.group(1))
