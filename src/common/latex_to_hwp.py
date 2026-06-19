@@ -120,8 +120,9 @@ def _sub_greek(m: re.Match) -> str:
 
 # ── 기호·연산자 (순서 중요 — 긴 것 먼저) ─────────────────────────
 _SYMBOLS: list[tuple[str, str]] = [
-    # 이스케이프된 중괄호 처리 (\{ → {, \} → })
-    (r'\\\{', '{'), (r'\\\}', '}'),
+    # 집합 빌더 세로줄 \mid / \vert → | (집합 {x | ...})
+    # ※ 이스케이프 중괄호 \{ \} 는 아래 \left/\right 블록 뒤에서 LEFT{/RIGHT}로 처리
+    (r'\\mid\b', ' | '), (r'\\vert\b', '|'),
     # 삼각함수 · 지수/로그 (백슬래시 제거 + 뒤따르는 공백 유지)
     # ※ \b 대신 (?![a-zA-Z])를 써야 \log_2 처럼 _ 뒤에 오는 경우도 매칭된다.
     # ※ 그리스 변환보다 먼저 실행되어야 \cos\theta 같은 연결이 올바르게 처리된다.
@@ -193,10 +194,13 @@ _SYMBOLS: list[tuple[str, str]] = [
     # \left / \right delimiter → 자동 사이즈 괄호 (행렬 등 큰 표현식에 대응)
     (r'\\left\s*\(',     'LEFT ('),    (r'\\right\s*\)',    ' RIGHT )'),
     (r'\\left\s*\[',     'LEFT ['),    (r'\\right\s*\]',    ' RIGHT ]'),
-    (r'\\left\s*\{',     'LEFT {'),    (r'\\right\s*\}',    ' RIGHT }'),
+    (r'\\left\s*\\?\{',  'LEFT {'),    (r'\\right\s*\\?\}', ' RIGHT }'),
     (r'\\left\s*\|',     'LEFT |'),    (r'\\right\s*\|',    ' RIGHT |'),
     (r'\\left\s*\.',     ''),          (r'\\right\s*\.',    ' RIGHT .'),
     (r'\\left\s*<',      'LEFT <'),    (r'\\right\s*>',     ' RIGHT >'),
+    # 이스케이프 중괄호 \{ \} = 집합 리터럴 → 보이는 괄호. HWP는 맨 { } 를 그룹화(비표시)로
+    # 처리하므로 집합 {3,4,5} 가 사라진다. \left\{(위)가 먼저 소비된 뒤 남은 단독 \{ \} 처리.
+    (r'\\\{', 'LEFT {'), (r'\\\}', ' RIGHT }'),
     # \text{...} 언래핑
     (r'\\text\{([^}]*)\}',  r'\1'),
     (r'\\mathrm\{([^}]*)\}', r'\1'),

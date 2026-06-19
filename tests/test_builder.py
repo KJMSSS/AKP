@@ -141,6 +141,20 @@ class TestLatexToHwp:
         result = convert(r"\left\{ a_n \right\}")
         assert result == "LEFT { a_n RIGHT }"
 
+    def test_set_braces_escaped(self):
+        # \{...\} = 집합 리터럴 → 보이는 괄호. HWP는 맨 {}를 그룹화(비표시)로 처리해
+        # 집합 {3,4,5} 가 사라지던 버그 회귀 방지.
+        assert convert(r"A=\{3,4,5\}") == "A=LEFT {3,4,5 RIGHT }"
+        assert convert(r"A \cap B = \{5,7\}") == "A cap B = LEFT {5,7 RIGHT }"
+
+    def test_set_builder_mid(self):
+        # \mid (집합 빌더 세로줄) → | , 중괄호 함께
+        assert convert(r"\{x \mid x^2<3\}") == "LEFT {x | x^2<3 RIGHT }"
+
+    def test_grouping_braces_untouched(self):
+        # 맨 중괄호(그룹화)는 그대로 — 지수/첨자 깨지면 안 됨
+        assert convert(r"x^{2}+a_{n}") == "x^{2}+a_{n}"
+
     def test_left_abs(self):
         result = convert(r"\left| x \right|")
         assert result == "LEFT | x RIGHT |"
