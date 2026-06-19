@@ -694,6 +694,39 @@ async def pipeline_stage_delete(key: str, stage: str, request: Request):
     return JSONResponse({"ok": True})
 
 
+def _typer_loss_reason(src_path: Path, cand_path: Path) -> str | None:
+    """2단 타이퍼 결과(cand)가 1단(src) 대비 내용을 보존했는지 검사.
+
+    보존되면 None, 유실/빈 결과면 한국어 사유를 반환한다(=등록 거부 신호).
+    `_finalize_2dan` 가드와 동일 기준 + 본문 텍스트 길이 가드를 추가해
+    수식·그림이 0개인 순수 텍스트 시험지의 '본문 통째 유실'도 잡는다.
+    """
+    import zipfile as _zf
+
+    def _stats(p: Path) -> tuple[int, int, int]:
+        eq = pic = text_len = 0
+        with _zf.ZipFile(p) as z:
+            for s in sorted(n for n in z.namelist()
+                            if re.match(r"Contents/section\d+\.xml", n)):
+                x = z.read(s).decode("utf-8")
+                eq  += x.count("<hp:equation")
+                pic += x.count("<hp:pic")
+                for m in re.finditer(r"<hp:t[^>]*>([^<]*)</hp:t>", x):
+                    text_len += len(m.group(1))
+        return eq, pic, text_len
+
+    eq1, pic1, len1 = _stats(src_path)
+    eq2, pic2, len2 = _stats(cand_path)
+    if eq2 < eq1 or pic2 < pic1:
+        return f"내용 손실(수식 {eq1}→{eq2}, 그림 {pic1}→{pic2})"
+    if len1 > 0 and len2 < len1 * 0.5:
+        return f"본문 유실({len1}→{len2}자)"
+    errs = validate_hwpx(str(cand_path))
+    if errs:
+        return f"HWPX 검증 실패: {errs[0]}"
+    return None
+
+
 @app.post("/api/pipeline/{key}/typer/generate")
 async def pipeline_typer_generate(key: str, request: Request):
     """
@@ -719,11 +752,10 @@ async def pipeline_typer_generate(key: str, request: Request):
 
     stage_dir = _UPLOADS_DIR / key / "typer"
     stage_dir.mkdir(parents=True, exist_ok=True)
-    for old in stage_dir.iterdir():
-        old.unlink(missing_ok=True)
 
     out_name = f"{key.strip('[]')}_타이퍼양식.hwpx"
     out_path = stage_dir / out_name
+    tmp_path = stage_dir / "_typer_build.tmp.hwpx"   # 가드 통과 전까지 임시
 
     try:
         loop = asyncio.get_event_loop()
@@ -732,11 +764,30 @@ async def pipeline_typer_generate(key: str, request: Request):
             lambda: build_typer_hwpx(
                 one_dan_path=one_dan,
                 registry_key=key,
-                out_path=out_path,
+                out_path=tmp_path,
             ),
         )
     except Exception as e:
+        tmp_path.unlink(missing_ok=True)
         raise HTTPException(500, f"타이퍼 양식 생성 실패: {e}")
+
+    # 빈/퇴화 결과 가드: 1단 대비 내용 유실이면 등록하지 않고 거부.
+    # 별도 파일이라 비파괴지만, 형식 미인식 시 빈 타이퍼를 성공으로 등록하던
+    # 문제를 차단한다(수피아여고류). 실패 시 기존 산출물·등록은 그대로 보존.
+    reason = _typer_loss_reason(one_dan, tmp_path)
+    if reason:
+        tmp_path.unlink(missing_ok=True)
+        raise HTTPException(
+            422,
+            f"타이퍼 변환 거부({reason}) — 형식 미인식으로 빈 양식이 생성되어 "
+            f"등록하지 않았습니다. 1단 검수본 형식을 확인하세요.",
+        )
+
+    # 가드 통과 → 이전 산출물 정리 후 확정 교체
+    for old in stage_dir.iterdir():
+        if old != tmp_path:
+            old.unlink(missing_ok=True)
+    tmp_path.replace(out_path)
 
     entry.setdefault("stages", {})["typer"] = {
         "filename":    out_path.name,
