@@ -108,12 +108,17 @@ def _classify(tbl_xml: str) -> str | None:
     if '보기표' in txt:  return 'boilerplate'
     if '데이터표' in txt: return 'data'
 
+    # 오지선다 그리드 가드 — ①②③④⑤ 가 3개 이상이면 선택지 배치 레이아웃이지
+    # 조건/보기 박스가 아니다. [증명 오지선다]가 (가)(나)(다)를 가져 condition으로
+    # 오분류되던 문제 차단.
+    has_choice = sum(c in txt for c in '①②③④⑤') >= 3
+
     # 2순위: 내용 기반 자동 감지
-    # (가)(나)(다) 패턴 → 조건표
-    if re.search(r'[（(][가나다마바사][）)]', txt):
+    # (가)(나)(다) 패턴 → 조건표 (단, 선택지 그리드 제외)
+    if re.search(r'[（(][가나다마바사][）)]', txt) and not has_choice:
         return 'condition'
-    # ㄱ. ㄴ. ㄷ. 또는 "보 기" → 보기표
-    if re.search(r'[ㄱㄴㄷ]\s*[.．]', txt) or re.search(r'보\s*기', txt):
+    # ㄱ. ㄴ. ㄷ. 또는 "보 기" → 보기표 (단, 선택지 그리드 제외)
+    if (re.search(r'[ㄱㄴㄷ]\s*[.．]', txt) or re.search(r'보\s*기', txt)) and not has_choice:
         return 'boilerplate'
 
     return None
