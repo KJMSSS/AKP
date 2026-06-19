@@ -4,7 +4,9 @@
 """
 from __future__ import annotations
 
-from src.text_only.problem_segmenter import _is_cond_label, parse_problems
+from src.text_only.problem_segmenter import (
+    _is_cond_label, parse_problems, check_condition_boxes, _CONDITION_CUE_RE,
+)
 
 
 class TestCondLabel:
@@ -160,3 +162,50 @@ class TestMultilineCondition:
         assert len(seg.conditions) == 1
         assert "[4점]" not in seg.conditions[0]
         assert "값을 구하면?" in seg.conditions[0] or "값을 구하면?" in seg.problem_text
+
+
+class TestConditionBoxCheck:
+    """'조건' 단서가 있는데 (가)(나) 미감지면 박스 누락으로 플래그(학원장 요구).
+
+    OCR이 (가)→(7) 처럼 레이블을 망가뜨리면 조건이 통째로 누락된다. '조건' 단어를
+    2차 신호로 써서 누락을 검수로 흘려보낸다.
+    """
+
+    def test_cue_matches_condition_phrases(self):
+        for t in ["다음 조건을 만족시키는", "다음 세 조건을 만족", "두 조건을 모두 만족하는"]:
+            assert _CONDITION_CUE_RE.search(t)
+
+    def test_cue_excludes_false_positives(self):
+        # '조건부 확률'(확통 용어)·일반 문장은 조건 박스 아님 — 오탐 금지
+        assert not _CONDITION_CUE_RE.search("조건부 확률을 구하시오")
+        assert not _CONDITION_CUE_RE.search("집합의 교집합을 구하시오")
+
+    def test_flags_cue_without_conditions(self):
+        # (가)→(7) OCR 손상 → 조건 미감지 → 13번 플래그
+        md = "\n".join([
+            "13. 집합 A에 대하여 다음 조건을 만족시키는 집합 X의 개수는? [3.8점]",
+            "(7) n(X) ge 3",
+            "① 1", "② 2", "③ 3", "④ 4", "⑤ 5",
+        ])
+        _, segs = parse_problems(md)
+        assert 13 in check_condition_boxes(segs)
+
+    def test_clears_when_conditions_found(self):
+        # (가)(나) 정상 감지 → 누락 아님
+        md = "\n".join([
+            "13. 다음 조건을 만족시키는 집합 X의 개수는? [3.8점]",
+            "(가) n(X) ge 3",
+            "(나) 모든 원소의 곱은 8의 배수이다",
+            "① 1", "② 2", "③ 3", "④ 4", "⑤ 5",
+        ])
+        _, segs = parse_problems(md)
+        assert check_condition_boxes(segs) == []
+
+    def test_no_cue_no_flag(self):
+        # '조건' 단서 없는 일반 문제 → 플래그 안 함
+        md = "\n".join([
+            "1. 두 직선의 교점의 좌표를 구하시오. [2점]",
+            "① 1", "② 2", "③ 3", "④ 4", "⑤ 5",
+        ])
+        _, segs = parse_problems(md)
+        assert check_condition_boxes(segs) == []

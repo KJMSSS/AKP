@@ -28,6 +28,22 @@ _ROMAN_ITEM_RE = re.compile(r'^\([ivxIVX]+\)\s+')          # (i) (ii) (iii) 로�
 # 질문 문장 신호 — 조건 연속 줄 병합을 끊는다 (본문 질문이 조건 박스에 빨려드는 것 방지)
 _QUESTION_RE = re.compile(r'구하시오|구하여라|구하라|쓰시오|답하시오|보이시오|나타내시오|서술하시오')
 
+# 조건 박스 단서 — 문제 본문에 이 표현이 있으면 (가)(나) 조건 박스가 따라온다.
+# OCR이 (가)(나) 레이블을 망가뜨려 조건 미감지 시, 이 단서로 박스 누락을 잡는다.
+_CONDITION_CUE_RE = re.compile(r'다음\s*(?:세\s*|두\s*|네\s*|모든\s*)?조건|조건을?\s*(?:모두\s*)?만족')
+
+
+def check_condition_boxes(segments: "list[ProblemSegment]") -> list[int]:
+    """'조건' 단서가 있으나 조건이 추출 안 된 문제 번호 목록 (조건 박스 누락 의심).
+
+    문제에 '다음 조건을 만족' 류 표현이 있는데 seg.conditions 가 비면, OCR 이
+    (가)(나) 레이블을 놓쳤을 가능성 → 호출자가 경고/검수 라우팅에 사용.
+    """
+    return [
+        seg.number for seg in segments
+        if not seg.conditions and _CONDITION_CUE_RE.search(seg.problem_text or "")
+    ]
+
 
 def _is_bogi_line(s: str) -> bool:
     """보기 항목 판정: ㄱ/ㄴ/ㄷ 또는 로마자 (i)(ii)(iii) — 연결문 '(i) 또는 (ii)' 제외."""
@@ -203,6 +219,14 @@ def parse_problems(md: str) -> tuple[str, list[ProblemSegment]]:
         ))
 
     segments.sort(key=lambda s: s.number)
+
+    # 조건 박스 누락 안전장치 — '조건' 단서가 있는데 (가)(나) 미감지면 경고
+    miss = check_condition_boxes(segments)
+    if miss:
+        nums = ", ".join(str(n if n < 100 else f"서술형{n - 100}") for n in miss)
+        print(f"  [조건박스] 경고: {nums}번 — 본문에 '조건' 단서가 있으나 "
+              f"(가)(나) 미감지(OCR 레이블 손상 의심) — 검수 필요")
+
     return header, segments
 
 
