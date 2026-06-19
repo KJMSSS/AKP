@@ -92,6 +92,11 @@ OCR + 자동 변환 (1회, 고품질)
   키워드·구분선 없는 고아 1행·이미지 전용 셀은 제외 → 텍스트로 렌더. 셀 내용은
   `_parse_segments`로 수식까지 변환(`$\mathbf{A}$`→수식 셀), `<br>`→공백.
   `_preprocess_md`의 `$$` 합치기가 표 행(`\n|`)을 삼키지 않도록 가드.
+  **원자 보존**(`problem_segmenter._extract_tables`): `parse_problems`가 `[N점]` 분리·선택지
+  수집 전에 표 블록을 떼어 `ProblemSegment.data_tables`에 보관 → `rebuild_markdown`이 본문
+  직후 재부착. 표행이 선택지로 오분류·폐기되던 문제 해결(광주고 16번 8행 유실→3표 복원).
+  채점기준표/결재칸은 `_TABLE_SKIP_KW`로 추출 제외(국제고 본문 노이즈 방지). 머릿말로
+  밀려난 표(2단 스캔)는 미복구.
 - HWPX 네임스페이스 자동 수정 (`src/common/hwpx_namespace_fixer.py`)
 - HWPX 구조 검증 (`src/common/hwpx_validator.py`)
 

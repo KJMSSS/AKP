@@ -98,6 +98,47 @@ def _extract_cond_blocks(lines: list[str]) -> tuple[list[str], list[str]]:
 _IMAGE_RE  = re.compile(r'!\[.*?\]\((https://cdn\.mathpix\.com/[^)]+)\)')
 _DISPLAY_MATH_RE = re.compile(r'^\$\$|^\\begin\{')
 _BIGVEE_RE   = re.compile(r'\s*\$\\bigvee_\{(\d+)\}\$\s*$')  # ① OCR 아티팩트
+_MD_SEP_RE   = re.compile(r'^\s*\|[-:\s|]*-[-:\s|]*\|\s*$')  # 표 구분행 |:---:|
+# 비-문제(머릿말 결재칸·해설 채점기준표) 표 제외 — text_builder._TABLE_EXCLUDE_KW와 동기화
+_TABLE_SKIP_KW = (
+    "결재", "교장", "교 장", "교감", "교 감", "연구부장",
+    "교과부장", "교무부장", "지필평가", "채점기준", "채점요소", "배점기준",
+)
+
+
+def _extract_tables(block_lines: list[str]) -> tuple[list[str], list[str]]:
+    """문제 블록에서 마크다운 데이터표(구분행 + 데이터 2행 이상)를 통째로 추출.
+
+    반환: (표 제거된 줄들, 추출된 표 텍스트 목록).
+    표를 `_split_block`의 [N점] 분리·선택지 수집 이전에 떼어내어, 표행이
+    선택지로 오분류되거나 스크래치로 폐기되는 것을 막는다(데이터표 원자 보존).
+    구분행 없는 고아 조각·단일행, 채점기준표/결재칸(키워드)은 건드리지 않는다
+    — 후자는 기존 `_split_block`/스코프 가드 동작(드롭/텍스트)에 맡긴다.
+    """
+    out: list[str] = []
+    tables: list[str] = []
+    i, n = 0, len(block_lines)
+    while i < n:
+        if block_lines[i].strip().startswith("|"):
+            j = i
+            while j < n and block_lines[j].strip().startswith("|"):
+                j += 1
+            block = block_lines[i:j]
+            has_sep = any(_MD_SEP_RE.match(l.strip()) for l in block)
+            content = [l for l in block if not _MD_SEP_RE.match(l.strip())]
+            flat = " ".join(content)
+            if (has_sep and len(content) >= 2
+                    and not any(kw in flat for kw in _TABLE_SKIP_KW)):
+                tables.append("\n".join(block))
+            else:
+                # 비-데이터표(채점/결재·고아 조각) → 블록째 줄 유지.
+                # 줄 단위로 흘리면 구분행이 헤더 없는 새 블록으로 재수집되므로 통째로.
+                out.extend(block)
+            i = j
+            continue
+        out.append(block_lines[i])
+        i += 1
+    return out, tables
 
 
 @dataclass
@@ -110,6 +151,7 @@ class ProblemSegment:
     images: list[str]     # Mathpix CDN URL 목록
     is_subjective: bool
     raw_block: str        # 원본 블록 (롤백용)
+    data_tables: list[str] = field(default_factory=list)  # 본문 데이터표 블록(원자 보존)
 
 
 def parse_problems(md: str) -> tuple[str, list[ProblemSegment]]:
@@ -143,7 +185,9 @@ def parse_problems(md: str) -> tuple[str, list[ProblemSegment]]:
         block_lines = lines[start:end]
         block_text  = "\n".join(block_lines)
 
-        prob_text, choices, conditions, boilerplate = _split_block(block_lines, is_subj)
+        # 데이터표를 먼저 떼어내 _split_block의 오분류·폐기로부터 보호
+        clean_lines, data_tables = _extract_tables(block_lines)
+        prob_text, choices, conditions, boilerplate = _split_block(clean_lines, is_subj)
         images = _IMAGE_RE.findall(block_text)
 
         segments.append(ProblemSegment(
@@ -155,6 +199,7 @@ def parse_problems(md: str) -> tuple[str, list[ProblemSegment]]:
             images=images,
             is_subjective=is_subj,
             raw_block=block_text,
+            data_tables=data_tables,
         ))
 
     segments.sort(key=lambda s: s.number)
@@ -376,6 +421,12 @@ def rebuild_markdown(
             # 서술형 소문제 (N) 형식을 수식으로 감싸서 ①②③ 변환 방지
             pt = _subprob_re.sub(r'\1$\2$\3', pt)
         parts.append(_normalize_score_to_end(pt))
+
+        # 본문 데이터표 (원자 보존) — 문제 본문 직후 블록째 재부착 → build_section이
+        # 스코프 가드 통과 시 N×M HWPX 표로 변환. 표 앞 빈 줄로 인접 표 병합 방지.
+        for tbl in seg.data_tables:
+            parts.append("")
+            parts.append(tbl)
 
         # 조건문 — text_builder가 수식 처리, table_inserter가 박스로 감쌈
         if seg.conditions:
