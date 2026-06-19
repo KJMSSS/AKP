@@ -35,6 +35,18 @@ def test_parse_prob_header_non_problem_line():
     assert _parse_prob_header(_para('① 보기 내용'))[0] == 0
 
 
+def test_parse_prob_header_seosulhyung():
+    """서술형 'N)' → 100+N 으로 매핑 (메타표에서 '서술형 N' 표기, 단답형 앞 순서 보존)."""
+    assert _parse_prob_header(_para('서술형1)'))[0] == 101
+    assert _parse_prob_header(_para('서술형 2) 적분값 구하시오 [6점]')) == (102, 6.0)
+    assert _parse_prob_header(_para('[서술형] 3'))[0] == 103
+
+
+def test_parse_prob_header_seosulhyung_intro_not_problem():
+    """'〈서술형문제〉' 안내문(괄호 시작)은 문제로 오인식하지 않음."""
+    assert _parse_prob_header(_para('〈서술형문제〉 (서술형 1번 ~ 4번)'))[0] == 0
+
+
 # ── Fix C: 거대 페이지 DPI 상한 ────────────────────────────────────────────
 
 def test_safe_dpi_caps_giant_page():

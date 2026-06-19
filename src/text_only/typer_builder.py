@@ -206,16 +206,25 @@ def _has_secpr(para_xml: str) -> bool:
 def _parse_prob_header(para_xml: str) -> tuple[int, float]:
     """
     문제 시작 단락이면 (prob_no, score) 반환, 아니면 (0, 0.0).
-    패턴: 텍스트가 ^[0-9]{1,3}[.．)］] 로 시작 (마침표형 "1." / 닫는괄호형 "5)")
+    - 일반: ^[0-9]{1,3}[.．)］] (마침표형 "1." / 닫는괄호형 "5)")
+    - 서술형: "서술형1)" "[서술형] 1" → prob_no = 100 + N
+      (메타표에서 "서술형 N" 으로 표기; 문서상 단답형보다 앞이라 순서 보존됨)
     """
     text = _para_text(para_xml)
+
+    def _score(t: str) -> float:
+        sm = re.search(r'\[(\d+(?:\.\d+)?)점\]', t)
+        return float(sm.group(1)) if sm else 0.0
+
+    # 서술형 — "〈서술형문제〉" 안내문(괄호 시작)은 제외, "서술형N" 헤더만
+    subj = re.match(r'^\[?\s*서술형\s*\]?\s*(\d{1,2})', text)
+    if subj:
+        return 100 + int(subj.group(1)), _score(text)
+
     m = re.match(r'^(\d{1,3})[.．)）]', text)
     if not m:
         return 0, 0.0
-    prob_no = int(m.group(1))
-    sm = re.search(r'\[(\d+(?:\.\d+)?)점\]', text)
-    score = float(sm.group(1)) if sm else 0.0
-    return prob_no, score
+    return int(m.group(1)), _score(text)
 
 
 def _extract_school(registry_key: str) -> str:
@@ -313,7 +322,9 @@ class _TyprWriter:
     ) -> str:
         tbl_h      = 2131
         score_txt  = f'{score:g}점' if score > 0 else ''
-        cell_texts = ['', school, f'{prob_no}번', exam_code, difficulty, score_txt]
+        # 서술형(100+N)은 "서술형 N", 일반은 "N번"
+        prob_label = f'서술형 {prob_no - 100}' if prob_no > 100 else f'{prob_no}번'
+        cell_texts = ['', school, prob_label, exam_code, difficulty, score_txt]
         # 셀 0: paraPr=12/charPr=8/styleIDRef=1 (empty 칸)
         # 셀 1~5: paraPr=6/charPr=16/styleIDRef=3
         para_prs   = [12, 6, 6, 6, 6, 6]
