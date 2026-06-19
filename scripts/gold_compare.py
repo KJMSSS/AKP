@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import argparse
 import difflib
+import html
 import json
 import re
 import sys
@@ -64,6 +65,8 @@ _BASE64ISH = re.compile(r"[A-Za-z0-9+/=]{30,}")  # 광덕고 등 임베드 잡�
 def normalize(text: str) -> str:
     for b in _BOILER:
         text = text.replace(b, "")
+    # 수식 인코딩 표준화 — XML 이스케이프 차이로 같은 수식이 불일치하는 것 방지
+    text = html.unescape(text)             # &amp;→& &lt;→< &gt;→> (양쪽 동일 적용)
     text = _BASE64ISH.sub("", text)        # base64 잡음 제거
     text = re.sub(r"\s+", "", text)        # 공백 전부 제거
     return text

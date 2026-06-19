@@ -5,7 +5,18 @@
 """
 from __future__ import annotations
 
-from scripts.gold_compare import containment, problem_count
+from scripts.gold_compare import containment, problem_count, normalize
+
+
+def test_normalize_xml_escape_canonicalized():
+    """XML 이스케이프 차이는 동일 수식으로 표준화(행렬 &amp; 등 공정 비교)."""
+    assert normalize("$1 &amp; 2$") == normalize("$1 & 2$")
+    assert normalize("$a &lt; b &gt; c$") == normalize("$a < b > c$")
+
+
+def test_normalize_strips_whitespace_for_operator_spacing():
+    """연산자 간격 차이는 공백 제거로 흡수(x - 1 == x-1)."""
+    assert normalize("x ^ {3} - 1 = 0") == normalize("x^{3}-1=0")
 
 
 def test_containment_full_subset_is_one():
