@@ -224,11 +224,13 @@ def _preprocess_md(md: str) -> list[str]:
     # Mathpix 형식 → 표준 형식 변환 (\[...\] → $$...$$, \(...\) → $...$)
     md = re.sub(r'\\\[\s*([\s\S]+?)\s*\\\]', lambda m: '$$' + ' '.join(m.group(1).split()) + '$$', md)
     md = re.sub(r'\\\(\s*(.+?)\s*\\\)', lambda m: '$' + m.group(1).strip() + '$', md)
-    # 멀티라인 $$...$$ → 한 줄
+    # 멀티라인 $$...$$ → 한 줄. 단, 마크다운 표 행(\n|)은 건너뛰지 않는다.
+    # (불균형 $$가 있으면 DOTALL이 표·뒤 본문을 통째 흡수하던 버그 방지.
+    #  정상 디스플레이 수식은 \begin{array}·& 를 쓰지 `|` 행을 쓰지 않아 안전.)
     md = re.sub(
-        r'\$\$(.*?)\$\$',
+        r'\$\$((?:(?!\n\s*\|)[\s\S])*?)\$\$',
         lambda m: '$$' + ' '.join(m.group(1).split()) + '$$',
-        md, flags=re.DOTALL,
+        md,
     )
     return md.split('\n')
 
@@ -252,6 +254,57 @@ def _parse_md_table(lines: list[str]) -> tuple[list[str], list[list[str]]]:
     if not rows:
         return [], []
     return rows[0], rows[1:]
+
+
+# ── 본문 데이터표 스코프 (머릿말·결재·채점·고아 조각 제외) ─────────────────
+#
+# build_section은 모든 `|`-블록을 HWPX 표로 만들지만, OCR 마크다운에는 표지·
+# 결재칸·배점 안내·채점기준표(해설측)도 표로 들어온다. 문제 본문 데이터표만
+# 변환하고 나머지는 텍스트로 렌더하여 오변환을 막는다.
+_TABLE_EXCLUDE_KW = (
+    "결재", "교장", "교 장", "교감", "교 감", "연구부장",
+    "교과부장", "교무부장", "지필평가", "채점기준", "채점요소", "배점기준",
+)
+_MATHPIX_IMG_RE = re.compile(r'!\[[^\]]*\]\([^)]*\)')
+# 첫 문제(머릿말 끝) 감지 — "1. " 류 또는 서술형 헤더
+_PROB_HDR_RE = re.compile(r'^\s*(?:\d{1,2}\s*[.．]\s|\[?\s*서술형)')
+
+
+def _table_scope_text(tbl_lines: list[str]) -> str:
+    """표 셀 텍스트만 모아 정규화 (이미지·구분선·파이프 제거) — 키워드/공백 판정용."""
+    parts: list[str] = []
+    for ln in tbl_lines:
+        s = ln.strip()
+        if _TABLE_SEP_RE.match(s):
+            continue
+        s = _MATHPIX_IMG_RE.sub('', s).strip('|').replace('|', ' ')
+        parts.append(s)
+    return re.sub(r'\s+', ' ', ' '.join(parts)).strip()
+
+
+def _keep_table_block(tbl_lines: list[str], seen_problem: bool) -> bool:
+    """마크다운 표 블록을 HWPX 표로 변환할지 판정 (문제 본문 데이터표만 True).
+
+    제외(텍스트로 렌더):
+      · 첫 문제 이전(표지·결재칸·배점 안내 = 머릿말)
+      · 결재/채점기준 등 비-문제 키워드 포함
+      · 구분선 없는 고아 1행 조각
+      · 이미지 전용 셀(도장칸 등 — 정리 후 텍스트 전무)
+    """
+    if not seen_problem:
+        return False
+    has_sep = any(_TABLE_SEP_RE.match(ln.strip()) for ln in tbl_lines)
+    content = [ln for ln in tbl_lines if not _TABLE_SEP_RE.match(ln.strip())]
+    if not content:
+        return False
+    if not has_sep and len(content) < 2:
+        return False
+    txt = _table_scope_text(tbl_lines)
+    if not txt:
+        return False
+    if any(kw in txt for kw in _TABLE_EXCLUDE_KW):
+        return False
+    return True
 
 
 # ── XML 생성 ─────────────────────────────────────────────────────────
@@ -447,6 +500,7 @@ class _HwpxWriter:
             bfid = '3' if ri == 0 else '4'
             for ci in range(n_cols):
                 cell_text = (row[ci] if ci < len(row) else '').strip()
+                cell_text = re.sub(r'<br\s*/?>', ' ', cell_text, flags=re.IGNORECASE).strip()
                 segs = _parse_segments(cell_text)
                 cell_para = self._para(segs, cpr=0)
                 cells_xml += (
@@ -494,18 +548,29 @@ class _HwpxWriter:
         lines = _postprocess_lines(lines)
 
         idx = 0
+        seen_problem = False
         while idx < len(lines):
             raw = lines[idx]
+            if _PROB_HDR_RE.match(raw):
+                seen_problem = True
 
-            # 마크다운 테이블 블록 감지 → HWPX 표 생성
+            # 마크다운 테이블 블록 감지 → 본문 데이터표만 HWPX 표로 변환
             if raw.strip().startswith('|'):
                 tbl_lines: list[str] = []
                 while idx < len(lines) and lines[idx].strip().startswith('|'):
                     tbl_lines.append(lines[idx])
                     idx += 1
-                tbl_xml = self._md_table_to_hwpx(tbl_lines)
-                if tbl_xml:
-                    paras.append(tbl_xml)
+                if _keep_table_block(tbl_lines, seen_problem):
+                    tbl_xml = self._md_table_to_hwpx(tbl_lines)
+                    if tbl_xml:
+                        paras.append(tbl_xml)
+                else:
+                    # 비-본문 표(머릿말·결재·채점·고아) → 구분선 제외, 각 행을 텍스트로
+                    for tl in tbl_lines:
+                        if _TABLE_SEP_RE.match(tl.strip()):
+                            continue
+                        segs = _parse_segments(re.sub(r'^#+\s*', '', tl).strip())
+                        paras.append(self._para(segs, cpr=0))
                 continue
 
             idx += 1

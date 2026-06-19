@@ -87,6 +87,11 @@ OCR + 자동 변환 (1회, 고품질)
 - `header.xml`(폰트·스타일)만 템플릿에서 복사
 - 조건표 `（가）（나）` → `1×1 hp:tbl` (`src/common/hwpx_table_inserter.py`)
 - 보기표 `ㄱ/ㄴ/ㄷ` → `1×1 hp:tbl`
+- **데이터표(도수·통계·격자 등)** → `N×M hp:tbl` (`build_section` 내 마크다운 표 자동 변환).
+  **스코프 가드**(`_keep_table_block`): 첫 문제 이전(표지·결재칸·배점 안내)·결재/채점기준
+  키워드·구분선 없는 고아 1행·이미지 전용 셀은 제외 → 텍스트로 렌더. 셀 내용은
+  `_parse_segments`로 수식까지 변환(`$\mathbf{A}$`→수식 셀), `<br>`→공백.
+  `_preprocess_md`의 `$$` 합치기가 표 행(`\n|`)을 삼키지 않도록 가드.
 - HWPX 네임스페이스 자동 수정 (`src/common/hwpx_namespace_fixer.py`)
 - HWPX 구조 검증 (`src/common/hwpx_validator.py`)
 
