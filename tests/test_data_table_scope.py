@@ -115,3 +115,15 @@ def test_build_section_br_in_cell_to_space():
     xml = _HwpxWriter().build_section(lines)
     assert "&lt;br&gt;" not in xml and "<br" not in xml   # <br> 리터럴 잔여 없음
     assert "수프" in xml and "스테이크" in xml             # 내용 보존(공백으로 분리)
+
+
+def test_data_table_cells_use_solid_borderfill():
+    """데이터표 셀이 사방 SOLID(BF2) — 워드초벌 템플릿에서 BF3(무테)/BF4(부분테)라
+    표가 거의 안 보이던 버그 회귀 방지."""
+    import re
+    lines = ["1. 다음 표를 보고 답하시오.",
+             "| 구분 | A | B |", "| :--: | :--: | :--: |", "| 1학년 | 3 | 2 |"]
+    xml = _HwpxWriter().build_section(lines)
+    tm = re.search(r'<hp:tbl[^>]*numberingType="TABLE".*?</hp:tbl>', xml, re.DOTALL)
+    cell_bfs = re.findall(r'<hp:tc[^>]*borderFillIDRef="(\d+)"', tm.group(0))
+    assert cell_bfs and all(b == "2" for b in cell_bfs), cell_bfs

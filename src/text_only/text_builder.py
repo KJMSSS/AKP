@@ -497,7 +497,9 @@ class _HwpxWriter:
         rows_xml = ''
         for ri, row in enumerate(all_rows):
             cells_xml = ''
-            bfid = '3' if ri == 0 else '4'
+            # 워드초벌 템플릿 borderFill: 2=사방SOLID, 3=사방NONE, 4=오른쪽만.
+            # 기존 3(헤더)/4(데이터)는 무테/부분테로 표가 거의 안 보였음 → 2(격자).
+            bfid = '2'
             for ci in range(n_cols):
                 cell_text = (row[ci] if ci < len(row) else '').strip()
                 cell_text = re.sub(r'<br\s*/?>', ' ', cell_text, flags=re.IGNORECASE).strip()
