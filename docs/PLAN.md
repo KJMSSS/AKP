@@ -289,11 +289,17 @@ PDF
 
 #### 🔲 남은 작업
 
-- **threshold 튜닝** `착수 가능`: 현재 IoU agreement≥0.7→auto, tesseract/density 단독=0.5→pending.
-  - ✅ **골드셋 실존 확인 (2026-06-10)** — `samples/11b/`에 PDF+수기 HWPX **18쌍** (git 미추적, 로컬 전용),
-    `data/gold_manifest/`에 학교별 문제·수식·선택지 구조화 JSON (git 추적).
-    ※ 이전 "골드셋 부재" 기록은 워크트리 경로에서 잘못 확인한 오기록.
-  - 부족한 것은 데이터가 아니라 **비교 하네스**(변환 결과 vs 골드 비교 스크립트). 하네스 구축 전까지 0.7 기본값 유지.
+- **threshold 튜닝** `데이터 블록 — 0.7 유지`: IoU agreement≥0.7→auto, 단독=0.5→pending.
+  - **임계값은 출력이 아니라 검수 큐 라우팅(auto/pending)에만 영향** — 변환부는 그림을
+    confidence 무관하게 삽입(`vision_map`→`figure_map`). 즉 튜닝 목표 = "교정 필요한 그림만
+    검수로 보내기"이고 이건 **bbox 정확성 라벨**이 있어야 데이터 기반 조정 가능.
+  - **가용 라벨 = 수완고 큐 3건뿐**(2026-06: conf 0.233·0.477·0.635, 셋 다 사람이 교정 →
+    auto-crop 틀림). 셋 다 conf<0.7이라 **0.7이 전부 올바르게 pending 처리(미스 0)**. 특히
+    0.635는 **0.6으로 낮추면 auto로 새서 놓침** → 데이터는 0.7 유지 지지, 낮추기 반대(올리는
+    쪽 데이터 없음). 검증일 2026-06-20.
+  - **비교 하네스는 골드 2단 구조 난제로 미완**: 골드 HWPX `hp:pic`을 문제 번호로 매핑하려면
+    수기 2단 양식(메타표 셀 숫자) 파싱이 필요해 naive `^\d+\.` 매칭은 0% 매칭(오매핑). gold_manifest는
+    `total_pics`(개수)만 있고 bbox 좌표 없음. → 라벨 누적(검수 결정)·과금 검출 전까지 **0.7 고정**.
 
 **관련 파일**:
 - `src/common/image_extractor.py` — PyMuPDF 추출 + `crop_problems_by_bbox` + `extract_with_confidence`
