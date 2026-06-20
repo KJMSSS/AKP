@@ -66,6 +66,14 @@ def _to_circled(text: str) -> str:
 _PROB_LINE_RE    = re.compile(r'^\d{1,2}[.．]\s')          # "1. " "2. " …
 _SCORE_LINE_RE   = re.compile(r'^\[\d+(?:\.\d+)?점\]')     # "[4.5점]" "[5점]"
 
+# 시험 운영 안내문(※ … 답안지/펜으로 … 작성하십시오.) — 문제 내용 아님 → 제거.
+# 단 같은 줄 뒤에 붙는 <서술형 2문항, 배점 15점> 같은 배점 헤더(<…>)는 보존한다.
+# 오탐 방지: '답안지/펜으로/서술형입니다/객관식입니다' 키워드 + '작성' 종결 동시 충족 시에만.
+_EXAM_NOTICE_RE  = re.compile(
+    r'※[^<\n]*(?:답안지|펜으로|서술형입니다|객관식입니다)[^<\n]*'
+    r'(?:작성하십시오|작성하시오|작성하세요)[.．]?\s*'
+)
+
 # ── 보기/점수 정규화 (v7) ─────────────────────────────────────────────
 _KOREAN_RE       = re.compile('[가-힣]')
 # 줄 시작 원문자/ASCII/전각 선택지 불릿 (공백 포함)
@@ -132,6 +140,13 @@ def _postprocess_lines(lines: list[str]) -> list[str]:
 
     for raw in lines:
         s = raw.strip()
+
+        # 시험 운영 안내문 제거 (배점 헤더<…>는 남김). 안내문만 있던 줄은 통째 제거.
+        if '※' in s and _EXAM_NOTICE_RE.search(s):
+            s = _EXAM_NOTICE_RE.sub('', s).strip()
+            if not s:
+                continue
+            raw = s
 
         # 마크다운 테이블 줄은 변경 없이 통과
         if s.startswith('|'):

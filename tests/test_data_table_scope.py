@@ -14,7 +14,7 @@ from __future__ import annotations
 import re
 
 from src.text_only.text_builder import (
-    _keep_table_block, _preprocess_md, _HwpxWriter,
+    _keep_table_block, _preprocess_md, _postprocess_lines, _HwpxWriter,
 )
 
 
@@ -85,6 +85,31 @@ def test_preprocess_real_multiline_equation_still_joins():
     lines = [l for l in _preprocess_md(md) if l.strip()]
     assert len(lines) == 1 and lines[0].startswith("$$") and lines[0].endswith("$$")
     assert "x = 1 y = 2" in lines[0]
+
+
+# ── 시험 운영 안내문 제거 (배점 헤더 보존) ──────────────────────────────────
+
+def test_exam_notice_stripped_keeps_score_header():
+    """상일여고 서술형 안내문: ※…작성하십시오. 는 제거, <서술형 N문항, 배점 M점>은 보존."""
+    line = ("※ 이번 문제부터는 서술형입니다. 문제를 잘 읽고 정확한 답을 서술형 답안지에 "
+            "작성하시오. 답안 작성은 검정 또는 파란색 펜으로 작성하십시오. "
+            "<서술형 2문항, 배점 15점>")
+    out = [l for l in _postprocess_lines([line]) if l.strip()]
+    assert out == ["<서술형 2문항, 배점 15점>"], out
+
+
+def test_exam_notice_only_line_dropped():
+    """배점 헤더 없이 안내문만 있으면 줄 통째 제거."""
+    line = "※ 답안은 서술형 답안지에 검정 펜으로 작성하십시오."
+    out = [l for l in _postprocess_lines([line]) if l.strip()]
+    assert out == [], out
+
+
+def test_exam_notice_does_not_touch_problem_text():
+    """'작성하시오'가 들어가도 ※/안내키워드 없는 일반 문제는 건드리지 않는다 (오탐 금지)."""
+    line = "3. 다음 함수의 그래프를 그리는 과정을 서술하고 답을 작성하시오. [5점]"
+    out = _postprocess_lines([line])
+    assert any("그래프를 그리는 과정" in l for l in out)
 
 
 # ── build_section 통합: 머릿말 결재표 텍스트 / 본문표만 변환 ─────────────────
