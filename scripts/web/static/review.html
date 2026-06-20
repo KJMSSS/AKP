@@ -243,16 +243,21 @@
       position: relative;
     }
     .card-text {
-      font-family: 'Consolas', 'Courier New', monospace;
-      font-size: 0.85rem;
-      line-height: 1.65;
+      font-family: -apple-system, 'Segoe UI', 'Malgun Gothic', sans-serif;
+      font-size: 0.95rem;
+      line-height: 1.75;
       color: #374151;
-      white-space: pre-wrap;
-      word-break: break-all;
+      overflow-wrap: break-word;
     }
     .card-text .latex {
       color: #6366f1;
       font-style: normal;
+    }
+    /* KaTeX 렌더 실패한 수식 — 소스로 폴백 표시(빨강) */
+    .card-text .kt-err, .math-preview .kt-err {
+      color: #dc2626;
+      font-family: 'Consolas', monospace;
+      font-size: 0.9em;
     }
     .card-text-collapsed {
       max-height: 3.6em; /* 약 2줄 */
@@ -856,20 +861,6 @@
     tmp.src = src;
   }
 
-  /* ─── LaTeX 하이라이트 ─── */
-  function renderLatex(raw) {
-    // $...$ 및 $$...$$ 를 <span class="latex"> 로 감싸기
-    // HTML 이스케이프 먼저, 그 다음 span 치환
-    const escaped = String(raw)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;');
-
-    return escaped.replace(/(\$\$[\s\S]*?\$\$|\$[^$\n]+?\$)/g, (m) => {
-      return `<span class="latex">${m}</span>`;
-    });
-  }
-
   /* ─── 수식 기호 팔레트 (수식 모르는 분용) ─── */
   // 각 버튼: [화면표시, 넣을 LaTeX, 커서를 ◎ 위치로]. ◎ 있으면 그 자리에 커서.
   const SYMBOL_PALETTE = [
@@ -934,13 +925,14 @@
     ta.dispatchEvent(new Event('input'));
   }
 
-  // 한글+$수식$ 혼합 텍스트를 KaTeX로 미리보기 렌더
-  function renderMathPreview(text, target) {
-    if (!text) { target.innerHTML = '<span style="color:#94a3b8">(내용 없음)</span>'; return; }
-    if (typeof katex === 'undefined') {       // CDN 미로딩 — 원문 표시
-      target.textContent = text; return;
+  // 한글+$수식$ 혼합 텍스트 → KaTeX 렌더된 HTML 문자열 반환.
+  // 검수 카드 표시와 편집 미리보기가 공유 (한 곳에서 렌더 규칙 관리).
+  function mathToHtml(text) {
+    if (!text) return '<span style="color:#94a3b8">(내용 없음)</span>';
+    if (typeof katex === 'undefined') {       // CDN 미로딩 — 원문 폴백
+      return escHtml(String(text)).replace(/\n/g, '<br>');
     }
-    const parts = text.split(/(\$\$[\s\S]*?\$\$|\$[^$\n]+?\$)/g);
+    const parts = String(text).split(/(\$\$[\s\S]*?\$\$|\$[^$\n]+?\$)/g);
     let html = '';
     for (const seg of parts) {
       if (!seg) continue;
@@ -956,7 +948,12 @@
         html += escHtml(seg).replace(/\n/g, '<br>');
       }
     }
-    target.innerHTML = html;
+    return html;
+  }
+
+  // 편집 미리보기 (textarea 입력 → 미리보기 영역에 렌더)
+  function renderMathPreview(text, target) {
+    target.innerHTML = mathToHtml(text);
   }
 
   // 카드의 수정 폼에 팔레트+미리보기 연결 (1회)
@@ -1014,7 +1011,7 @@
     // 텍스트가 길 경우 더보기 처리 (2줄 기준 약 160자 이상이면 접기)
     const COLLAPSE_THRESHOLD = 160;
     const isLong = prob.full_text.length > COLLAPSE_THRESHOLD;
-    const textHtml = renderLatex(prob.full_text);
+    const textHtml = mathToHtml(prob.full_text);
 
     card.innerHTML = `
       <div class="card-header">
@@ -1116,7 +1113,7 @@
       prob.status    = (changed || memo) ? 'edited' : 'ok';
       textEditWrap.classList.remove('open');
       const textDiv = card.querySelector('.card-text');
-      textDiv.innerHTML = renderLatex(newText);
+      textDiv.innerHTML = mathToHtml(newText);
       textDiv.classList.remove('card-text-collapsed');
       const expandBtn = card.querySelector('.btn-expand');
       if (expandBtn) expandBtn.style.display = 'none';
