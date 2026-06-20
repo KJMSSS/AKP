@@ -192,15 +192,17 @@ _SYMBOLS: list[tuple[str, str]] = [
     (r'\\,|\\;|\\!|\\quad\b|\\qquad\b', '~'),
     (r'\\ ',                '~'),
     # \left / \right delimiter → 자동 사이즈 괄호 (행렬 등 큰 표현식에 대응)
-    (r'\\left\s*\(',     'LEFT ('),    (r'\\right\s*\)',    ' RIGHT )'),
-    (r'\\left\s*\[',     'LEFT ['),    (r'\\right\s*\]',    ' RIGHT ]'),
-    (r'\\left\s*\\?\{',  'LEFT {'),    (r'\\right\s*\\?\}', ' RIGHT }'),
-    (r'\\left\s*\|',     'LEFT |'),    (r'\\right\s*\|',    ' RIGHT |'),
-    (r'\\left\s*\.',     ''),          (r'\\right\s*\.',    ' RIGHT .'),
-    (r'\\left\s*<',      'LEFT <'),    (r'\\right\s*>',     ' RIGHT >'),
+    # ※ LEFT 앞에 반드시 공백 — 앞 토큰과 붙으면(예: t\left( → tLEFT) HWP가
+    #    'tLEFT'를 한 변수명으로 인식해 LEFT 키워드가 죽고 리터럴 텍스트로 렌더된다.
+    (r'\\left\s*\(',     ' LEFT ('),    (r'\\right\s*\)',    ' RIGHT )'),
+    (r'\\left\s*\[',     ' LEFT ['),    (r'\\right\s*\]',    ' RIGHT ]'),
+    (r'\\left\s*\\?\{',  ' LEFT {'),    (r'\\right\s*\\?\}', ' RIGHT }'),
+    (r'\\left\s*\|',     ' LEFT |'),    (r'\\right\s*\|',    ' RIGHT |'),
+    (r'\\left\s*\.',     ''),           (r'\\right\s*\.',    ' RIGHT .'),
+    (r'\\left\s*<',      ' LEFT <'),    (r'\\right\s*>',     ' RIGHT >'),
     # 이스케이프 중괄호 \{ \} = 집합 리터럴 → 보이는 괄호. HWP는 맨 { } 를 그룹화(비표시)로
     # 처리하므로 집합 {3,4,5} 가 사라진다. \left\{(위)가 먼저 소비된 뒤 남은 단독 \{ \} 처리.
-    (r'\\\{', 'LEFT {'), (r'\\\}', ' RIGHT }'),
+    (r'\\\{', ' LEFT {'), (r'\\\}', ' RIGHT }'),
     # \text{...} 언래핑
     (r'\\text\{([^}]*)\}',  r'\1'),
     (r'\\mathrm\{([^}]*)\}', r'\1'),
@@ -298,6 +300,10 @@ def _sub_env(m: re.Match) -> str:
 def convert(latex: str) -> str:
     """LaTeX 수식 문자열을 HWP hp:script 표기로 변환한다."""
     s = latex.strip()
+    # LaTeX 렌더링 힌트 제거 (HWP 무대응) — \displaystyle\sum → \sum.
+    # OCR이 \displaystyle\sum 을 \displaystylesum 으로 붙여 출력하면 sum 키워드가
+    # 죽어 'displaystylesum' 리터럴로 렌더된다(18번). limits/nolimits 도 동일.
+    s = re.sub(r'\\(?:display|text|script)style|\\(?:no)?limits', '', s)
     # ^{\circ} → DEG (ss.hwp: 60DEG not 60^{DEG})
     # 다른 변환보다 먼저 처리해야 \circ → CIRC 규칙과 충돌하지 않음
     s = re.sub(r'\^\s*\{\s*\\circ\s*\}', 'DEG', s)

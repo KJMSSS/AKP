@@ -144,7 +144,7 @@ class TestLatexToHwp:
     def test_set_braces_escaped(self):
         # \{...\} = 집합 리터럴 → 보이는 괄호. HWP는 맨 {}를 그룹화(비표시)로 처리해
         # 집합 {3,4,5} 가 사라지던 버그 회귀 방지.
-        assert convert(r"A=\{3,4,5\}") == "A=LEFT {3,4,5 RIGHT }"
+        assert convert(r"A=\{3,4,5\}") == "A= LEFT {3,4,5 RIGHT }"
         assert convert(r"A \cap B = \{5,7\}") == "A cap B = LEFT {5,7 RIGHT }"
 
     def test_set_builder_mid(self):
@@ -161,14 +161,36 @@ class TestLatexToHwp:
 
     def test_left_dot_removed(self):
         # \left. → 빈 여는 구분자, \right. → RIGHT . (소문자 left/right 미잔존)
+        # ※ 'c LEFT' — 앞 토큰과 LEFT 사이 공백 필수 (cLEFT 면 HWP가 한 변수로 인식)
         result = convert(r"c\left(\frac{a}{b}\right.")
         assert "left" not in result
         assert "right" not in result
-        assert result == "cLEFT ({a} over {b} RIGHT ."
+        assert result == "c LEFT ({a} over {b} RIGHT ."
 
     def test_left_bracket(self):
         result = convert(r"\left[ x \right]")
         assert result == "LEFT [ x RIGHT ]"
+
+    def test_left_after_letter_separated(self):
+        # 실전 버그(상일여고 4·16번): t\left(...\right) → 'tLEFT' 붙음 →
+        # HWP가 한 변수로 인식해 괄호가 리터럴 'LEFT' 텍스트로 렌더됐다.
+        result = convert(r"t\left(0<t<\frac{\pi}{2}\right)")
+        assert "tLEFT" not in result            # 앞 토큰과 안 붙음
+        assert "t LEFT (" in result
+        assert result == "t LEFT (0<t<{pi} over {2} RIGHT )"
+
+    def test_left_after_letter_e(self):
+        # 상일여고 6번: \int_1^e\left(...) → 'eLEFT' 붙던 버그
+        result = convert(r"\int_1^e\left(\frac{1}{x}-\frac{1}{x^2}\right)dx")
+        assert "eLEFT" not in result
+        assert "e LEFT (" in result
+
+    def test_displaystyle_stripped(self):
+        # 상일여고 18번: \displaystyle\sum → OCR이 \displaystylesum 으로 붙여
+        # sum 키워드가 죽고 'displaystylesum' 리터럴로 렌더됐다.
+        result = convert(r"\displaystyle\sum_{n=1}^{10}\frac{a_n-n}{e^n}")
+        assert "displaystyle" not in result
+        assert result.startswith("sum from {n=1} to {10}")
 
     def test_text_unwrapped(self):
         result = convert(r"\text{단위}")
