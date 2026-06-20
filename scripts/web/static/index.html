@@ -256,6 +256,21 @@
     transition: background 0.2s;
   }
   #download-btn:hover { background: #157347; }
+  #md-btn {
+    display: none;
+    margin-top: 12px;
+    margin-left: 8px;
+    background: #0d9488;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 9px 22px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  #md-btn:hover { background: #0f766e; }
   #retry-btn {
     display: none;
     margin-top: 12px;
@@ -475,6 +490,7 @@
     <div id="log-box" aria-live="polite" aria-label="변환 로그"></div>
     <div id="log-summary"></div>
     <button id="download-btn">HWPX 다운로드</button>
+    <button id="md-btn" title="OCR이 인식한 원본 마크다운 — 수정 후 재과금 없이 재빌드용">OCR 기록(.md)</button>
     <button id="review-btn">검수 시작</button>
     <button id="retry-btn">다시 시도</button>
   </div>
@@ -714,6 +730,7 @@ function clearLog() {
   $('log-box').innerHTML = '';
   $('log-summary').style.display = 'none';
   $('download-btn').style.display = 'none';
+  if ($('md-btn')) $('md-btn').style.display = 'none';
   $('review-btn').style.display = 'none';
   $('retry-btn').style.display = 'none';
 }
@@ -799,6 +816,12 @@ $('convert-btn').addEventListener('click', async () => {
     dlBtn.style.display = 'inline-block';
     dlBtn.onclick = () => { window.location.href = `/download/${jobId}`; };
 
+    const mdBtn = $('md-btn');
+    if (mdBtn) {
+      mdBtn.style.display = 'inline-block';
+      mdBtn.onclick = () => { window.location.href = `/download/${jobId}/md`; };
+    }
+
     const rvBtn = $('review-btn');
     rvBtn.style.display = 'inline-block';
     rvBtn.onclick = () => { window.location.href = `/review/${jobId}`; };
@@ -862,6 +885,7 @@ async function renderMyJobs() {
         <td>${escHtml(j.file)}</td>
         <td><span id="job-status-${escHtml(j.id)}" style="font-size:0.75rem;color:#adb5bd;margin-right:6px;"></span>
           <a class="job-btn primary" href="/download/${escHtml(j.id)}">다운로드</a>
+          <a class="job-btn" href="/download/${escHtml(j.id)}/md" title="OCR 인식 마크다운">.md</a>
           <a class="job-btn review" href="/review/${escHtml(j.id)}">검수 보기</a>
           <button class="job-btn" onclick="removeJob('${escHtml(j.id)}')">✕</button>
         </td>

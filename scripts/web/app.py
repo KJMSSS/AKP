@@ -32,7 +32,7 @@ import fitz  # PyMuPDF
 from authlib.integrations.starlette_client import OAuth
 from dotenv import load_dotenv
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse, StreamingResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 
@@ -548,6 +548,41 @@ async def download(job_id: str, request: Request):
             pass
 
     return FileResponse(str(hwpx), media_type="application/octet-stream", filename=dl_name)
+
+
+@app.get("/download/{job_id}/md")
+async def download_md(job_id: str, request: Request):
+    """OCR 인식 기록(최종 마크다운) 다운로드.
+
+    build_from_markdown 이 그대로 소비하는 문자열이라, 이 .md 만 있으면
+    Mathpix/Claude 재호출(재과금) 없이 수정→재빌드가 가능하다.
+    """
+    _require_login(request)
+    _validate_safe_key(job_id)
+    base_id = job_id.removesuffix("_reviewed")
+    review_file = _TMP_DIR / f"{base_id}_review.json"
+    if not review_file.exists():
+        raise HTTPException(404, "변환 기록이 서버에 없습니다. PDF를 다시 변환해 주세요.")
+
+    rv = json.loads(review_file.read_text(encoding="utf-8"))
+    md = rv.get("markdown", "")
+    if not md:
+        # 구버전 review.json 호환: 문제 구조에서 재조립
+        problems = rv.get("problems", [])
+        md = rv.get("header", "") + "\n\n" + "\n\n".join(
+            p.get("full_text", "") for p in problems
+        )
+    if not md.strip():
+        raise HTTPException(404, "마크다운 기록이 비어 있습니다.")
+
+    custom = rv.get("custom_filename", "")
+    pdf_name = rv.get("pdf_name", "")
+    stem = Path(custom).stem if custom else (Path(pdf_name).stem if pdf_name else base_id)
+    return Response(
+        content=md.encode("utf-8"),
+        media_type="text/markdown; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{stem}.md"'},
+    )
 
 
 @app.get("/api/jobs/{job_id}")
@@ -1844,6 +1879,9 @@ def _save_review_data(
         "drive_file_id":   drive_file_id,
         "header":          header,
         "pages":           n_pages,
+        # OCR 인식 기록(최종 마크다운) — 재과금 0으로 재빌드/수정하기 위한 원본.
+        # build_from_markdown 이 그대로 소비하는 바로 그 문자열.
+        "markdown":        md,
         "problems": [
             {"number": seg.number, "full_text": seg.raw_block,
              "is_subjective": seg.is_subjective, "status": "pending"}
