@@ -1685,6 +1685,8 @@ async def review_submit(job_id: str, request: Request):
     review_data = json.loads(review_file.read_text(encoding="utf-8"))
     header      = review_data.get("header", "")
     new_md      = header + "\n\n" + "\n\n".join(p["full_text"] for p in problems)
+    pdf_name    = review_data.get("pdf_name", "")
+    reviewer    = request.session.get("name", email)
 
     reviewed_id = f"{job_id}_reviewed"
     out_hwpx    = _TMP_DIR / f"{reviewed_id}.hwpx"
@@ -1740,12 +1742,32 @@ async def review_submit(job_id: str, request: Request):
     _jobs[reviewed_id] = {"queue": queue.Queue(), "hwpx": out_hwpx, "meta": {}}
     edited   = sum(1 for p in problems if p.get("status") == "edited")
 
-    # review.json 갱신 — 수정 내용 + 검수 완료 정보
+    # review.json 갱신 — 검수 전→후 자동 기록 + 원본 보존 + 검수 완료 정보
     edit_map = {p["number"]: p["full_text"] for p in problems}
     for p in review_data.get("problems", []):
-        if p["number"] in edit_map:
-            p["full_text"] = edit_map[p["number"]]
-            p["status"]    = "pending"
+        num = p["number"]
+        if num not in edit_map:
+            continue
+        before = p.get("full_text", "")
+        after  = edit_map[num]
+        if "original_text" not in p:           # 최초 OCR 원본 1회 보존(덮어쓰기 방지)
+            p["original_text"] = before
+        # 내용이 실제로 바뀐 문제는 검수 전→후를 자동으로 교정 로그에 남긴다.
+        # 직원 메모가 없어도 기록 — 반복-오류 내용 분석의 원천 데이터.
+        if after.strip() != before.strip():
+            append_correction({
+                "employee":        reviewer,
+                "token":           email,
+                "job_id":          job_id,
+                "pdf_name":        pdf_name,
+                "problem_number":  num,
+                "problem_text":    before,      # 검수 전 (원본/직전 OCR)
+                "correction_note": "",          # 자동 기록 — 메모 불요
+                "corrected_text":  after,       # 수정 후
+                "source":          "review-edit",
+            })
+        p["full_text"] = after
+        p["status"]    = "pending"
     review_data["review_status"]   = "completed"
     review_data["reviewer_name"]   = request.session.get("name", email)
     review_data["reviewer_email"]  = email
@@ -1753,7 +1775,6 @@ async def review_submit(job_id: str, request: Request):
     review_file.write_text(
         json.dumps(review_data, ensure_ascii=False, indent=2), encoding="utf-8"
     )
-    pdf_name = review_data.get("pdf_name", "")
 
     append_entry({
         "ts": datetime.now().isoformat(timespec="seconds"),

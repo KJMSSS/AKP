@@ -19,6 +19,7 @@ logs/corrections.jsonl 에 한 줄씩 기록.
 """
 from __future__ import annotations
 
+import difflib
 import json
 import os
 import re
@@ -296,14 +297,52 @@ _THEME_KEYWORDS = [
     "기호", "바", "괄호", "등호", "부등호", "절댓값", "수식", "조건", "보기",
 ]
 
+_WS_RE = re.compile(r"\s+")
+
+
+def _norm_ws(s: str) -> str:
+    return _WS_RE.sub(" ", (s or "")).strip()
+
+
+def _diff_fragments(before: str, after: str) -> list[dict]:
+    """검수 전(before)→수정 후(after)의 최소 변경 토막만 추출.
+
+    char 단위로 비교해 바뀐 구간만 뽑는다 — 동일 부분·공백차·무변경은 버린다.
+    한쪽이 비면(삭제/삽입) 그대로 둔다. 반환: [{"old": "...", "new": "..."}, ...]
+
+    메모 없이 자동 기록된 '검수 전→후'를 내용 단위로 묶기 위한 핵심 헬퍼.
+    """
+    if before is None or after is None:
+        return []
+    if _norm_ws(before) == _norm_ws(after):
+        return []
+    sm = difflib.SequenceMatcher(a=before, b=after, autojunk=False)
+    frags: list[dict] = []
+    for tag, i1, i2, j1, j2 in sm.get_opcodes():
+        if tag == "equal":
+            continue
+        old = before[i1:i2].strip()
+        new = after[j1:j2].strip()
+        if _norm_ws(old) == _norm_ws(new):
+            continue
+        if not old and not new:
+            continue
+        frags.append({"old": old, "new": new})
+    return frags
+
 
 def analyze_corrections(days: int = 90) -> dict:
     """검수 교정을 묶어 '반복되는 오류'를 surface — 검수→개선 루프 자동화.
 
+    묶는 기준은 두 가지:
+      - 직원 메모가 있으면 메모로 묶는다 (기존 동작).
+      - 메모가 없는 자동 기록(검수 전→후)은 **내용 diff 토막**으로 묶는다.
+        → "수정메모에만 확인할 게 아니라" 내용 변화 자체를 패턴으로 본다.
+
     반환:
       themes: [{keyword, count}]  메모에 등장한 테마 키워드 빈도 (내림차순)
-      groups: [{note, count, has_corrected, occurrences:[...]}]
-              정규화된 메모로 묶은 그룹 (count 내림차순). count≥2가 체계적 오류 신호.
+      groups: [{note, count, has_corrected, job_span, occurrences:[...]}]
+              메모 또는 내용변화로 묶은 그룹 (count 내림차순). count≥2가 체계적 오류 신호.
       total:  분석 대상 교정 수
     """
     rows = [e for e in read_corrections(days=days) if e.get("status") != "reverted"]
@@ -320,24 +359,38 @@ def analyze_corrections(days: int = 90) -> dict:
         return re.sub(r"\s+", " ", (s or "").strip())
 
     groups: dict[str, dict] = {}
-    for e in rows:
-        key = _norm(e.get("correction_note", ""))
-        if not key:
-            continue
+
+    def _push(key, note, e, ptext, ctext, has_corr):
         g = groups.setdefault(key, {
-            "note": key, "count": 0, "has_corrected": False, "occurrences": [],
+            "note": note, "count": 0, "has_corrected": False, "occurrences": [],
         })
         g["count"] += 1
-        if (e.get("corrected_text") or "").strip():
+        if has_corr:
             g["has_corrected"] = True
         g["occurrences"].append({
             "id":             e.get("id"),
             "problem_number": e.get("problem_number"),
             "pdf_name":       e.get("pdf_name", ""),
             "job_id":         e.get("job_id", ""),
-            "problem_text":   e.get("problem_text", ""),
-            "corrected_text": e.get("corrected_text", ""),
+            "problem_text":   ptext,
+            "corrected_text": ctext,
         })
+
+    for e in rows:
+        memo   = _norm(e.get("correction_note", ""))
+        before = e.get("problem_text", "") or ""
+        after  = e.get("corrected_text", "") or ""
+        if memo:
+            # 직원이 남긴 메모 → 메모로 묶는다 (기존 동작)
+            _push("memo::" + memo, memo, e, before, after, bool(after.strip()))
+            continue
+        # 메모 없는 자동 기록(검수 전→후) → 내용 diff 토막으로 묶는다.
+        for fr in _diff_fragments(before, after):
+            old_s = fr["old"][:40] + ("…" if len(fr["old"]) > 40 else "")
+            new_s = fr["new"][:40] + ("…" if len(fr["new"]) > 40 else "")
+            label = (old_s or "(빈칸)") + " → " + (new_s or "(삭제)")
+            key   = "diff::" + _norm(fr["old"]) + "→" + _norm(fr["new"])
+            _push(key, label, e, fr["old"], fr["new"], True)
 
     # 여러 시험지(job)에 걸쳐 나오면 더 체계적 — span 계산
     for g in groups.values():

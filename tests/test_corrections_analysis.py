@@ -73,3 +73,62 @@ def test_reverted_excluded(logfile):
 def test_empty(logfile):
     a = cl.analyze_corrections(days=365)
     assert a == {"themes": [], "groups": [], "total": 0}
+
+
+# ── _diff_fragments: 검수 전→후 최소 변경 토막 ─────────────────────────────
+
+def test_diff_fragments_replacement():
+    """치환: 'abc XXX def' → 'abc YYY def' → 토막 XXX→YYY."""
+    frags = cl._diff_fragments("abc XXX def", "abc YYY def")
+    assert any(f["old"] == "XXX" and f["new"] == "YYY" for f in frags), frags
+
+
+def test_diff_fragments_deletion():
+    """삭제: 'A f'(x) B' → 'A B' → 토막 f'(x)→(빈)."""
+    frags = cl._diff_fragments("A f'(x) B", "A B")
+    assert any("f'(x)" in f["old"] and f["new"] == "" for f in frags), frags
+
+
+def test_diff_fragments_no_change_and_none():
+    """무변경(공백차만)·None 입력 → 토막 없음."""
+    assert cl._diff_fragments("a  b", "a b") == []
+    assert cl._diff_fragments("같은 내용", "같은 내용") == []
+    assert cl._diff_fragments(None, "x") == []
+    assert cl._diff_fragments("x", None) == []
+
+
+# ── 메모 없는 자동 기록(검수 전→후) → 내용 diff 로 묶임 ─────────────────────
+
+def _add_edit(before, after, prob, job="J1"):
+    """검수 보기 제출이 만드는 자동 기록 모사 — 메모 없음, 검수 전/후만."""
+    cl.append_correction({
+        "job_id": job, "problem_number": prob, "problem_text": before,
+        "correction_note": "", "corrected_text": after, "pdf_name": "X.pdf",
+        "source": "review-edit",
+    })
+
+
+def test_memoless_grouped_by_content_diff(logfile):
+    """메모 없이 같은 f'(x) 삭제가 2개 시험지에서 → 내용 diff 로 반복 그룹."""
+    _add_edit("값 f'(x) 끝", "값 끝", prob=1, job="A")
+    _add_edit("답 f'(x) 끝", "답 끝", prob=2, job="B")
+    a = cl.analyze_corrections(days=365)
+    assert a["total"] == 2
+    hot = [g for g in a["groups"] if g["count"] == 2]
+    assert hot, a["groups"]
+    g = hot[0]
+    assert "f'(x)" in g["note"]                 # 내용 변화가 그룹 라벨로
+    assert g["job_span"] == 2                    # 두 시험지에 걸침 → 체계적
+    # occurrence 에 최소 토막이 실려 패턴 등록이 깔끔
+    assert g["occurrences"][0]["problem_text"] == "f'(x)"
+    assert g["occurrences"][0]["corrected_text"] == ""
+
+
+def test_memo_and_diff_coexist(logfile):
+    """메모 있는 항목은 메모로, 메모 없는 항목은 내용으로 — 한 분석에 공존."""
+    _add("집합기호 없음", 3)                      # 메모 그룹
+    _add_edit("p DEL q", "p q", prob=5, job="A")  # 내용 diff 그룹
+    a = cl.analyze_corrections(days=365)
+    notes = [g["note"] for g in a["groups"]]
+    assert "집합기호 없음" in notes
+    assert any("DEL" in n for n in notes)
