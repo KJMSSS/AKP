@@ -32,6 +32,7 @@ import fitz  # PyMuPDF
 from authlib.integrations.starlette_client import OAuth
 from dotenv import load_dotenv
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
@@ -1339,6 +1340,98 @@ async def api_corrections_analysis(request: Request, days: int = 90):
     return JSONResponse(analyze_corrections(days=days))
 
 
+def _ai_suggest_patterns(api_key: str, items: list[dict]) -> list[dict]:
+    """검수 반복 교정을 Claude가 분석해 교정 패턴 제안 (temperature=0, 제안만).
+
+    정책: LLM=패턴 발견기, 자동 적용 금지 → 여기선 '제안'만 반환하고
+    실제 등록(approve)은 관리자가 한 번 눌러야 한다.
+    """
+    import anthropic  # 지연 import (OCR과 동일 의존성)
+
+    system = (
+        "너는 한국 수학 시험지 OCR 교정 패턴 분석가다. 검수자가 반복적으로 고친 교정 "
+        "목록을 보고, OCR이 '체계적으로(반복적으로)' 틀리는 것만 골라 교정 패턴으로 제안한다.\n"
+        "규칙:\n"
+        "- 단발성·우연한 교정·일회성 오타는 제외. 같은 유형이 반복되는 것만 제안.\n"
+        "- original_text = OCR이 내는 잘못된 형태(특정 문제에 한정 말고 일반화), "
+        "corrected_text = 올바른 형태.\n"
+        "- scope: 전역적 OCR 습관이면 'global', 특정 학교/과목 한정이면 'school' 또는 "
+        "'subject'(그 경우 scope_value 채움).\n"
+        "- note: 왜 이 패턴인지 한 줄.\n"
+        "- confidence: 0~1. 확실치 않으면 제안하지 마라(거짓 패턴은 OCR을 망친다).\n"
+        "출력은 JSON 배열만(설명 금지). 각 원소: "
+        '{"original_text":"","corrected_text":"","scope":"global","scope_value":"",'
+        '"note":"","confidence":0.0}'
+    )
+    user = ("다음은 검수에서 반복된 교정 목록(JSON)이다. 패턴 제안 JSON 배열만 출력하라:\n"
+            + json.dumps(items, ensure_ascii=False))
+
+    client = anthropic.Anthropic(api_key=api_key)
+    resp = client.messages.create(
+        model="claude-sonnet-4-6", max_tokens=2000, temperature=0,
+        system=system, messages=[{"role": "user", "content": user}],
+    )
+    text = "".join(getattr(b, "text", "") for b in resp.content).strip()
+    text = re.sub(r'^```(?:json)?|```$', '', text, flags=re.MULTILINE).strip()
+    m = re.search(r'\[.*\]', text, re.DOTALL)
+    if not m:
+        return []
+    try:
+        arr = json.loads(m.group(0))
+    except Exception:
+        return []
+    out: list[dict] = []
+    for s in arr if isinstance(arr, list) else []:
+        if not isinstance(s, dict):
+            continue
+        sc = s.get("scope", "global")
+        try:
+            conf = float(s.get("confidence", 0))
+        except Exception:
+            conf = 0.0
+        out.append({
+            "original_text":  str(s.get("original_text", ""))[:500],
+            "corrected_text": str(s.get("corrected_text", ""))[:500],
+            "scope":          sc if sc in ("global", "school", "subject") else "global",
+            "scope_value":    str(s.get("scope_value", ""))[:50],
+            "note":           str(s.get("note", ""))[:200],
+            "confidence":     round(max(0.0, min(1.0, conf)), 2),
+        })
+    return out
+
+
+@app.post("/api/admin/corrections/ai-suggest")
+async def api_corrections_ai_suggest(request: Request, days: int = 180):
+    """반복 교정을 Claude가 분석해 등록할 패턴을 제안 (관리자가 원클릭 승인)."""
+    _require_admin(request)
+    api_key = os.environ.get("ANTHROPIC_API_KEY")
+    if not api_key:
+        raise HTTPException(503, "ANTHROPIC_API_KEY 미설정 — AI 분석 불가")
+
+    analysis = analyze_corrections(days=days)
+    groups = [g for g in analysis.get("groups", []) if g.get("count", 0) >= 2]
+    if not groups:
+        return JSONResponse({"suggestions": [],
+                             "note": "반복(2회 이상) 교정이 아직 없습니다. 검수가 더 쌓이면 분석할 수 있어요."})
+
+    items = []
+    for g in groups[:40]:
+        occ = g.get("occurrences", [])
+        items.append({
+            "note":     g.get("note", ""),
+            "count":    g.get("count", 0),
+            "job_span": g.get("job_span", 0),
+            "examples": [{"before": (o.get("problem_text") or "")[:300],
+                          "after":  (o.get("corrected_text") or "")[:300]}
+                         for o in occ[:3]],
+        })
+    try:
+        suggestions = await run_in_threadpool(_ai_suggest_patterns, api_key, items)
+    except Exception as e:
+        raise HTTPException(502, f"AI 분석 실패: {e}")
+    return JSONResponse({"suggestions": suggestions})
+
+
 @app.patch("/api/admin/corrections/{cid}/revert")
 async def api_revert_correction(cid: str, request: Request):
     _require_admin(request)
@@ -1392,80 +1485,6 @@ async def api_delete_pattern(pid: str, request: Request):
     if not delete_pattern(pid):
         raise HTTPException(404)
     return JSONResponse({"ok": True})
-
-
-# ── 표 양식 (한글 HWPX에서 추출 → DATA_DIR 영속) ───────────────────────────
-_TABLE_TPL_HWPX = _DATA_DIR / "table_templates.hwpx"
-_TABLE_TPL_JSON = _DATA_DIR / "table_templates.json"
-
-
-def _table_template_status() -> dict:
-    from src.common.table_template_builder import get_default_templates
-    t = get_default_templates() or {}
-    return {
-        "active":          bool(t),
-        "condition_tbl":   bool(t.get("condition_tbl")),
-        "boilerplate_tbl": bool(t.get("boilerplate_tbl")),
-        "data_tbl":        bool(t.get("data_tbl")),
-        "source": "uploaded" if _TABLE_TPL_JSON.exists() else ("repo" if t else "none"),
-    }
-
-
-@app.get("/api/admin/table-template/status")
-async def api_table_template_status(request: Request):
-    _require_admin(request)
-    return JSONResponse(_table_template_status())
-
-
-@app.post("/api/admin/table-template/upload")
-async def api_table_template_upload(request: Request, file: UploadFile = File(...)):
-    """한글(HWPX) 표 양식 업로드 → 조건/보기/데이터표 스켈레톤 추출 → DATA_DIR 영속 저장.
-    다음 변환부터 그 양식이 적용된다(mtime 캐싱이라 서버 재시작 불필요)."""
-    _require_admin(request)
-    if not (file.filename or "").lower().endswith(".hwpx"):
-        raise HTTPException(400, "HWPX 파일만 업로드 가능합니다.")
-    _TABLE_TPL_HWPX.write_bytes(await file.read())
-
-    from src.common.table_template_extractor import extract_templates, save_templates
-    from src.common.table_template_builder import box_skeleton_usable, get_default_templates
-    try:
-        templates = extract_templates(_TABLE_TPL_HWPX)
-    except Exception as e:
-        raise HTTPException(400, f"표 추출 실패 — 올바른 HWPX인지 확인하세요. ({e})")
-
-    if not any(v is not None for v in templates.values()):
-        raise HTTPException(
-            400,
-            "표를 하나도 찾지 못했습니다. 각 표의 한 셀에 '조건표'/'보기표'/'데이터표'를 "
-            "적었는지 확인하세요.",
-        )
-    save_templates(templates, _TABLE_TPL_JSON)
-    get_default_templates()  # 캐시 즉시 갱신
-
-    detail: dict = {}
-    for key, kind in (("condition_tbl", "조건"), ("boilerplate_tbl", "보기"), ("data_tbl", "데이터")):
-        t = templates.get(key)
-        if t is None:
-            detail[key] = {"found": False}
-        elif key == "data_tbl":
-            detail[key] = {"found": True, "usable": True}
-        else:
-            detail[key] = {"found": True, "usable": box_skeleton_usable(t.get("skeleton", ""))}
-    return JSONResponse({"ok": True, "templates": detail})
-
-
-@app.delete("/api/admin/table-template")
-async def api_table_template_clear(request: Request):
-    """업로드한 표 양식 제거 → 하드코딩 fallback으로 복귀."""
-    _require_admin(request)
-    removed = []
-    for p in (_TABLE_TPL_JSON, _TABLE_TPL_HWPX):
-        if p.exists():
-            p.unlink()
-            removed.append(p.name)
-    from src.common.table_template_builder import get_default_templates
-    get_default_templates()  # 캐시 갱신
-    return JSONResponse({"ok": True, "removed": removed})
 
 
 # ══════════════════════════════════════════════════════════════════════

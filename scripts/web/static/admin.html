@@ -406,8 +406,12 @@
     <div style="background:#f5f3ff;border:1px solid #ddd6fe;border-radius:8px;padding:14px 16px;margin-bottom:16px;">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:8px;">
         <div style="font-size:0.92rem;font-weight:700;color:#5b21b6;">🔁 반복 교정 분석 <span style="font-weight:400;font-size:0.78rem;color:#7c3aed;">— 여러 번 나온 오류를 패턴으로 등록하면 다음 변환부터 자동 교정</span></div>
-        <button onclick="loadAnalysis()" style="padding:5px 11px;border:1px solid #c4b5fd;border-radius:6px;background:#fff;color:#6d28d9;font-size:0.78rem;font-weight:600;cursor:pointer;">새로고침</button>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <button onclick="aiSuggestPatterns()" title="검수 누적을 Claude가 분석해 등록할 패턴을 자동 제안합니다" style="padding:5px 12px;border:none;border-radius:6px;background:#6d28d9;color:#fff;font-size:0.78rem;font-weight:600;cursor:pointer;">🤖 AI 패턴 제안</button>
+          <button onclick="loadAnalysis()" style="padding:5px 11px;border:1px solid #c4b5fd;border-radius:6px;background:#fff;color:#6d28d9;font-size:0.78rem;font-weight:600;cursor:pointer;">새로고침</button>
+        </div>
       </div>
+      <div id="ai-suggest" style="margin-bottom:10px;"></div>
       <div id="analysis-themes" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;"></div>
       <div id="analysis-groups"></div>
     </div>
@@ -482,25 +486,6 @@
     </div>
   </div>
 
-  <!-- 표 양식 (한글에서 추출) -->
-  <div class="card">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;gap:10px;flex-wrap:wrap;">
-      <div class="card-title" style="margin-bottom:0;">표 양식 (한글에서 추출)</div>
-      <span id="tpl-status" style="font-size:0.8rem;color:#94a3b8;"></span>
-    </div>
-    <div style="font-size:0.82rem;color:#475569;line-height:1.6;margin-bottom:10px;">
-      한글에서 <strong>조건표·보기표·데이터표</strong>를 원하는 스타일로 만들고,
-      각 표의 <strong>아무 셀에 그 이름</strong>(조건표 / 보기표 / 데이터표)을 적은 뒤
-      <strong>.hwpx</strong>로 저장해 올리세요. 올리면 <strong>다음 변환부터 그 양식</strong>이 적용됩니다.
-      (안 올리면 기본 내장 양식 사용. 조건/보기는 1×1 단일 셀 표여야 합니다.)
-    </div>
-    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-      <input type="file" id="tpl-file" accept=".hwpx" style="font-size:0.82rem;">
-      <button onclick="uploadTableTemplate()" style="padding:6px 14px;background:#0d9488;color:#fff;border:none;border-radius:6px;font-size:0.82rem;cursor:pointer;">업로드·적용</button>
-      <button onclick="clearTableTemplate()" style="padding:6px 12px;background:#fff;border:1px solid #fca5a5;color:#dc2626;border-radius:6px;font-size:0.8rem;cursor:pointer;">기본으로 초기화</button>
-    </div>
-    <div id="tpl-result" style="font-size:0.8rem;margin-top:10px;"></div>
-  </div>
 
 </div><!-- /container -->
 
@@ -591,7 +576,6 @@
         loadAnalysis();
         loadCorrections();
         loadPatterns();
-        loadTableTemplateStatus();
       })
       .catch(function (err) {
         showToast('인증 확인 실패: ' + (err.message || err), true);
@@ -1168,6 +1152,82 @@
     groupsEl.innerHTML = html;
   }
 
+  /* AI 패턴 제안 — Claude가 반복 교정 분석 → 원클릭 등록 */
+  window._aiSg = [];
+  window.aiSuggestPatterns = function () {
+    var el = document.getElementById('ai-suggest');
+    el.innerHTML = '<div style="background:#faf5ff;border:1px solid #e9d5ff;border-radius:8px;padding:12px;font-size:0.83rem;color:#6d28d9;"><span class="spinner"></span> Claude가 분석 중… (수십 초 걸릴 수 있어요)</div>';
+    apiFetch('/api/admin/corrections/ai-suggest', { method: 'POST' })
+      .then(function (data) {
+        var sg = (data && data.suggestions) || [];
+        if (!sg.length) {
+          var msg = (data && data.note) || '제안할 패턴이 없습니다 (반복적·확실한 오류만 제안합니다).';
+          el.innerHTML = '<div style="background:#faf5ff;border:1px solid #e9d5ff;border-radius:8px;padding:12px;font-size:0.83rem;color:#7c3aed;">' + escHtml(msg) + '</div>';
+          return;
+        }
+        window._aiSg = sg;
+        var rows = sg.map(function (s, i) {
+          var scope = s.scope === 'global' ? '전역' : (s.scope === 'school' ? ('학교:' + escHtml(s.scope_value)) : ('과목:' + escHtml(s.scope_value)));
+          var conf = Math.round((s.confidence || 0) * 100);
+          return '<div style="display:flex;align-items:flex-start;gap:10px;padding:8px 4px;border-bottom:1px solid #f1f5f9;">'
+            + '<div style="flex:1;min-width:0;">'
+            + '<div style="font-size:0.84rem;"><code style="background:#fef2f2;color:#b91c1c;padding:1px 5px;border-radius:4px;">' + escHtml(s.original_text || '(빈)') + '</code> <span style="color:#94a3b8;">→</span> <code style="background:#f0fdf4;color:#15803d;padding:1px 5px;border-radius:4px;">' + escHtml(s.corrected_text || '(빈)') + '</code></div>'
+            + '<div style="font-size:0.74rem;color:#64748b;margin-top:3px;">' + escHtml(s.note || '') + ' · <strong>' + scope + '</strong> · 확신 ' + conf + '%</div>'
+            + '</div>'
+            + '<button onclick="registerAiSuggestion(' + i + ', this)" style="font-size:0.74rem;padding:4px 12px;background:#6d28d9;color:#fff;border:none;border-radius:5px;cursor:pointer;white-space:nowrap;">등록</button>'
+            + '</div>';
+        }).join('');
+        el.innerHTML = '<div style="background:#faf5ff;border:1px solid #ddd6fe;border-radius:8px;padding:8px 12px;">'
+          + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">'
+          + '<div style="font-size:0.82rem;font-weight:700;color:#5b21b6;">🤖 AI 제안 ' + sg.length + '건 <span style="font-weight:400;color:#7c3aed;">— 검토 후 등록하세요</span></div>'
+          + '<button onclick="registerAllAiSuggestions(this)" style="font-size:0.74rem;padding:4px 12px;background:#15803d;color:#fff;border:none;border-radius:5px;cursor:pointer;">전체 등록</button></div>'
+          + rows + '</div>';
+      })
+      .catch(function (err) {
+        var m = err.message || String(err);
+        try { var j = JSON.parse(m); if (j.detail) m = j.detail; } catch (e) {}
+        el.innerHTML = '<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:12px;font-size:0.83rem;color:#dc2626;">AI 분석 실패: ' + escHtml(m) + '</div>';
+      });
+  };
+
+  function _registerOneAi(s) {
+    return apiFetch('/api/admin/corrections/ai/approve-pattern', {
+      method: 'POST',
+      body: JSON.stringify({
+        scope: s.scope, scope_value: s.scope_value,
+        original_text: s.original_text, corrected_text: s.corrected_text,
+        note: 'AI 제안: ' + (s.note || ''),
+      }),
+    });
+  }
+
+  window.registerAiSuggestion = function (i, btn) {
+    var s = (window._aiSg || [])[i];
+    if (!s) return;
+    btn.disabled = true; btn.textContent = '등록 중…';
+    _registerOneAi(s).then(function () {
+      btn.textContent = '✓ 등록됨'; btn.style.background = '#15803d';
+      loadPatterns();
+    }).catch(function (err) {
+      btn.disabled = false; btn.textContent = '등록';
+      showToast('등록 실패: ' + (err.message || err), true);
+    });
+  };
+
+  window.registerAllAiSuggestions = function (btn) {
+    var sg = window._aiSg || [];
+    if (!sg.length) return;
+    btn.disabled = true; btn.textContent = '등록 중…';
+    Promise.all(sg.map(_registerOneAi)).then(function () {
+      showToast(sg.length + '개 패턴 등록됨 — 다음 변환부터 적용', false);
+      document.getElementById('ai-suggest').innerHTML = '';
+      loadPatterns();
+    }).catch(function (err) {
+      btn.disabled = false; btn.textContent = '전체 등록';
+      showToast('일부 등록 실패: ' + (err.message || err), true);
+    });
+  };
+
   /* 검수 로그 중복 정리 */
   window.dedupeCorrections = function () {
     apiFetch('/api/admin/corrections/dedupe', { method: 'POST' })
@@ -1189,58 +1249,6 @@
         loadPatterns();
       })
       .catch(function (err) { showToast('기본 패턴 등록 실패: ' + (err.message || err), true); });
-  };
-
-  /* 표 양식 (한글 HWPX 추출) */
-  function loadTableTemplateStatus() {
-    apiFetch('/api/admin/table-template/status')
-      .then(function (s) {
-        var el = document.getElementById('tpl-status');
-        if (!s.active) { el.textContent = '기본 내장 양식 사용 중'; el.style.color = '#94a3b8'; return; }
-        var on = function (b) { return b ? '✓' : '–'; };
-        el.textContent = '적용됨(' + (s.source === 'uploaded' ? '업로드' : '번들') + '): 조건'
-          + on(s.condition_tbl) + ' 보기' + on(s.boilerplate_tbl) + ' 데이터' + on(s.data_tbl);
-        el.style.color = '#0d9488';
-      })
-      .catch(function () {});
-  }
-  window.loadTableTemplateStatus = loadTableTemplateStatus;
-
-  window.uploadTableTemplate = function () {
-    var input = document.getElementById('tpl-file');
-    var f = input.files && input.files[0];
-    if (!f) { showToast('HWPX 파일을 선택하세요.', true); return; }
-    var fd = new FormData(); fd.append('file', f);
-    var res = document.getElementById('tpl-result');
-    res.innerHTML = '<span class="spinner"></span> 추출 중...';
-    apiFetch('/api/admin/table-template/upload', { method: 'POST', body: fd })
-      .then(function (data) {
-        var t = (data && data.templates) || {};
-        function row(label, info) {
-          if (!info || !info.found) return '<span style="color:#b45309;">' + label + ' 미발견</span>';
-          if (info.usable === false) return '<span style="color:#dc2626;">' + label + ' 추출됐으나 단일 셀 아님 → 기본 양식 폴백</span>';
-          return '<span style="color:#15803d;">' + label + ' 적용</span>';
-        }
-        res.innerHTML = [row('조건표', t.condition_tbl), row('보기표', t.boilerplate_tbl), row('데이터표', t.data_tbl)].join(' &nbsp;·&nbsp; ');
-        showToast('표 양식 적용됨 — 다음 변환부터 반영', false);
-        loadTableTemplateStatus();
-      })
-      .catch(function (err) {
-        var msg = err.message || String(err);
-        try { var j = JSON.parse(msg); if (j.detail) msg = j.detail; } catch (e) {}
-        res.innerHTML = '<span style="color:#dc2626;">' + escHtml(msg) + '</span>';
-      });
-  };
-
-  window.clearTableTemplate = function () {
-    if (!confirm('업로드한 표 양식을 지우고 기본 내장 양식으로 되돌릴까요?')) return;
-    apiFetch('/api/admin/table-template', { method: 'DELETE' })
-      .then(function () {
-        showToast('기본 양식으로 초기화됨', false);
-        document.getElementById('tpl-result').innerHTML = '';
-        loadTableTemplateStatus();
-      })
-      .catch(function (err) { showToast('초기화 실패: ' + (err.message || err), true); });
   };
 
   document.getElementById('pm-scope').addEventListener('change', function () {
