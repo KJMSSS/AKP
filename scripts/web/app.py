@@ -1413,6 +1413,12 @@ async def guide_page():
     return HTMLResponse((_HERE / "static" / "guide.html").read_text(encoding="utf-8"))
 
 
+@app.get("/guide/admin", response_class=HTMLResponse)
+async def guide_admin_page():
+    """관리자·운영자용 운영 설명서 (개선 루프·패턴·관리자 화면)."""
+    return HTMLResponse((_HERE / "static" / "guide_admin.html").read_text(encoding="utf-8"))
+
+
 @app.get("/api/config")
 async def api_get_config(request: Request):
     _require_login(request)
