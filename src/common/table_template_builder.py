@@ -8,6 +8,8 @@ build_data_table(templates, ...)
 """
 from __future__ import annotations
 
+import json
+import os
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -111,8 +113,8 @@ def _escape(text: str) -> str:
 _BOX_WARNED: set[str] = set()
 
 
-def _box_skeleton_ok(skeleton: str, kind: str) -> bool:
-    """1×1 박스 스켈레톤 검증 — 오염된 템플릿 거부.
+def box_skeleton_usable(skeleton: str) -> bool:
+    """1×1 박스 스켈레톤이 사용 가능한지 검사 (부작용 없음).
 
     추출이 잘못되면 다중 셀 표(예: 6×4 답안표)가 스켈레톤으로 저장되고,
     원본 텍스트((가)(나)(다)·①~⑤ 등)가 잔존한 채 {{CONTENT}}만 한 셀에
@@ -120,12 +122,17 @@ def _box_skeleton_ok(skeleton: str, kind: str) -> bool:
     없음 + {{CONTENT}} 존재를 모두 만족해야 사용한다.
     """
     m = re.search(r'rowCnt="(\d+)" colCnt="(\d+)"', skeleton)
-    ok = bool(m and m.group(1) == "1" and m.group(2) == "1"
-              and '{{CONTENT}}' in skeleton)
-    if ok:
-        leftover = [t for t in re.findall(r'<hp:t[^>]*>([^<]*)</hp:t>', skeleton)
-                    if t.strip()]
-        ok = not leftover
+    if not (m and m.group(1) == "1" and m.group(2) == "1"
+            and '{{CONTENT}}' in skeleton):
+        return False
+    leftover = [t for t in re.findall(r'<hp:t[^>]*>([^<]*)</hp:t>', skeleton)
+                if t.strip()]
+    return not leftover
+
+
+def _box_skeleton_ok(skeleton: str, kind: str) -> bool:
+    """build 시점 가드 — box_skeleton_usable + 1회 경고 출력."""
+    ok = box_skeleton_usable(skeleton)
     if not ok and kind not in _BOX_WARNED:
         _BOX_WARNED.add(kind)
         print(f"  [표 템플릿] {kind} 스켈레톤 오염(다중 셀/잔존 텍스트) — 내장 1×1 박스로 폴백")
@@ -175,25 +182,113 @@ def build_data_table(
     return '', 0
 
 
-# ── 전역 템플릿 캐시 ──────────────────────────────────────────────────────
+# ── 전역 템플릿 캐시 (파일 mtime 기준 무효화) ──────────────────────────────
 
-_TEMPLATES: dict | None = None
-_TEMPLATES_LOADED = False
+_TEMPLATES_CACHE: dict | None = None
+_TEMPLATES_MTIME: float | None = None
+_TEMPLATES_KEY: Path | None = None
+
+
+def template_json_candidates(project_root: Path | None = None) -> list[Path]:
+    """표 템플릿 JSON 후보 경로 (우선순위 순).
+
+    1) DATA_DIR/table_templates.json — 학원장이 한글 양식을 업로드해 추출한 영속본
+       (Railway Volume. 재배포에도 유지). 관리자 표 양식 업로드의 저장 위치.
+    2) samples/templates/table_templates.json — 레포 번들(있으면).
+    """
+    paths: list[Path] = []
+    data_dir = os.environ.get("DATA_DIR", "")
+    if data_dir:
+        paths.append(Path(data_dir) / "table_templates.json")
+    root = project_root or Path(__file__).resolve().parent.parent.parent
+    paths.append(root / "samples" / "templates" / "table_templates.json")
+    return paths
+
+
+# ── 제목 박스 (보기/조건) — 학원장 골드 스타일 이식 ────────────────────────
+# titled_box_template.json: 골드 table[16](▍보 기▍ 헤더 바 박스)에서 추출한
+# 재사용 스켈레톤. 자리표시자 {{TBL_ID}} {{ZO}} {{TITLE}} {{CONTENT}} {{BF_51..58}}.
+# borderFill 은 출력 헤더의 빈 번호로 동적 주입(템플릿마다 안전)하므로 51~58 →
+# bf_base..bf_base+7 로 매핑한다.
+
+_TITLED_TPL: dict | None = None
+_TITLED_BF_ORDER = [str(i) for i in range(51, 59)]  # 골드 원본 borderFill 번호
+
+
+def _load_titled_template() -> dict:
+    global _TITLED_TPL
+    if _TITLED_TPL is None:
+        p = Path(__file__).resolve().parent / "titled_box_template.json"
+        try:
+            _TITLED_TPL = json.loads(p.read_text(encoding="utf-8"))
+        except Exception:
+            _TITLED_TPL = {}
+    return _TITLED_TPL
+
+
+def has_titled_template() -> bool:
+    return bool(_load_titled_template().get("skeleton"))
+
+
+def build_titled_box(title: str, content_inner: str, tbl_id: int,
+                     zo: int, bf_base: int) -> str | None:
+    """제목 박스 XML 생성 (None=템플릿 없음).
+
+    bf_base: borderFill 시작 번호 — 골드 51→bf_base, …, 58→bf_base+7.
+    content_inner: 박스 내용(이미 만들어진 <hp:p> 들의 연결 문자열).
+    """
+    tpl = _load_titled_template()
+    skel = tpl.get("skeleton")
+    if not skel:
+        return None
+    for k, orig in enumerate(_TITLED_BF_ORDER):
+        skel = skel.replace(f"{{{{BF_{orig}}}}}", str(bf_base + k))
+    return (skel.replace("{{TBL_ID}}", str(tbl_id))
+                .replace("{{ZO}}", str(zo))
+                .replace("{{TITLE}}", title)
+                .replace("{{CONTENT}}", content_inner))
+
+
+def titled_borderfill_defs(bf_base: int) -> str:
+    """주입할 borderFill 정의 8개 XML (id = bf_base..bf_base+7)."""
+    tpl = _load_titled_template()
+    bfs = tpl.get("borderfills", {})
+    out = []
+    for k, orig in enumerate(_TITLED_BF_ORDER):
+        d = bfs.get(orig, "").replace("{{ID}}", str(bf_base + k))
+        if d:
+            out.append(d)
+    return "".join(out)
 
 
 def get_default_templates(project_root: Path | None = None) -> dict | None:
-    """
-    samples/templates/table_templates.json 자동 로드 (1회).
-    없으면 None 반환 → 기존 하드코딩 사용.
-    """
-    global _TEMPLATES, _TEMPLATES_LOADED
-    if _TEMPLATES_LOADED:
-        return _TEMPLATES
-    _TEMPLATES_LOADED = True
+    """표 템플릿 JSON 로드 (DATA_DIR 우선 → 레포 번들).
 
-    root = project_root or Path(__file__).resolve().parent.parent.parent
-    json_path = root / 'samples' / 'templates' / 'table_templates.json'
-    _TEMPLATES = load_templates(json_path)
-    if _TEMPLATES:
-        print(f'[표 템플릿] 로드: {json_path.name}')
-    return _TEMPLATES
+    파일 mtime 기준 캐싱 — 런타임 중 템플릿이 업로드/수정되면 자동 재로드한다
+    (웹 서버 재시작 불필요). 후보가 모두 없으면 None → 호출자가 하드코딩 fallback.
+
+    이전 구현은 1회 로드 플래그라, 서버 기동 시점에 파일이 없으면 이후 템플릿을
+    넣어도 같은 프로세스에서 영영 반영되지 않았다(숨은 차단요인).
+    """
+    global _TEMPLATES_CACHE, _TEMPLATES_MTIME, _TEMPLATES_KEY
+
+    active: Path | None = None
+    mtime: float | None = None
+    for p in template_json_candidates(project_root):
+        try:
+            mtime = p.stat().st_mtime
+            active = p
+            break
+        except OSError:
+            continue
+
+    # 활성 경로·mtime 모두 동일하면 캐시 그대로 반환
+    if active == _TEMPLATES_KEY and mtime == _TEMPLATES_MTIME:
+        return _TEMPLATES_CACHE
+
+    _TEMPLATES_KEY = active
+    _TEMPLATES_MTIME = mtime
+    _TEMPLATES_CACHE = load_templates(active) if active is not None else None
+    if _TEMPLATES_CACHE:
+        print(f'[표 템플릿] 로드: {active}')
+    return _TEMPLATES_CACHE

@@ -43,3 +43,67 @@ def test_explicit_keyword_priority():
     # 명시 키워드는 선택지 유무와 무관하게 우선
     assert _classify(_tbl("데이터표|①|②|③")) == "data"
     assert _classify(_tbl("조건표|①|②|③")) == "condition"
+
+
+# ── 업로드 경로: 합성 HWPX → 추출 → 빌드 라운드트립 ─────────────────────────
+
+_COND_TBL = (
+    '<hp:tbl id="100" zOrder="5" rowCnt="1" colCnt="1">'
+    '<hp:sz width="29190" height="2000"/>'
+    '<hp:tr><hp:tc name=""><hp:subList id="">'
+    '<hp:p id="1"><hp:run><hp:t>조건표</hp:t></hp:run></hp:p>'
+    '</hp:subList><hp:cellSz width="29190" height="2000"/></hp:tc></hp:tr></hp:tbl>'
+)
+_BOILER_TBL = (
+    '<hp:tbl id="150" zOrder="6" rowCnt="1" colCnt="1">'
+    '<hp:sz width="29190" height="2000"/>'
+    '<hp:tr><hp:tc name=""><hp:subList id="">'
+    '<hp:p id="1"><hp:run><hp:t>보기표</hp:t></hp:run></hp:p>'
+    '</hp:subList><hp:cellSz width="29190" height="2000"/></hp:tc></hp:tr></hp:tbl>'
+)
+_DATA_TBL = (
+    '<hp:tbl id="200" zOrder="7" rowCnt="2" colCnt="2">'
+    '<hp:sz width="20000" height="4000"/>'
+    '<hp:tr>'
+    '<hp:tc name=""><hp:subList id=""><hp:p><hp:run><hp:t>데이터표</hp:t></hp:run></hp:p></hp:subList><hp:cellSz width="10000" height="2000"/></hp:tc>'
+    '<hp:tc name=""><hp:subList id=""><hp:p><hp:run><hp:t>B</hp:t></hp:run></hp:p></hp:subList><hp:cellSz width="10000" height="2000"/></hp:tc>'
+    '</hp:tr>'
+    '<hp:tr>'
+    '<hp:tc name=""><hp:subList id=""><hp:p><hp:run><hp:t>1</hp:t></hp:run></hp:p></hp:subList><hp:cellSz width="10000" height="2000"/></hp:tc>'
+    '<hp:tc name=""><hp:subList id=""><hp:p><hp:run><hp:t>2</hp:t></hp:run></hp:p></hp:subList><hp:cellSz width="10000" height="2000"/></hp:tc>'
+    '</hp:tr></hp:tbl>'
+)
+
+
+def _make_hwpx(tmp_path, *tables):
+    import zipfile
+    p = tmp_path / "tpl.hwpx"
+    section = "<hml>" + "".join(tables) + "</hml>"
+    with zipfile.ZipFile(p, "w") as z:
+        z.writestr("Contents/section0.xml", section)
+    return p
+
+
+def test_extract_all_three_from_hwpx(tmp_path):
+    """합성 HWPX(조건표/보기표/데이터표) → 셋 다 추출."""
+    from src.common.table_template_extractor import extract_templates
+    hwpx = _make_hwpx(tmp_path, _COND_TBL, _BOILER_TBL, _DATA_TBL)
+    t = extract_templates(hwpx)
+    assert t["condition_tbl"] is not None
+    assert t["boilerplate_tbl"] is not None
+    assert t["data_tbl"] is not None
+
+
+def test_extracted_condition_builds_clean(tmp_path):
+    """추출된 조건 스켈레톤이 가드 통과 + 실제 내용 채워 빌드된다 (업로드→적용 경로)."""
+    from src.common.table_template_extractor import extract_templates
+    from src.common.table_template_builder import build_condition_box, box_skeleton_usable
+    hwpx = _make_hwpx(tmp_path, _COND_TBL)
+    t = extract_templates(hwpx)
+    assert box_skeleton_usable(t["condition_tbl"]["skeleton"])  # 1×1 깨끗
+
+    para = ('<hp:p id="9"><hp:run><hp:t>조건 내용 X</hp:t></hp:run>'
+            '<hp:linesegarray><hp:lineseg vertsize="1200"/></hp:linesegarray></hp:p>')
+    xml, h = build_condition_box(t, [para], 500, 500)
+    assert xml and "조건 내용 X" in xml
+    assert "{{CONTENT}}" not in xml and "{{TBL_ID}}" not in xml

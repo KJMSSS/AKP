@@ -13,6 +13,9 @@ from xml.sax.saxutils import escape as _xe
 
 from src.common.latex_to_hwp import convert as latex_to_hwp
 
+# XML 1.0 에서 금지된 제어문자 (\t \n \r 만 허용) — 수식/텍스트에 섞이면 HWPX 손상
+_XML_BAD_CHARS_RE = re.compile(r'[\x00-\x08\x0b\x0c\x0e-\x1f]')
+
 # ── XML 네임스페이스 선언 ─────────────────────────────────────────────
 _NS = (
     'xmlns:ha="http://www.hancom.co.kr/hwpml/2011/app" '
@@ -385,6 +388,9 @@ class _HwpxWriter:
 
     def _equation(self, latex: str) -> str:
         hwp = latex_to_hwp(latex)
+        # 잘못된 XML 1.0 제어문자 제거 — OCR/입력에 \x0b 등이 섞이면 HWPX가
+        # 손상돼 한글이 못 연다. 허용: \t \n \r, 그 외 제어문자는 버린다.
+        hwp = _XML_BAD_CHARS_RE.sub('', hwp)
         w, h = self._eq_size(hwp)
         return (
             f'<hp:equation id="{self._eid()}" zOrder="{self._ez()}" '

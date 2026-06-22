@@ -1394,6 +1394,80 @@ async def api_delete_pattern(pid: str, request: Request):
     return JSONResponse({"ok": True})
 
 
+# ── 표 양식 (한글 HWPX에서 추출 → DATA_DIR 영속) ───────────────────────────
+_TABLE_TPL_HWPX = _DATA_DIR / "table_templates.hwpx"
+_TABLE_TPL_JSON = _DATA_DIR / "table_templates.json"
+
+
+def _table_template_status() -> dict:
+    from src.common.table_template_builder import get_default_templates
+    t = get_default_templates() or {}
+    return {
+        "active":          bool(t),
+        "condition_tbl":   bool(t.get("condition_tbl")),
+        "boilerplate_tbl": bool(t.get("boilerplate_tbl")),
+        "data_tbl":        bool(t.get("data_tbl")),
+        "source": "uploaded" if _TABLE_TPL_JSON.exists() else ("repo" if t else "none"),
+    }
+
+
+@app.get("/api/admin/table-template/status")
+async def api_table_template_status(request: Request):
+    _require_admin(request)
+    return JSONResponse(_table_template_status())
+
+
+@app.post("/api/admin/table-template/upload")
+async def api_table_template_upload(request: Request, file: UploadFile = File(...)):
+    """한글(HWPX) 표 양식 업로드 → 조건/보기/데이터표 스켈레톤 추출 → DATA_DIR 영속 저장.
+    다음 변환부터 그 양식이 적용된다(mtime 캐싱이라 서버 재시작 불필요)."""
+    _require_admin(request)
+    if not (file.filename or "").lower().endswith(".hwpx"):
+        raise HTTPException(400, "HWPX 파일만 업로드 가능합니다.")
+    _TABLE_TPL_HWPX.write_bytes(await file.read())
+
+    from src.common.table_template_extractor import extract_templates, save_templates
+    from src.common.table_template_builder import box_skeleton_usable, get_default_templates
+    try:
+        templates = extract_templates(_TABLE_TPL_HWPX)
+    except Exception as e:
+        raise HTTPException(400, f"표 추출 실패 — 올바른 HWPX인지 확인하세요. ({e})")
+
+    if not any(v is not None for v in templates.values()):
+        raise HTTPException(
+            400,
+            "표를 하나도 찾지 못했습니다. 각 표의 한 셀에 '조건표'/'보기표'/'데이터표'를 "
+            "적었는지 확인하세요.",
+        )
+    save_templates(templates, _TABLE_TPL_JSON)
+    get_default_templates()  # 캐시 즉시 갱신
+
+    detail: dict = {}
+    for key, kind in (("condition_tbl", "조건"), ("boilerplate_tbl", "보기"), ("data_tbl", "데이터")):
+        t = templates.get(key)
+        if t is None:
+            detail[key] = {"found": False}
+        elif key == "data_tbl":
+            detail[key] = {"found": True, "usable": True}
+        else:
+            detail[key] = {"found": True, "usable": box_skeleton_usable(t.get("skeleton", ""))}
+    return JSONResponse({"ok": True, "templates": detail})
+
+
+@app.delete("/api/admin/table-template")
+async def api_table_template_clear(request: Request):
+    """업로드한 표 양식 제거 → 하드코딩 fallback으로 복귀."""
+    _require_admin(request)
+    removed = []
+    for p in (_TABLE_TPL_JSON, _TABLE_TPL_HWPX):
+        if p.exists():
+            p.unlink()
+            removed.append(p.name)
+    from src.common.table_template_builder import get_default_templates
+    get_default_templates()  # 캐시 갱신
+    return JSONResponse({"ok": True, "removed": removed})
+
+
 # ══════════════════════════════════════════════════════════════════════
 # ══════════════════════════════════════════════════════════════════════
 # Matrix 라우트

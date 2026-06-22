@@ -482,6 +482,26 @@
     </div>
   </div>
 
+  <!-- 표 양식 (한글에서 추출) -->
+  <div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;gap:10px;flex-wrap:wrap;">
+      <div class="card-title" style="margin-bottom:0;">표 양식 (한글에서 추출)</div>
+      <span id="tpl-status" style="font-size:0.8rem;color:#94a3b8;"></span>
+    </div>
+    <div style="font-size:0.82rem;color:#475569;line-height:1.6;margin-bottom:10px;">
+      한글에서 <strong>조건표·보기표·데이터표</strong>를 원하는 스타일로 만들고,
+      각 표의 <strong>아무 셀에 그 이름</strong>(조건표 / 보기표 / 데이터표)을 적은 뒤
+      <strong>.hwpx</strong>로 저장해 올리세요. 올리면 <strong>다음 변환부터 그 양식</strong>이 적용됩니다.
+      (안 올리면 기본 내장 양식 사용. 조건/보기는 1×1 단일 셀 표여야 합니다.)
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+      <input type="file" id="tpl-file" accept=".hwpx" style="font-size:0.82rem;">
+      <button onclick="uploadTableTemplate()" style="padding:6px 14px;background:#0d9488;color:#fff;border:none;border-radius:6px;font-size:0.82rem;cursor:pointer;">업로드·적용</button>
+      <button onclick="clearTableTemplate()" style="padding:6px 12px;background:#fff;border:1px solid #fca5a5;color:#dc2626;border-radius:6px;font-size:0.8rem;cursor:pointer;">기본으로 초기화</button>
+    </div>
+    <div id="tpl-result" style="font-size:0.8rem;margin-top:10px;"></div>
+  </div>
+
 </div><!-- /container -->
 
 <!-- 패턴 등록 모달 -->
@@ -571,6 +591,7 @@
         loadAnalysis();
         loadCorrections();
         loadPatterns();
+        loadTableTemplateStatus();
       })
       .catch(function (err) {
         showToast('인증 확인 실패: ' + (err.message || err), true);
@@ -949,7 +970,7 @@
   ══════════════════════════════════════════════ */
   function apiFetch(url, options) {
     var opts = Object.assign({ credentials: 'include', headers: {} }, options || {});
-    if (opts.body) {
+    if (opts.body && !(opts.body instanceof FormData)) {
       opts.headers['Content-Type'] = 'application/json';
     }
     return fetch(url, opts).then(function (r) {
@@ -1168,6 +1189,58 @@
         loadPatterns();
       })
       .catch(function (err) { showToast('기본 패턴 등록 실패: ' + (err.message || err), true); });
+  };
+
+  /* 표 양식 (한글 HWPX 추출) */
+  function loadTableTemplateStatus() {
+    apiFetch('/api/admin/table-template/status')
+      .then(function (s) {
+        var el = document.getElementById('tpl-status');
+        if (!s.active) { el.textContent = '기본 내장 양식 사용 중'; el.style.color = '#94a3b8'; return; }
+        var on = function (b) { return b ? '✓' : '–'; };
+        el.textContent = '적용됨(' + (s.source === 'uploaded' ? '업로드' : '번들') + '): 조건'
+          + on(s.condition_tbl) + ' 보기' + on(s.boilerplate_tbl) + ' 데이터' + on(s.data_tbl);
+        el.style.color = '#0d9488';
+      })
+      .catch(function () {});
+  }
+  window.loadTableTemplateStatus = loadTableTemplateStatus;
+
+  window.uploadTableTemplate = function () {
+    var input = document.getElementById('tpl-file');
+    var f = input.files && input.files[0];
+    if (!f) { showToast('HWPX 파일을 선택하세요.', true); return; }
+    var fd = new FormData(); fd.append('file', f);
+    var res = document.getElementById('tpl-result');
+    res.innerHTML = '<span class="spinner"></span> 추출 중...';
+    apiFetch('/api/admin/table-template/upload', { method: 'POST', body: fd })
+      .then(function (data) {
+        var t = (data && data.templates) || {};
+        function row(label, info) {
+          if (!info || !info.found) return '<span style="color:#b45309;">' + label + ' 미발견</span>';
+          if (info.usable === false) return '<span style="color:#dc2626;">' + label + ' 추출됐으나 단일 셀 아님 → 기본 양식 폴백</span>';
+          return '<span style="color:#15803d;">' + label + ' 적용</span>';
+        }
+        res.innerHTML = [row('조건표', t.condition_tbl), row('보기표', t.boilerplate_tbl), row('데이터표', t.data_tbl)].join(' &nbsp;·&nbsp; ');
+        showToast('표 양식 적용됨 — 다음 변환부터 반영', false);
+        loadTableTemplateStatus();
+      })
+      .catch(function (err) {
+        var msg = err.message || String(err);
+        try { var j = JSON.parse(msg); if (j.detail) msg = j.detail; } catch (e) {}
+        res.innerHTML = '<span style="color:#dc2626;">' + escHtml(msg) + '</span>';
+      });
+  };
+
+  window.clearTableTemplate = function () {
+    if (!confirm('업로드한 표 양식을 지우고 기본 내장 양식으로 되돌릴까요?')) return;
+    apiFetch('/api/admin/table-template', { method: 'DELETE' })
+      .then(function () {
+        showToast('기본 양식으로 초기화됨', false);
+        document.getElementById('tpl-result').innerHTML = '';
+        loadTableTemplateStatus();
+      })
+      .catch(function (err) { showToast('초기화 실패: ' + (err.message || err), true); });
   };
 
   document.getElementById('pm-scope').addEventListener('change', function () {

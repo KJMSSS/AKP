@@ -32,10 +32,23 @@ try:
         build_data_table as _tpl_data_table,
         get_default_templates as _get_templates,
         DataTableSpec as _DataTableSpec,
+        build_titled_box as _build_titled_box,
+        titled_borderfill_defs as _titled_bf_defs,
+        has_titled_template as _has_titled_template,
     )
     _TEMPLATE_SUPPORT = True
 except ImportError:
     _TEMPLATE_SUPPORT = False
+
+# 조건/보기 박스 제목 (골드 ▍보 기▍ 헤더 바와 동일 — 글자 사이 공백 포함)
+_BOX_TITLE = {"조건": "조 건", "보기": "보 기"}
+
+# 제목 박스를 담는 외부 블록 단락
+_TITLED_PARA = (
+    '<hp:p id="{pid}" paraPrIDRef="{ppr}" styleIDRef="0" pageBreak="0" '
+    'columnBreak="0" merged="0"><hp:run charPrIDRef="{cpr}">{tbl_xml}</hp:run>'
+    '<hp:t/></hp:p>'
+)
 
 
 # ── XML 템플릿 ─────────────────────────────────────────────────────────────
@@ -297,18 +310,40 @@ def _build_data_table_xml(
     return tbl_xml, total_h
 
 
+def _max_borderfill_id(hdr_xml: str) -> int:
+    ids = [int(m) for m in re.findall(r'<hh:borderFill id="(\d+)"', hdr_xml)]
+    return max(ids) if ids else 0
+
+
+def _inject_borderfills(hdr_xml: str, defs_xml: str, count: int) -> str:
+    """헤더 borderFillList 끝에 정의 추가 + itemCnt 증가."""
+    last = hdr_xml.rfind("</hh:borderFill>")
+    if last < 0 or not defs_xml:
+        return hdr_xml
+    last += len("</hh:borderFill>")
+    hdr_xml = hdr_xml[:last] + defs_xml + hdr_xml[last:]
+    return re.sub(
+        r'(<hh:borderFills\b[^>]*?itemCnt=")(\d+)(")',
+        lambda m: f'{m.group(1)}{int(m.group(2)) + count}{m.group(3)}',
+        hdr_xml, count=1,
+    )
+
+
 def _rewrite_hwpx(
     hwpx_path: Path,
     xml_new: str,
     out_path: Path,
+    header_new: str | None = None,
 ) -> None:
-    """section0.xml을 교체한 HWPX를 out_path에 저장."""
+    """section0.xml(+선택적 header.xml)을 교체한 HWPX를 out_path에 저장."""
     tmp = hwpx_path.with_suffix(".tmp2.hwpx")
     with zipfile.ZipFile(hwpx_path, "r") as src:
         with zipfile.ZipFile(tmp, "w", zipfile.ZIP_DEFLATED) as dst:
             for item in src.infolist():
                 if item.filename == "Contents/section0.xml":
                     dst.writestr(item, xml_new.encode("utf-8"))
+                elif header_new is not None and item.filename == "Contents/header.xml":
+                    dst.writestr(item, header_new.encode("utf-8"))
                 else:
                     dst.writestr(item, src.read(item.filename))
     shutil.move(str(tmp), str(out_path))
@@ -360,6 +395,10 @@ def _replace_box_tables(
 ) -> int:
     with zipfile.ZipFile(hwpx_path, "r") as zf:
         xml = zf.read("Contents/section0.xml").decode("utf-8")
+        try:
+            hdr = zf.read("Contents/header.xml").decode("utf-8")
+        except KeyError:
+            hdr = ""   # 헤더 없는 최소 HWPX(테스트 등) → 제목 박스 비활성, 1×1 fallback
 
     start_prefix = f"【★ {kind}시작:"
     end_prefix   = f"【★ {kind}끝:"
@@ -367,6 +406,11 @@ def _replace_box_tables(
 
     if start_prefix not in xml and end_prefix not in xml:
         return 0
+
+    # 학원장 골드 제목-박스 스타일 사용 가능?  borderFill 은 헤더의 빈 번호로 주입.
+    use_titled = bool(hdr) and _TEMPLATE_SUPPORT and _has_titled_template()
+    bf_base    = (_max_borderfill_id(hdr) + 1) if use_titled else 0
+    titled_used = False
 
     replaced = 0
     failed   = 0
@@ -435,20 +479,25 @@ def _replace_box_tables(
         zo     = max_zo + 1
         pid    = max_pid + 1
 
-        tbl_xml, height = _build_condition_table_xml(content_paras, tbl_id, zo, kind, kind=kind)
-        bl = round(height * 0.85)
-
         # 기존 단락 스타일 (시작 마커 단락에서 추출)
         ppr_m = re.search(r'paraPrIDRef="(\d+)"', xml[p_s_start:p_s_end])
         cpr_m = re.search(r'charPrIDRef="(\d+)"', xml[p_s_start:p_s_end])
         ppr = ppr_m.group(1) if ppr_m else "8"
         cpr = cpr_m.group(1) if cpr_m else "0"
 
-        new_para = _COND_PARA.format(
-            pid=pid, ppr=ppr, cpr=cpr,
-            tbl_xml=tbl_xml,
-            height=height, bl=bl,
-        )
+        titled_xml = None
+        if use_titled:
+            titled_xml = _build_titled_box(
+                _BOX_TITLE.get(kind, kind), "".join(content_paras), tbl_id, zo, bf_base)
+        if titled_xml:
+            new_para = _TITLED_PARA.format(pid=pid, ppr=ppr, cpr=cpr, tbl_xml=titled_xml)
+            titled_used = True
+        else:
+            # fallback: 내장 1×1 박스 (제목 박스 템플릿 없을 때)
+            tbl_xml, height = _build_condition_table_xml(content_paras, tbl_id, zo, kind, kind=kind)
+            bl = round(height * 0.85)
+            new_para = _COND_PARA.format(
+                pid=pid, ppr=ppr, cpr=cpr, tbl_xml=tbl_xml, height=height, bl=bl)
         xml = xml[:p_s_start] + new_para + xml[p_e_end:]
         replaced += 1
 
@@ -466,8 +515,13 @@ def _replace_box_tables(
         print(f"  [table] 경고: 번호를 읽을 수 없는 {kind} 시작 마커 잔존 — 원문 확인 필요")
 
     if replaced or modified:
-        _rewrite_hwpx(hwpx_path, xml, out_path)
-        print(f"  [table] {kind} 박스 표: {replaced}건 삽입" + (f", 실패 {failed}건" if failed else ""))
+        header_new = None
+        if titled_used:
+            # 제목 박스가 쓴 borderFill 8개를 출력 헤더에 주입 (bf_base..bf_base+7)
+            header_new = _inject_borderfills(hdr, _titled_bf_defs(bf_base), 8)
+        _rewrite_hwpx(hwpx_path, xml, out_path, header_new=header_new)
+        style = "제목 박스" if titled_used else "박스 표"
+        print(f"  [table] {kind} {style}: {replaced}건 삽입" + (f", 실패 {failed}건" if failed else ""))
     return replaced
 
 
