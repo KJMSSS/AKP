@@ -1400,9 +1400,17 @@ def _ai_suggest_patterns(api_key: str, items: list[dict]) -> list[dict]:
     return out
 
 
+# AI 패턴 자동 등록 확신도 임계값 — 이상이면 바로 등록·적용, 미만은 관리자 검토.
+_AI_AUTO_THRESHOLD = 0.8
+
+
 @app.post("/api/admin/corrections/ai-suggest")
 async def api_corrections_ai_suggest(request: Request, days: int = 180):
-    """반복 교정을 Claude가 분석해 등록할 패턴을 제안 (관리자가 원클릭 승인)."""
+    """반복 교정을 Claude가 분석 → 고확신 패턴은 자동 등록, 저확신은 제안.
+
+    정책: AI 고확신 패턴(확신 ≥ _AI_AUTO_THRESHOLD)은 자동 등록·적용한다.
+    저확신은 관리자가 원클릭 승인. 등록된 패턴은 패턴 목록에서 끄거나 삭제 가능.
+    """
     _require_admin(request)
     api_key = os.environ.get("ANTHROPIC_API_KEY")
     if not api_key:
@@ -1411,7 +1419,7 @@ async def api_corrections_ai_suggest(request: Request, days: int = 180):
     analysis = analyze_corrections(days=days)
     groups = [g for g in analysis.get("groups", []) if g.get("count", 0) >= 2]
     if not groups:
-        return JSONResponse({"suggestions": [],
+        return JSONResponse({"suggestions": [], "auto_registered": [],
                              "note": "반복(2회 이상) 교정이 아직 없습니다. 검수가 더 쌓이면 분석할 수 있어요."})
 
     items = []
@@ -1429,7 +1437,19 @@ async def api_corrections_ai_suggest(request: Request, days: int = 180):
         suggestions = await run_in_threadpool(_ai_suggest_patterns, api_key, items)
     except Exception as e:
         raise HTTPException(502, f"AI 분석 실패: {e}")
-    return JSONResponse({"suggestions": suggestions})
+
+    # 고확신은 자동 등록, 저확신은 제안으로 분리
+    auto, manual = [], []
+    for s in suggestions:
+        has_body = bool((s.get("original_text") or "").strip() or (s.get("corrected_text") or "").strip())
+        if s.get("confidence", 0) >= _AI_AUTO_THRESHOLD and has_body:
+            approve_as_pattern("ai-auto", s["scope"], s["scope_value"],
+                               s["original_text"], s["corrected_text"],
+                               "AI 자동등록: " + s.get("note", ""))
+            auto.append(s)
+        else:
+            manual.append(s)
+    return JSONResponse({"auto_registered": auto, "suggestions": manual})
 
 
 @app.patch("/api/admin/corrections/{cid}/revert")

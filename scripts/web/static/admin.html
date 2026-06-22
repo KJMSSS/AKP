@@ -1159,29 +1159,41 @@
     el.innerHTML = '<div style="background:#faf5ff;border:1px solid #e9d5ff;border-radius:8px;padding:12px;font-size:0.83rem;color:#6d28d9;"><span class="spinner"></span> Claude가 분석 중… (수십 초 걸릴 수 있어요)</div>';
     apiFetch('/api/admin/corrections/ai-suggest', { method: 'POST' })
       .then(function (data) {
+        var auto = (data && data.auto_registered) || [];
         var sg = (data && data.suggestions) || [];
-        if (!sg.length) {
+        if (!auto.length && !sg.length) {
           var msg = (data && data.note) || '제안할 패턴이 없습니다 (반복적·확실한 오류만 제안합니다).';
           el.innerHTML = '<div style="background:#faf5ff;border:1px solid #e9d5ff;border-radius:8px;padding:12px;font-size:0.83rem;color:#7c3aed;">' + escHtml(msg) + '</div>';
           return;
         }
         window._aiSg = sg;
-        var rows = sg.map(function (s, i) {
+        function rowInfo(s) {
           var scope = s.scope === 'global' ? '전역' : (s.scope === 'school' ? ('학교:' + escHtml(s.scope_value)) : ('과목:' + escHtml(s.scope_value)));
           var conf = Math.round((s.confidence || 0) * 100);
-          return '<div style="display:flex;align-items:flex-start;gap:10px;padding:8px 4px;border-bottom:1px solid #f1f5f9;">'
-            + '<div style="flex:1;min-width:0;">'
-            + '<div style="font-size:0.84rem;"><code style="background:#fef2f2;color:#b91c1c;padding:1px 5px;border-radius:4px;">' + escHtml(s.original_text || '(빈)') + '</code> <span style="color:#94a3b8;">→</span> <code style="background:#f0fdf4;color:#15803d;padding:1px 5px;border-radius:4px;">' + escHtml(s.corrected_text || '(빈)') + '</code></div>'
-            + '<div style="font-size:0.74rem;color:#64748b;margin-top:3px;">' + escHtml(s.note || '') + ' · <strong>' + scope + '</strong> · 확신 ' + conf + '%</div>'
-            + '</div>'
-            + '<button onclick="registerAiSuggestion(' + i + ', this)" style="font-size:0.74rem;padding:4px 12px;background:#6d28d9;color:#fff;border:none;border-radius:5px;cursor:pointer;white-space:nowrap;">등록</button>'
-            + '</div>';
-        }).join('');
-        el.innerHTML = '<div style="background:#faf5ff;border:1px solid #ddd6fe;border-radius:8px;padding:8px 12px;">'
-          + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">'
-          + '<div style="font-size:0.82rem;font-weight:700;color:#5b21b6;">🤖 AI 제안 ' + sg.length + '건 <span style="font-weight:400;color:#7c3aed;">— 검토 후 등록하세요</span></div>'
-          + '<button onclick="registerAllAiSuggestions(this)" style="font-size:0.74rem;padding:4px 12px;background:#15803d;color:#fff;border:none;border-radius:5px;cursor:pointer;">전체 등록</button></div>'
-          + rows + '</div>';
+          return '<div style="font-size:0.84rem;"><code style="background:#fef2f2;color:#b91c1c;padding:1px 5px;border-radius:4px;">' + escHtml(s.original_text || '(빈)') + '</code> <span style="color:#94a3b8;">→</span> <code style="background:#f0fdf4;color:#15803d;padding:1px 5px;border-radius:4px;">' + escHtml(s.corrected_text || '(빈)') + '</code></div>'
+            + '<div style="font-size:0.74rem;color:#64748b;margin-top:3px;">' + escHtml(s.note || '') + ' · <strong>' + scope + '</strong> · 확신 ' + conf + '%</div>';
+        }
+        var html = '<div style="background:#faf5ff;border:1px solid #ddd6fe;border-radius:8px;padding:8px 12px;">';
+        if (auto.length) {
+          html += '<div style="font-size:0.82rem;font-weight:700;color:#15803d;margin-bottom:4px;">✓ 고확신 ' + auto.length + '건 자동 등록·적용됨 <span style="font-weight:400;color:#16a34a;">— 패턴 목록에서 끄거나 삭제 가능</span></div>';
+          html += auto.map(function (s) {
+            return '<div style="padding:7px 4px;border-bottom:1px solid #f1f5f9;">' + rowInfo(s) + '</div>';
+          }).join('');
+          loadPatterns();
+        }
+        if (sg.length) {
+          html += '<div style="display:flex;justify-content:space-between;align-items:center;margin:8px 0 4px;">'
+            + '<div style="font-size:0.82rem;font-weight:700;color:#5b21b6;">🤖 검토 제안 ' + sg.length + '건 <span style="font-weight:400;color:#7c3aed;">— 확신 낮음, 확인 후 등록</span></div>'
+            + '<button onclick="registerAllAiSuggestions(this)" style="font-size:0.74rem;padding:4px 12px;background:#15803d;color:#fff;border:none;border-radius:5px;cursor:pointer;">전체 등록</button></div>';
+          html += sg.map(function (s, i) {
+            return '<div style="display:flex;align-items:flex-start;gap:10px;padding:7px 4px;border-bottom:1px solid #f1f5f9;">'
+              + '<div style="flex:1;min-width:0;">' + rowInfo(s) + '</div>'
+              + '<button onclick="registerAiSuggestion(' + i + ', this)" style="font-size:0.74rem;padding:4px 12px;background:#6d28d9;color:#fff;border:none;border-radius:5px;cursor:pointer;white-space:nowrap;">등록</button>'
+              + '</div>';
+          }).join('');
+        }
+        html += '</div>';
+        el.innerHTML = html;
       })
       .catch(function (err) {
         var m = err.message || String(err);
