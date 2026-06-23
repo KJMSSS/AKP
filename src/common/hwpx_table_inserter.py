@@ -96,7 +96,7 @@ _COND_PARA = (
     '</hp:p>'
 )
 
-# N×M 데이터 표 — borderFillIDRef=2 (SOLID), 셀=borderFillIDRef=4
+# N×M 데이터 표 — 표·셀 모두 borderFillIDRef=2 (사방 SOLID 격자)
 _DATA_TBL_OPEN = (
     '<hp:tbl id="{tbl_id}" zOrder="{zo}" numberingType="TABLE" '
     'textWrap="TOP_AND_BOTTOM" textFlow="BOTH_SIDES" lock="0" dropcapstyle="None" '
@@ -286,7 +286,9 @@ def _build_data_table_xml(
     cells_xml = ""
     for r_idx, (row, is_hdr) in enumerate(zip(all_rows, header_flag)):
         cells_xml += "<hp:tr>"
-        bfid = "5" if is_hdr else "4"
+        # 전 셀 bf#2(사방 SOLID 격자) — text_builder._md_table_to_hwpx와 일치.
+        # 기존 5(헤더=하단만)/4(데이터=우측만)는 행 사이 가로선이 빠져 부분선만 렌더됐음.
+        bfid = "2"
         for c_idx, (text, cw) in enumerate(zip(row, spec.col_widths)):
             inner_w = max(100, cw - 1020)
             cells_xml += _DATA_CELL.format(
