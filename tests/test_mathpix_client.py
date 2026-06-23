@@ -268,6 +268,26 @@ def test_submit_pdf_expired_cache_resubmits(_tmp_cache, monkeypatch):
     assert lookup_pdf_id(pdf) == "fresh_id_999"   # 새 id로 캐시 갱신
 
 
+def test_submit_pdf_cache_key_path_uses_original(_tmp_cache, monkeypatch):
+    # 회전 보정으로 제출 바이트가 바뀌어도, 원본(cache_key_path) 기준으로 적중해야 함
+    original   = _tmp_cache / "orig.pdf"
+    original.write_bytes(b"%PDF original")
+    normalized = _tmp_cache / "orig_rotfix.pdf"
+    normalized.write_bytes(b"%PDF rotated-fixed DIFFERENT bytes")
+    mc.save_pdf_id_to_cache(original, "orig_keyed_id")  # 원본 해시로 캐시
+
+    client = _make_client()
+    monkeypatch.setattr(client, "_pdf_id_valid", lambda pid: True)
+
+    def _no_post(*a, **k):
+        raise AssertionError("재과금! 원본 기준 캐시가 적중하지 않음")
+    monkeypatch.setattr(mc.httpx.Client, "post", _no_post)
+
+    pdf_id = client.submit_pdf(normalized, cache_key_path=original)
+    assert pdf_id == "orig_keyed_id"
+    assert client.last_pdf_cached is True
+
+
 def test_submit_pdf_force_bypasses_cache(_tmp_cache, monkeypatch):
     # force=True 면 유효한 캐시가 있어도 무시하고 새로 제출(재과금)
     pdf = _tmp_cache / "exam.pdf"

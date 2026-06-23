@@ -60,6 +60,7 @@ def _pick_template() -> Path:
 
 def convert(pdf_path: Path, filter_hw: bool = False, ocr_engine: str = "mathpix", full_content: bool = False, force_ocr: bool = False) -> Path:
     # 회전 정상화 (회전된 페이지가 있으면 보정 PDF로 교체)
+    original_pdf = pdf_path                          # 캐시 키는 원본 기준 (rotfix 바이트 변동 무시)
     pdf_path = normalize_pdf_rotation(pdf_path)
 
     stem    = pdf_path.stem
@@ -77,7 +78,7 @@ def convert(pdf_path: Path, filter_hw: bool = False, ocr_engine: str = "mathpix"
         md = read_pdf_as_markdown(pdf_path, full_content=full_content)
     else:
         client = MathpixClient()
-        pdf_id = client.submit_pdf(pdf_path, force=force_ocr)
+        pdf_id = client.submit_pdf(pdf_path, force=force_ocr, cache_key_path=original_pdf)
         if client.last_pdf_cached:
             print(f"  캐시된 pdf_id 재사용 → 재과금 없음 (pdf_id={pdf_id})")
         else:

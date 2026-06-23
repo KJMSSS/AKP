@@ -206,13 +206,18 @@ class MathpixClient:
 
     # ── PDF OCR ─────────────────────────────────────────────────
 
-    def submit_pdf(self, pdf_path: Path, *, force: bool = False) -> str:
+    def submit_pdf(self, pdf_path: Path, *, force: bool = False,
+                   cache_key_path: Path | None = None) -> str:
         # 재과금 방지: 같은 PDF(내용 SHA-256 동일)는 캐시된 pdf_id를 재사용한다.
+        # cache_key_path: 캐시 키로 쓸 파일(기본=pdf_path). 회전 보정(rotfix) 등으로
+        #   제출 바이트가 바뀌어도 '원본 PDF' 기준으로 캐시해, 같은 원본을 재실행하면
+        #   적중하도록 하는 용도. 제출은 항상 pdf_path 바이트로 한다.
         # 캐시된 id가 Mathpix에 더 이상 없으면(만료) 새로 제출한다.
         # force=True 면 캐시를 무시하고 무조건 새로 제출(재과금).
+        key_path = cache_key_path or pdf_path
         self.last_pdf_cached = False
         if not force:
-            cached = lookup_pdf_id(pdf_path)
+            cached = lookup_pdf_id(key_path)
             if cached and self._pdf_id_valid(cached):
                 self.last_pdf_cached = True
                 return cached
@@ -232,7 +237,7 @@ class MathpixClient:
             )
         _raise_for_status(resp)
         pdf_id = resp.json()["pdf_id"]
-        save_pdf_id_to_cache(pdf_path, pdf_id)  # 다음 재실행 때 재사용 → 무과금
+        save_pdf_id_to_cache(key_path, pdf_id)  # 다음 재실행 때 재사용 → 무과금
         return pdf_id
 
     def _pdf_id_valid(self, pdf_id: str) -> bool:
