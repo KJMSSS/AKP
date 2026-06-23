@@ -562,6 +562,18 @@ async def download(job_id: str, request: Request):
     return FileResponse(str(hwpx), media_type="application/octet-stream", filename=dl_name)
 
 
+def _attachment_disposition(filename: str, ascii_fallback: str) -> str:
+    """latin-1 안전한 Content-Disposition 값.
+
+    HTTP 헤더는 latin-1만 허용 — 한글 파일명을 raw로 박으면 uvicorn이 헤더를
+    인코딩하다 UnicodeEncodeError → 500. RFC 5987(`filename*`)로 UTF-8 인코딩하고
+    구형 클라이언트용 ASCII 폴백(`filename=`)을 함께 준다.
+    """
+    from urllib.parse import quote
+    fb = filename.encode("ascii", "ignore").decode("ascii").strip("._ ") or ascii_fallback
+    return f'attachment; filename="{fb}"; ' + f"filename*=UTF-8''{quote(filename)}"
+
+
 @app.get("/download/{job_id}/md")
 async def download_md(job_id: str, request: Request):
     """OCR 인식 기록(최종 마크다운) 다운로드.
@@ -593,7 +605,7 @@ async def download_md(job_id: str, request: Request):
     return Response(
         content=md.encode("utf-8"),
         media_type="text/markdown; charset=utf-8",
-        headers={"Content-Disposition": f'attachment; filename="{stem}.md"'},
+        headers={"Content-Disposition": _attachment_disposition(f"{stem}.md", f"{base_id}.md")},
     )
 
 
