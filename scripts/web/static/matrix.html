@@ -380,6 +380,8 @@ body {
 .s-upload:hover { border-color: #0d6efd; color: #0d6efd; }
 .s-dl    { background: #198754; color: #fff; }
 .s-dl:hover { background: #157347; }
+.s-mddl  { background: #fff; border-color: #198754; color: #198754; }
+.s-mddl:hover { background: #e8f5ee; }
 .s-review { background: #2563eb; color: #fff; }
 .s-review:hover { background: #1d4ed8; }
 .s-del   { background: #fff; border-color: #f1aeb5; color: #dc3545; }
@@ -1067,6 +1069,7 @@ function renderStageCard(key, entry, stage) {
       cardClass += ' s-done';
       badgeHtml = `<span class="stage-status-badge sb-done">완료</span>`;
       actionsHtml = `<a class="s-btn s-dl" href="/download/${encodeURIComponent(entry.job_id)}" target="_blank">다운로드</a>
+        <a class="s-btn s-mddl" href="/download/${encodeURIComponent(entry.job_id)}/md" target="_blank" title="OCR 인식 기록(.md) — 재과금 없이 로컬 수정·재빌드용">OCR기록(.md)</a>
         <button class="s-btn s-del" data-action="delete-job" data-key="${escHtml(key)}" data-job-id="${escHtml(entry.job_id)}">삭제</button>`;
     }
   } else if (id === 'hwpx_review') {
@@ -1076,7 +1079,8 @@ function renderStageCard(key, entry, stage) {
       cardClass += ' s-reviewed';
       badgeHtml = `<span class="stage-status-badge sb-reviewed">완료</span>`;
       actionsHtml = `<a class="s-btn s-review" href="/review/${encodeURIComponent(entry.job_id)}" target="_blank">검수보기</a>
-        <a class="s-btn s-dl" href="/download/${encodeURIComponent(entry.job_id)}_reviewed" target="_blank">다운로드</a>`;
+        <a class="s-btn s-dl" href="/download/${encodeURIComponent(entry.job_id)}_reviewed" target="_blank">다운로드</a>
+        <a class="s-btn s-mddl" href="/download/${encodeURIComponent(entry.job_id)}_reviewed/md" target="_blank" title="검수 교정본 OCR 기록(.md) — 재과금 없이 로컬 수정·재빌드용">OCR기록(.md)</a>`;
     } else {
       badgeHtml = `<span class="stage-status-badge sb-done">대기중</span>`;
       actionsHtml = `<a class="s-btn s-review" href="/review/${encodeURIComponent(entry.job_id)}" target="_blank">검수하기</a>`;

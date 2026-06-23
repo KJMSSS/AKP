@@ -1887,6 +1887,11 @@ async def review_submit(job_id: str, request: Request):
             })
         p["full_text"] = after
         p["status"]    = "pending"
+    # 저장된 markdown 키도 교정본으로 동기화 — .md 다운로드(재과금 0 재빌드용)가
+    # 검수 전 원본이 아니라 교정 후 내용을 반환하도록.
+    review_data["markdown"]        = header + "\n\n" + "\n\n".join(
+        p["full_text"] for p in review_data.get("problems", [])
+    )
     review_data["review_status"]   = "completed"
     review_data["reviewer_name"]   = request.session.get("name", email)
     review_data["reviewer_email"]  = email
