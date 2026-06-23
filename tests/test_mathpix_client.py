@@ -5,12 +5,14 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from src.common.ocr import mathpix_client as mc
 from src.common.ocr.mathpix_client import (
     MathpixClient,
     MathpixError,
     OcrBlock,
     OcrResult,
     _parse_text,
+    lookup_pdf_id,
 )
 
 _FIXTURE = Path("samples/last_response.json")
@@ -212,3 +214,78 @@ def test_ocr_image_retries_on_429(tmp_path):
             result = client.ocr_image(img, retries=3)
 
     assert result.raw_text == "ok"
+
+
+# ── submit_pdf pdf_id 캐시(재과금 방지) ────────────────────────────
+
+@pytest.fixture
+def _tmp_cache(tmp_path, monkeypatch):
+    """pdf_id 캐시를 임시 폴더로 돌려 레포 오염을 막는다."""
+    monkeypatch.setattr(mc, "_PDF_ID_CACHE_DIR", tmp_path)
+    monkeypatch.setattr(mc, "_PDF_ID_CACHE_PATH", tmp_path / "pdf_ids.json")
+    return tmp_path
+
+
+def _make_client():
+    with patch.dict(os.environ, {"MATHPIX_APP_ID": "id", "MATHPIX_APP_KEY": "key"}):
+        return MathpixClient()
+
+
+def test_submit_pdf_reuses_cache_without_recharge(_tmp_cache, monkeypatch):
+    # 같은 PDF 재실행 → 캐시된 pdf_id 반환, POST(=재과금) 절대 호출 안 함
+    pdf = _tmp_cache / "exam.pdf"
+    pdf.write_bytes(b"%PDF-1.4 same content")
+    mc.save_pdf_id_to_cache(pdf, "cached_id_123")
+
+    client = _make_client()
+    monkeypatch.setattr(client, "_pdf_id_valid", lambda pid: True)  # 만료 확인 통과
+
+    def _no_post(*a, **k):
+        raise AssertionError("submit_pdf가 POST함 → 재과금! 캐시 미사용")
+    monkeypatch.setattr(mc.httpx.Client, "post", _no_post)
+
+    pdf_id = client.submit_pdf(pdf)
+    assert pdf_id == "cached_id_123"
+    assert client.last_pdf_cached is True
+
+
+def test_submit_pdf_expired_cache_resubmits(_tmp_cache, monkeypatch):
+    # 캐시 id가 Mathpix에 없으면(만료) 새로 제출하고 새 id를 다시 캐시한다
+    pdf = _tmp_cache / "exam.pdf"
+    pdf.write_bytes(b"%PDF-1.4 stale")
+    mc.save_pdf_id_to_cache(pdf, "expired_id")
+
+    client = _make_client()
+    monkeypatch.setattr(client, "_pdf_id_valid", lambda pid: False)  # 만료됨
+    with patch("src.common.ocr.mathpix_client.httpx.Client") as M:
+        M.return_value.__enter__.return_value.post.return_value = _mock_response(
+            {"pdf_id": "fresh_id_999"}
+        )
+        pdf_id = client.submit_pdf(pdf)
+
+    assert pdf_id == "fresh_id_999"
+    assert client.last_pdf_cached is False
+    assert lookup_pdf_id(pdf) == "fresh_id_999"   # 새 id로 캐시 갱신
+
+
+def test_submit_pdf_force_bypasses_cache(_tmp_cache, monkeypatch):
+    # force=True 면 유효한 캐시가 있어도 무시하고 새로 제출(재과금)
+    pdf = _tmp_cache / "exam.pdf"
+    pdf.write_bytes(b"%PDF-1.4 content")
+    mc.save_pdf_id_to_cache(pdf, "cached_id_123")
+
+    client = _make_client()
+    # _pdf_id_valid가 불려선 안 됨(캐시 자체를 건너뛰므로)
+    monkeypatch.setattr(
+        client, "_pdf_id_valid",
+        lambda pid: (_ for _ in ()).throw(AssertionError("force인데 캐시 확인함")),
+    )
+    with patch("src.common.ocr.mathpix_client.httpx.Client") as M:
+        M.return_value.__enter__.return_value.post.return_value = _mock_response(
+            {"pdf_id": "forced_id"}
+        )
+        pdf_id = client.submit_pdf(pdf, force=True)
+
+    assert pdf_id == "forced_id"
+    assert client.last_pdf_cached is False
+    assert lookup_pdf_id(pdf) == "forced_id"

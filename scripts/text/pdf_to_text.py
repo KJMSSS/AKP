@@ -58,7 +58,7 @@ def _pick_template() -> Path:
     raise FileNotFoundError("samples/ 폴더에 .hwpx 파일이 없습니다.")
 
 
-def convert(pdf_path: Path, filter_hw: bool = False, ocr_engine: str = "mathpix", full_content: bool = False) -> Path:
+def convert(pdf_path: Path, filter_hw: bool = False, ocr_engine: str = "mathpix", full_content: bool = False, force_ocr: bool = False) -> Path:
     # 회전 정상화 (회전된 페이지가 있으면 보정 PDF로 교체)
     pdf_path = normalize_pdf_rotation(pdf_path)
 
@@ -77,8 +77,11 @@ def convert(pdf_path: Path, filter_hw: bool = False, ocr_engine: str = "mathpix"
         md = read_pdf_as_markdown(pdf_path, full_content=full_content)
     else:
         client = MathpixClient()
-        pdf_id = client.submit_pdf(pdf_path)
-        print(f"  제출 완료 (pdf_id={pdf_id})")
+        pdf_id = client.submit_pdf(pdf_path, force=force_ocr)
+        if client.last_pdf_cached:
+            print(f"  캐시된 pdf_id 재사용 → 재과금 없음 (pdf_id={pdf_id})")
+        else:
+            print(f"  제출 완료 (pdf_id={pdf_id})")
         client.poll_pdf(pdf_id, progress=True)
         md = client.fetch_pdf_markdown(pdf_id)
 
@@ -220,6 +223,7 @@ if __name__ == "__main__":
     args = sys.argv[1:]
     filter_hw    = "--filter-handwriting" in args
     full_content = "--full-content" in args
+    force_ocr    = "--force-ocr" in args
 
     # --ocr-engine 파싱
     ocr_engine = "mathpix"
@@ -235,7 +239,7 @@ if __name__ == "__main__":
     positional = [a for a in args if not a.startswith("--") and a not in ("mathpix", "claude")]
 
     if not positional:
-        print("사용법: py scripts/text/pdf_to_text.py [PDF경로] [--filter-handwriting] [--ocr-engine mathpix|claude] [--full-content]")
+        print("사용법: py scripts/text/pdf_to_text.py [PDF경로] [--filter-handwriting] [--ocr-engine mathpix|claude] [--full-content] [--force-ocr]")
         sys.exit(1)
 
     pdf = Path(positional[0])
@@ -248,4 +252,4 @@ if __name__ == "__main__":
             print(f"파일 없음: {pdf}")
             sys.exit(1)
 
-    convert(pdf, filter_hw=filter_hw, ocr_engine=ocr_engine, full_content=full_content)
+    convert(pdf, filter_hw=filter_hw, ocr_engine=ocr_engine, full_content=full_content, force_ocr=force_ocr)

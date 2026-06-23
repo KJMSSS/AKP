@@ -530,8 +530,9 @@ py scripts/text/pdf_to_text.py "samples/시험지.pdf"
 # PDF → HWPX (Claude OCR, 정답·해설 포함)
 py scripts/text/pdf_to_text.py "samples/시험지.pdf" --ocr-engine claude --full-content
 
-# 재실행 (Mathpix 재과금 방지)
-py scripts/text/pdf_to_text.py "samples/시험지.pdf" --pdf-id <이전_pdf_id>
+# 재실행 (Mathpix 재과금 방지 — 같은 PDF는 내용 해시로 pdf_id 자동 캐시·재사용)
+py scripts/text/pdf_to_text.py "samples/시험지.pdf"
+# 캐시 무시하고 강제 새 OCR (재과금): --force-ocr
 
 # 플랜 PDF 재생성
 py docs/_gen_plan_pdf.py

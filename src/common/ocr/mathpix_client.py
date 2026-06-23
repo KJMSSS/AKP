@@ -169,6 +169,8 @@ class MathpixClient:
     def __init__(self) -> None:
         self.app_id  = os.getenv("MATHPIX_APP_ID")
         self.app_key = os.getenv("MATHPIX_APP_KEY")
+        # 직전 submit_pdf가 캐시된 pdf_id를 재사용했는지(=무과금) 표시
+        self.last_pdf_cached = False
         if not self.app_id or not self.app_key:
             raise MathpixError(
                 "MATHPIX_APP_ID and MATHPIX_APP_KEY must be set in .env"
@@ -204,7 +206,17 @@ class MathpixClient:
 
     # ── PDF OCR ─────────────────────────────────────────────────
 
-    def submit_pdf(self, pdf_path: Path) -> str:
+    def submit_pdf(self, pdf_path: Path, *, force: bool = False) -> str:
+        # 재과금 방지: 같은 PDF(내용 SHA-256 동일)는 캐시된 pdf_id를 재사용한다.
+        # 캐시된 id가 Mathpix에 더 이상 없으면(만료) 새로 제출한다.
+        # force=True 면 캐시를 무시하고 무조건 새로 제출(재과금).
+        self.last_pdf_cached = False
+        if not force:
+            cached = lookup_pdf_id(pdf_path)
+            if cached and self._pdf_id_valid(cached):
+                self.last_pdf_cached = True
+                return cached
+
         # \(...\) / \[...\] 구분자 → _parse_text와 호환
         options = {
             "conversion_formats": {"md": True},
@@ -219,7 +231,18 @@ class MathpixClient:
                 data={"options_json": json.dumps(options)},
             )
         _raise_for_status(resp)
-        return resp.json()["pdf_id"]
+        pdf_id = resp.json()["pdf_id"]
+        save_pdf_id_to_cache(pdf_path, pdf_id)  # 다음 재실행 때 재사용 → 무과금
+        return pdf_id
+
+    def _pdf_id_valid(self, pdf_id: str) -> bool:
+        """캐시된 pdf_id가 Mathpix에 아직 존재하는지 확인한다(상태 조회는 무과금)."""
+        try:
+            with httpx.Client(timeout=15.0) as client:
+                resp = client.get(f"{_API_BASE}/pdf/{pdf_id}", headers=self._auth)
+            return resp.status_code < 400
+        except httpx.HTTPError:
+            return False
 
     def poll_pdf(
         self, pdf_id: str, interval: float = 3.0, timeout: float = 300.0,

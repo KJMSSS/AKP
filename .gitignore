@@ -41,6 +41,9 @@ pip-wheel-metadata/
 .mypy_cache/
 .ruff_cache/
 
+# ─── Mathpix pdf_id 캐시 (머신 종속, 재과금 방지용 로컬 캐시) ──────
+.mathpix_cache/
+
 # ─── 작업 임시 폴더 / 테스트 데이터 ──────────────────────────────
 _unpacked/
 _temp/
