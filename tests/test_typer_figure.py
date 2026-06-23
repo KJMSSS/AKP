@@ -96,8 +96,10 @@ def test_condition_box_fills_column_not_overshrunk(tmp_path):
     replace_condition_tables(one)
 
     def _box_w(path):
+        # 조건 박스 = section0의 (유일한) 표. 골드 제목 박스(4×5)든 1×1 fallback이든
+        # 표 여는 태그 직후의 <hp:sz width>가 박스 전체 폭이다.
         xml = zipfile.ZipFile(path).read("Contents/section0.xml").decode("utf-8")
-        m = re.search(r'<hp:tbl\b[^>]*rowCnt="1" colCnt="1"[\s\S]{0,200}?<hp:sz width="(\d+)"', xml)
+        m = re.search(r'<hp:tbl\b[^>]*?>\s*<hp:sz width="(\d+)"', xml)
         return int(m.group(1)) if m else 0
 
     w1 = _box_w(one)
@@ -106,8 +108,10 @@ def test_condition_box_fills_column_not_overshrunk(tmp_path):
     two = tmp_path / "two.hwpx"
     build_typer_hwpx(one, "2026_2_1_a_공수1_테스트고", two)
     w2 = _box_w(two)
-    # 이미 열폭 이하 → 자연 크기 유지 (이전 일괄 0.673 축소면 ~60%로 줄었음)
-    assert w2 == w1, f"조건표가 자연 크기로 유지돼야 함 (1단 {w1} → 2단 {w2})"
+    # 핵심 회귀 방지: 2단 변환이 박스를 과소축소(이전 0.673배 → ~60%)하면 안 됨.
+    # 골드 제목 박스는 단폭에 맞춰 미세 조정될 수 있으나(예: 32095→32397) 좁혀선 안 된다.
+    assert w2 <= _COL_W, f"2단 조건표가 열폭 이하여야 함 (w2={w2})"
+    assert w2 >= w1, f"2단 변환이 조건표를 축소하면 안 됨 (1단 {w1} → 2단 {w2})"
     assert w2 / _COL_W > 0.7, f"조건표가 단을 충분히 채워야 함 ({w2/_COL_W:.0%})"
 
 
