@@ -198,7 +198,7 @@ from src.common.hwpx_image_inserter import (                        # noqa: E402
     insert_figure_placeholder, apply_figure_decisions,
 )
 from src.common.hwpx_table_inserter import (                        # noqa: E402
-    replace_condition_tables, replace_boilerplate_tables,
+    replace_condition_tables, replace_boilerplate_tables, restyle_data_tables_to_gold,
 )
 from src.common.hwpx_namespace_fixer import fix_hwpx_namespaces    # noqa: E402
 from src.common.hwpx_validator import validate_hwpx                 # noqa: E402
@@ -1228,6 +1228,7 @@ def api_figure_apply(key: str, request: Request):
         if not _TEMPLATE:
             raise HTTPException(500, "samples/ 폴더에 템플릿 HWPX가 없습니다.")
         build_from_markdown(md, tmp_out, _TEMPLATE)
+        restyle_data_tables_to_gold(tmp_out)
         replace_condition_tables(tmp_out)
         replace_boilerplate_tables(tmp_out)
         fix_hwpx_namespaces(str(tmp_out))
@@ -1848,6 +1849,7 @@ async def review_submit(job_id: str, request: Request):
             if not _TEMPLATE:
                 raise RuntimeError("템플릿 없음")
             build_from_markdown(new_md, out_hwpx, _TEMPLATE)
+            restyle_data_tables_to_gold(out_hwpx)
             replace_condition_tables(out_hwpx)
             replace_boilerplate_tables(out_hwpx)
             fix_hwpx_namespaces(str(out_hwpx))
@@ -2159,6 +2161,7 @@ def _run_conversion(
             raise RuntimeError("samples/ 폴더에 .hwpx 파일이 없습니다.")
 
         build_from_markdown(md, out_hwpx, _TEMPLATE)
+        restyle_data_tables_to_gold(out_hwpx)
         replace_condition_tables(out_hwpx)
         replace_boilerplate_tables(out_hwpx)
         fix_hwpx_namespaces(str(out_hwpx))

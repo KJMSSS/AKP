@@ -18,6 +18,7 @@ HWPX 표/글상자 삽입 모듈.
 """
 from __future__ import annotations
 
+import json
 import re
 import shutil
 import zipfile
@@ -349,6 +350,87 @@ def _rewrite_hwpx(
                 else:
                     dst.writestr(item, src.read(item.filename))
     shutil.move(str(tmp), str(out_path))
+
+
+# ── 골드 데이터표 양식 (위치별 borderFill — 헤더 윗변 이중선) ──────────────────
+_GOLD_BF_PATH = Path(__file__).resolve().parent / "gold_data_table_bf.json"
+# 9-구역 스킴: 헤더행 좌11 중12 우13(윗변 DOUBLE_SLIM) / 중간 좌10 중3 우9 / 끝행 좌14 중15 우16
+_GOLD_BF_ORDER = ["3", "9", "10", "11", "12", "13", "14", "15", "16"]
+
+
+def _load_gold_data_bf() -> dict[str, str]:
+    try:
+        return json.loads(_GOLD_BF_PATH.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+
+def _gold_cell_gid(r: int, c: int, nrows: int, ncols: int) -> str:
+    """셀 위치(r,c) → 골드 borderFill 원본 id."""
+    if r == 0:            row = ("11", "12", "13")   # 헤더행(이중 윗변)
+    elif r == nrows - 1:  row = ("14", "15", "16")   # 끝행
+    else:                 row = ("10", "3",  "9")    # 중간행
+    if c == 0:            return row[0]
+    if c == ncols - 1:    return row[2]
+    return row[1]
+
+
+def restyle_data_tables_to_gold(hwpx_path: Path, out_path: Path | None = None) -> Path:
+    """본문 데이터표에 학원장 골드 양식(헤더 이중선 + 위치별 격자)을 입힌다.
+
+    build_from_markdown 직후·조건/보기 박스 치환 **전**에 호출할 것 — 그 시점의
+    모든 <hp:tbl>은 본문 마크다운 데이터표이므로 일괄 적용해도 안전하다. 골드
+    borderFill 9종을 출력 헤더에 동적 주입(연속 ID)하고 각 셀을 위치별로 재지정.
+    """
+    out_path = out_path or hwpx_path
+    gold = _load_gold_data_bf()
+    if not gold:
+        return out_path
+    with zipfile.ZipFile(hwpx_path, "r") as zf:
+        sec = zf.read("Contents/section0.xml").decode("utf-8")
+        hdr = zf.read("Contents/header.xml").decode("utf-8")
+    if "<hp:tbl" not in sec:
+        return out_path
+
+    base = _max_borderfill_id(hdr) + 1
+    id_map = {g: str(base + i) for i, g in enumerate(_GOLD_BF_ORDER)}
+    defs_xml = "".join(
+        gold[g].replace(f'id="{g}"', f'id="{id_map[g]}"', 1) for g in _GOLD_BF_ORDER
+    )
+
+    n_tbl = [0]
+
+    def _restyle_tc(nrows: int, ncols: int):
+        def _inner(mc):
+            tc = mc.group(0)
+            ca = re.search(r'<hp:cellAddr colAddr="(\d+)" rowAddr="(\d+)"/>', tc)
+            if not ca:
+                return tc
+            c, r = int(ca.group(1)), int(ca.group(2))
+            gid = id_map[_gold_cell_gid(r, c, nrows, ncols)]
+            return re.sub(r'(borderFillIDRef=")\d+(")',
+                          lambda mm: mm.group(1) + gid + mm.group(2), tc, count=1)
+        return _inner
+
+    def _restyle_tbl(m):
+        blk = m.group(0)
+        rc = re.search(r'rowCnt="(\d+)"', blk)
+        cc = re.search(r'colCnt="(\d+)"', blk)
+        if not rc or not cc:
+            return blk
+        nrows, ncols = int(rc.group(1)), int(cc.group(1))
+        n_tbl[0] += 1
+        blk = re.sub(r'(<hp:tbl\b[^>]*?borderFillIDRef=")\d+(")',
+                     lambda mm: mm.group(1) + id_map["3"] + mm.group(2), blk, count=1)
+        return re.sub(r'<hp:tc\b.*?</hp:tc>', _restyle_tc(nrows, ncols), blk, flags=re.DOTALL)
+
+    sec_new = re.sub(r'<hp:tbl\b.*?</hp:tbl>', _restyle_tbl, sec, flags=re.DOTALL)
+    if not n_tbl[0]:
+        return out_path
+    hdr_new = _inject_borderfills(hdr, defs_xml, len(_GOLD_BF_ORDER))
+    _rewrite_hwpx(hwpx_path, sec_new, out_path, header_new=hdr_new)
+    print(f"  [table] 데이터표 골드 양식 적용: {n_tbl[0]}개")
+    return out_path
 
 
 # ── 공개 API ──────────────────────────────────────────────────────────────

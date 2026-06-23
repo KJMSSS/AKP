@@ -33,7 +33,7 @@ from src.text_only.ocr_fallback import apply_fallback, reinforce_placeholders
 from src.text_only.problem_segmenter import parse_problems, rebuild_markdown
 from src.common.image_extractor import extract_images, extract_figures_with_bbox_detection
 from src.common.hwpx_image_inserter import insert_figure_placeholder
-from src.common.hwpx_table_inserter import replace_condition_tables, replace_boilerplate_tables
+from src.common.hwpx_table_inserter import replace_condition_tables, replace_boilerplate_tables, restyle_data_tables_to_gold
 from src.common.hwpx_namespace_fixer import fix_hwpx_namespaces
 from src.common.hwpx_validator import validate_hwpx, HWPXValidationError
 
@@ -171,6 +171,7 @@ def convert(pdf_path: Path, filter_hw: bool = False, ocr_engine: str = "mathpix"
     t1 = time.time()
     result = build_from_markdown(md, out_hwpx, base)
     out_hwpx = result['output']  # 잠금으로 인해 대체 경로에 저장된 경우 반영
+    restyle_data_tables_to_gold(out_hwpx)   # 데이터표 골드 양식(헤더 이중선) — 박스 치환 전
     replace_condition_tables(out_hwpx)
     replace_boilerplate_tables(out_hwpx)
     build_time = time.time() - t1
