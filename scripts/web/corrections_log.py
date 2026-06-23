@@ -29,7 +29,10 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 def _data_dir() -> Path:
-    d = os.environ.get("DATA_DIR", "")
+    # 볼륨 마운트가 있으면 그게 유일한 영속 경로 (app.py와 동일 규칙) —
+    # DATA_DIR 오타로 휘발성 디스크에 교정·패턴이 쌓여 재배포 때 사라지던 것 방지.
+    vol = os.environ.get("RAILWAY_VOLUME_MOUNT_PATH", "").strip()
+    d = vol or os.environ.get("DATA_DIR", "")
     return Path(d) if d else Path(__file__).resolve().parent / "logs"
 
 _LOG_DIR      = _data_dir()

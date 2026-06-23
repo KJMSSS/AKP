@@ -42,11 +42,18 @@ load_dotenv()
 # ── 경로 설정 ──────────────────────────────────────────────────────────
 _HERE    = Path(__file__).resolve().parent
 _ROOT    = _HERE.parent.parent
-_TMP_DIR = Path(os.environ.get("TMP_DIR", str(_HERE / "tmp")))
-_TMP_DIR.mkdir(exist_ok=True, parents=True)
 
-_DATA_DIR = Path(os.environ.get("DATA_DIR", str(_HERE / "data")))
+# Railway 볼륨이 마운트돼 있으면 그 경로가 유일한 영속 저장소다. DATA_DIR 환경변수가
+# 볼륨과 다른 경로(예: 오타 /data vs 실제 마운트 /date)를 가리키면 앱이 휘발성 컨테이너
+# 디스크에 쓰게 돼 재배포마다 변환물·교정·패턴이 통째로 사라진다 — 볼륨 마운트를 최우선한다.
+_VOL_MOUNT = os.environ.get("RAILWAY_VOLUME_MOUNT_PATH", "").strip()
+_DATA_DIR = Path(_VOL_MOUNT or os.environ.get("DATA_DIR") or str(_HERE / "data"))
 _DATA_DIR.mkdir(exist_ok=True, parents=True)
+
+# 변환 결과물(HWPX·review.json·OCR·PDF)도 영속 볼륨 아래 둔다 — 재배포에도 유지.
+# (TMP_DIR 미설정 시 _HERE/tmp 휘발성 폴더로 가던 것이 데이터 소실의 주원인이었다.)
+_TMP_DIR = Path(os.environ.get("TMP_DIR") or str(_DATA_DIR / "tmp"))
+_TMP_DIR.mkdir(exist_ok=True, parents=True)
 _CONFIG_FILE   = _DATA_DIR / "matrix_config.json"
 _REGISTRY_FILE = _DATA_DIR / "matrix_registry.json"
 _UPLOADS_DIR   = _DATA_DIR / "uploads"
@@ -55,6 +62,10 @@ _UPLOADS_DIR.mkdir(exist_ok=True, parents=True)
 _MANUAL_STAGES = {"hangeul", "typer", "solution"}
 _FIGQ_DIR      = _DATA_DIR / "figure_queue"
 _FIGQ_DIR.mkdir(exist_ok=True, parents=True)
+
+# 영속 경로 확인용 — 재배포 후 railway logs 에서 볼륨 경로가 맞는지 한눈에.
+print(f"  [경로] DATA_DIR={_DATA_DIR}  TMP_DIR={_TMP_DIR}"
+      f"  (볼륨마운트={_VOL_MOUNT or '없음'})")
 _config_lock   = threading.Lock()
 _registry_lock = threading.Lock()
 _figq_lock     = threading.Lock()
