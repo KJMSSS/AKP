@@ -24,6 +24,8 @@ _COND_LABEL_RE = re.compile(r'^(?:\$[（(]\s*[가-힣]\s*[）)]\$|[（(]\s*[가-
 _COND_LABEL_INNER = re.compile(r'[（(]\s*[가-힣]\s*[）)]')  # 줄 중간 탐색용 (비앵커)
 _COND_RE   = _COND_LABEL_RE  # 하위 호환 별칭
 _BOGI_RE   = re.compile(r'^[ㄱ-ㅎ]\s*[.．]\s*|^보기\s*$')  # ㄱ. ㄴ. ㄷ. 또는 "보기" 헤더
+# 보기 항목 라벨: 자음(ㄱ-ㅎ) 또는 음절 가/나/다/… — "가. 나. 다." 형식 보기 지원
+_BOGI_LABEL_RE = re.compile(r'^(?:[ㄱ-ㅎ]|[가나다라마바사아자차카타파하])\s*[.．]')
 _ROMAN_ITEM_RE = re.compile(r'^\([ivxIVX]+\)\s+')          # (i) (ii) (iii) 로마자 번호 항목
 # 질문 문장 신호 — 조건 연속 줄 병합을 끊는다 (본문 질문이 조건 박스에 빨려드는 것 방지)
 _QUESTION_RE = re.compile(r'구하시오|구하여라|구하라|쓰시오|답하시오|보이시오|나타내시오|서술하시오')
@@ -46,8 +48,8 @@ def check_condition_boxes(segments: "list[ProblemSegment]") -> list[int]:
 
 
 def _is_bogi_line(s: str) -> bool:
-    """보기 항목 판정: ㄱ/ㄴ/ㄷ 또는 로마자 (i)(ii)(iii) — 연결문 '(i) 또는 (ii)' 제외."""
-    if _BOGI_RE.match(s):
+    """보기 항목 판정: ㄱ/ㄴ/ㄷ·가/나/다 또는 로마자 (i)(ii)(iii) — 연결문 '(i) 또는 (ii)' 제외."""
+    if _BOGI_RE.match(s) or _BOGI_LABEL_RE.match(s):
         return True
     return bool(_ROMAN_ITEM_RE.match(s)) and '또는 (' not in s
 
@@ -330,6 +332,17 @@ def _split_block(
         # 새 문제 시작 → 중단
         if _PROB_RE.match(s) or _SUBJ_RE.match(s):
             break
+
+        # 블록쿼트 보기 블록: "> 가. ..." / "> ㄱ. ..." → 연속 인용(>) 줄을 통째로 보기로 수집.
+        # 가/나/다 음절·블록쿼트·한 줄 여러 항목·연속줄 형식이라 일반 보기 감지가 못 잡는 경우.
+        # 보기 라벨로 시작하는 인용블록만(예: "> 주사위를…" 시행 설명은 제외) — 오분류 방지.
+        if s.startswith('>') and _BOGI_LABEL_RE.match(s.lstrip('>').strip()):
+            while i < len(after_lines) and after_lines[i].strip().startswith('>'):
+                li = after_lines[i].strip().lstrip('>').strip()
+                if li:
+                    boilerplate.append(li)
+                i += 1
+            continue
 
         # 조건문 （가）/（나）/（다） — 꺾인 연속 줄까지 한 항목으로
         if _is_cond_label(s):
