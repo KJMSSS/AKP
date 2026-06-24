@@ -354,8 +354,15 @@ def _rewrite_hwpx(
 
 # ── 골드 데이터표 양식 (위치별 borderFill — 헤더 윗변 이중선) ──────────────────
 _GOLD_BF_PATH = Path(__file__).resolve().parent / "gold_data_table_bf.json"
-# 9-구역 스킴: 헤더행 좌11 중12 우13(윗변 DOUBLE_SLIM) / 중간 좌10 중3 우9 / 끝행 좌14 중15 우16
-_GOLD_BF_ORDER = ["3", "9", "10", "11", "12", "13", "14", "15", "16"]
+# 데이터표 9-구역 스킴: 헤더행 좌11 중12 우13(윗변 DOUBLE_SLIM) / 중간 좌10 중3 우9 / 끝행 좌14 중15 우16
+# + 오지선다 그리드용: 외곽 #3(프레임) · 셀 #4(무테)
+_GOLD_BF_ORDER = ["3", "4", "9", "10", "11", "12", "13", "14", "15", "16"]
+
+
+def _is_choice_grid(tbl_block: str) -> bool:
+    """오지선다 그리드 판정: ①②③④⑤ 3개 이상 = (가)(나)(다)×①②③ 선택 표.
+    데이터표(격자+이중선)와 달리 외곽 프레임만·셀 무테가 골드 양식."""
+    return sum(tbl_block.count(c) for c in "①②③④⑤") >= 3
 
 
 def _load_gold_data_bf() -> dict[str, str]:
@@ -422,6 +429,10 @@ def restyle_data_tables_to_gold(hwpx_path: Path, out_path: Path | None = None) -
         n_tbl[0] += 1
         blk = re.sub(r'(<hp:tbl\b[^>]*?borderFillIDRef=")\d+(")',
                      lambda mm: mm.group(1) + id_map["3"] + mm.group(2), blk, count=1)
+        if _is_choice_grid(blk):
+            # 오지선다 그리드: 외곽 프레임(#3)만, 셀 전부 무테(#4)
+            return re.sub(r'(<hp:tc\b[^>]*?borderFillIDRef=")\d+(")',
+                          lambda mm: mm.group(1) + id_map["4"] + mm.group(2), blk)
         return re.sub(r'<hp:tc\b.*?</hp:tc>', _restyle_tc(nrows, ncols), blk, flags=re.DOTALL)
 
     sec_new = re.sub(r'<hp:tbl\b.*?</hp:tbl>', _restyle_tbl, sec, flags=re.DOTALL)
