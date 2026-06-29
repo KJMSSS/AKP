@@ -46,7 +46,7 @@ class FigureCandidate:
     """단일 크롭에서 추출한 그림 후보 + 신뢰도.
 
     bbox: (x0, y0, x1, y1) 픽셀 좌표 (원본 crop 기준)
-    strategy: "agreement" | "tesseract_only" | "density_only"
+    strategy: "agreement" | "tesseract_only" | "google_only" | "density_only"
     """
     bbox: tuple[int, int, int, int]
     image_path: Path
@@ -877,6 +877,100 @@ def _density_bbox(
     return (0, int(fig_top), int(W), int(fig_bot))
 
 
+def _figure_bbox_from_text_boxes(
+    arr, text_boxes: list[tuple[int, int, int, int]], pad_px: int = 8, margin: int = 15,
+) -> tuple[int, int, int, int] | None:
+    """텍스트 박스([(x,y,w,h),...])를 흰색 마스킹 후 남은 어두운 영역의 bbox.
+    텍스트 검출 엔진(Tesseract/Google Vision) 무관 공용 — 박스 출처만 다르다."""
+    import numpy as np
+    H, W = arr.shape
+    text_mask = np.zeros((H, W), dtype=bool)
+    n = 0
+    for (x, y, w, h) in text_boxes:
+        if w <= 0 or h <= 0:
+            continue
+        r0 = max(0, y - pad_px); r1 = min(H, y + h + pad_px)
+        c0 = max(0, x - pad_px); c1 = min(W, x + w + pad_px)
+        text_mask[r0:r1, c0:c1] = True
+        n += 1
+    if n == 0:
+        return None
+    masked = arr.copy()
+    masked[text_mask] = 255
+    dark = masked < 180
+    if dark.sum() < 200:
+        return None
+    rows = np.where(dark.any(axis=1))[0]
+    cols = np.where(dark.any(axis=0))[0]
+    y0 = max(0, int(rows[0]) - margin); y1 = min(H, int(rows[-1]) + margin)
+    x0 = max(0, int(cols[0]) - margin); x1 = min(W, int(cols[-1]) + margin)
+    if y1 <= y0 or x1 <= x0:
+        return None
+    return (x0, y0, x1, y1)
+
+
+def _google_vision_text_boxes(crop_png: Path) -> list[tuple[int, int, int, int]] | None:
+    """Google Cloud Vision DOCUMENT_TEXT_DETECTION → 단어 bbox (x,y,w,h) 목록.
+
+    인증: GOOGLE_APPLICATION_CREDENTIALS(서비스계정 JSON 경로) 환경변수.
+    미설치/자격증명 없음/API 오류 → None (호출자가 Tesseract로 폴백).
+    Tesseract와 달리 로컬 바이너리 설치가 필요 없다(클라우드).
+    """
+    try:
+        from google.cloud import vision
+    except ImportError:
+        return None
+    try:
+        client = vision.ImageAnnotatorClient()
+        image = vision.Image(content=Path(crop_png).read_bytes())
+        resp = client.document_text_detection(image=image)
+        if resp.error.message:
+            print(f"  [google-vision] API 오류: {resp.error.message[:80]}")
+            return None
+    except Exception as e:
+        print(f"  [google-vision] 호출 실패 ({type(e).__name__}) → 폴백")
+        return None
+    boxes: list[tuple[int, int, int, int]] = []
+    for page in resp.full_text_annotation.pages:
+        for block in page.blocks:
+            for para in block.paragraphs:
+                for word in para.words:
+                    vs = word.bounding_box.vertices
+                    xs = [v.x for v in vs]; ys = [v.y for v in vs]
+                    x, y = min(xs), min(ys)
+                    boxes.append((x, y, max(xs) - x, max(ys) - y))
+    return boxes or None
+
+
+def _google_vision_bbox(crop_png: Path, pad_px: int = 8) -> tuple[int, int, int, int] | None:
+    """Google Vision 텍스트 마스킹 후 그림 bbox — _tesseract_bbox의 클라우드판."""
+    from PIL import Image as PILImage
+    import numpy as np
+    boxes = _google_vision_text_boxes(crop_png)
+    if not boxes:
+        return None
+    try:
+        arr = np.array(PILImage.open(crop_png).convert("L"))
+    except Exception:
+        return None
+    return _figure_bbox_from_text_boxes(arr, boxes, pad_px)
+
+
+def _text_bbox(crop_png: Path) -> tuple[tuple[int, int, int, int] | None, str]:
+    """텍스트 마스킹 기반 그림 bbox + 사용 엔진명. FIGURE_TEXT_ENGINE 로 선택:
+       'google' | 'tesseract' | 'auto'(기본: 자격증명 있으면 google→실패 시 tesseract)."""
+    engine = os.environ.get("FIGURE_TEXT_ENGINE", "auto").lower()
+    if engine == "tesseract":
+        return _tesseract_bbox(crop_png), "tesseract"
+    if engine == "google":
+        return _google_vision_bbox(crop_png), "google"
+    if os.environ.get("GOOGLE_APPLICATION_CREDENTIALS"):
+        b = _google_vision_bbox(crop_png)
+        if b is not None:
+            return b, "google"
+    return _tesseract_bbox(crop_png), "tesseract"
+
+
 def extract_with_confidence(
     crop_png: Path,
     problem_no: str,
@@ -894,7 +988,7 @@ def extract_with_confidence(
     from PIL import Image as PILImage
 
     output_dir.mkdir(parents=True, exist_ok=True)
-    bbox_t = _tesseract_bbox(crop_png)
+    bbox_t, _eng_t = _text_bbox(crop_png)   # 엔진: google(Vision) | tesseract
     bbox_d = _density_bbox(crop_png)
 
     if bbox_t is None and bbox_d is None:
@@ -912,7 +1006,7 @@ def extract_with_confidence(
         confidence = iou
     elif bbox_t is not None:
         chosen_bbox = bbox_t
-        strategy = "tesseract_only"
+        strategy = f"{_eng_t}_only"   # "google_only" | "tesseract_only"
         confidence = 0.5
     else:
         chosen_bbox = bbox_d  # type: ignore[assignment]

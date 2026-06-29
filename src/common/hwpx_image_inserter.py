@@ -307,7 +307,7 @@ def apply_figure_decisions(hwpx_path: Path, items: dict) -> dict:
 
     # 신뢰도 측정 경로(문제 크롭 기반)는 300 DPI 렌더 — DPI 메타 없는
     # 구버전 큐 항목은 strategy로 추정 (pymupdf/vision은 150 DPI)
-    _conf_strategies = {"agreement", "tesseract_only", "density_only"}
+    _conf_strategies = {"agreement", "tesseract_only", "google_only", "density_only"}
 
     skip_nos: list[str] = []
     for prob_no in sorted(items, key=lambda x: int(x) if x.isdigit() else 999):

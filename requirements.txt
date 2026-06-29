@@ -17,3 +17,5 @@ PyMuPDF>=1.23.0
 # 회전 보정(OSD)·그림 신뢰도 측정 — Tesseract 바이너리는 nixpacks.toml(aptPkgs)
 pytesseract>=0.3.10
 numpy>=1.26.0
+# 그림 텍스트 검출 (Tesseract 대체, 선택) — GOOGLE_APPLICATION_CREDENTIALS 설정 시 사용
+google-cloud-vision>=3.4.0
