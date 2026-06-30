@@ -12,6 +12,10 @@ PDF → 빈 HWPX 직접 타이핑 변환 (템플릿 불필요)
     --ocr-engine claude   Claude API 직접 사용 (Mathpix 구독 불필요)
     --full-content        정답·해설 포함 전체 내용 전사 (--ocr-engine claude 전용)
 
+동작:
+    파일명에 풀이본 마커(쫑/쭌/DJ/훈)가 있으면 OCR을 자동 스킵한다(정형화본+손풀이라 무의미).
+    그래도 읽어야 하면 --clean-handwriting로 손풀이를 지우고 OCR한다.
+
 출력:
     samples/output_text_{파일명}.hwpx
 """
@@ -104,7 +108,31 @@ def _hybrid_merge_ocr(md_claude: str, md_mathpix: str) -> str:
     return (head_c.rstrip() + "\n\n" + body) if head_c.strip() else body
 
 
-def convert(pdf_path: Path, filter_hw: bool = False, ocr_engine: str = "mathpix", full_content: bool = False, force_ocr: bool = False, clean_handwriting: bool = False) -> Path:
+_HW_MARKERS = ("쫑", "쭌", "DJ", "훈")   # 파일명 손글씨(풀이) 마커: 쫑=학원장·DJ/훈/쭌=선생님
+
+
+def _hw_marker_in(name: str):
+    """파일명에 풀이본 마커가 있으면 그 마커를, 없으면 None.
+
+    마커 PDF = 이미 정형화(타이핑)된 시험지를 PDF로 출력한 뒤 손풀이만 얹은 것.
+    깨끗한 원본이 따로 있어 OCR 의미 없음 → OCR 입력에서 스킵 판정용.
+    """
+    for mk in _HW_MARKERS:
+        if mk in name:
+            return mk
+    return None
+
+
+def convert(pdf_path: Path, filter_hw: bool = False, ocr_engine: str = "mathpix", full_content: bool = False, force_ocr: bool = False, clean_handwriting: bool = False) -> Path | None:
+    # 0단계: 풀이본(쫑/쭌/DJ/훈) 스킵 — 정형화본+손풀이라 OCR 무의미(과금·출력 없음).
+    #         단, --clean-handwriting 명시 시엔 의도적 처리로 보고 스킵하지 않는다(손풀이 지우고 읽기).
+    _mk = _hw_marker_in(pdf_path.name)
+    if _mk and not clean_handwriting:
+        print("─" * 62)
+        print(f"[ 스킵 ] 풀이본 PDF (마커 '{_mk}') — OCR 제외 · 과금/출력 없음")
+        print(f"  PDF: {pdf_path.name}")
+        print("─" * 62)
+        return None
     # 회전 정상화 (회전된 페이지가 있으면 보정 PDF로 교체)
     original_pdf = pdf_path                          # 캐시 키는 원본 기준 (rotfix 바이트 변동 무시)
     pdf_path = normalize_pdf_rotation(pdf_path)
