@@ -268,3 +268,109 @@ def normalize_pdf_rotation(src_path: Path, use_content_detection: bool = True) -
 
     print(f"  [회전 보정 완료] {fixed_path.name} ({fixed_path.stat().st_size:,} bytes)")
     return fixed_path
+
+
+# ── 손풀이(학생 손글씨) 제거 — OCR 입력 정화 ─────────────────────────────────
+_HANDWRITING_PROMPT = (
+    "이 시험지 페이지에서 **학생이 손으로 쓴 것**의 영역만 찾아라 — 연필/펜 풀이·계산 과정·"
+    "낙서·동그라미·체크·밑줄 등 손글씨 표시.\n"
+    "**절대 포함 금지**: 인쇄된 문제 텍스트·선택지·숫자·수식, 인쇄된 그림/그래프/도형/표, 머리말.\n"
+    "손글씨가 전혀 없으면 빈 배열 []. 애매하면 제외하라(인쇄물을 지우면 절대 안 됨 — 확실한 손글씨만).\n"
+    'JSON 배열만 출력. 각 원소: {"bbox":[x0,y0,x1,y1]} (페이지 좌상단 기준 0~100 백분율).'
+)
+
+
+def _vision_handwriting_boxes(png_bytes: bytes, api_key: str) -> list[tuple[float, float, float, float]]:
+    """Claude Vision으로 손글씨 영역 bbox(0~100 백분율) 목록 검출. 실패/없음 → []."""
+    import base64
+    import json
+    import re
+
+    import anthropic
+
+    try:
+        client = anthropic.Anthropic(api_key=api_key)
+        b64 = base64.standard_b64encode(png_bytes).decode()
+        resp = client.messages.create(
+            model="claude-sonnet-4-6", max_tokens=1024,
+            messages=[{"role": "user", "content": [
+                {"type": "image", "source": {"type": "base64", "media_type": "image/png", "data": b64}},
+                {"type": "text", "text": _HANDWRITING_PROMPT},
+            ]}],
+        )
+        raw = "".join(getattr(b, "text", "") for b in resp.content).strip()
+    except Exception as e:
+        print(f"  [손풀이] Vision 호출 실패 ({type(e).__name__}) — 이 페이지 원본 유지")
+        return []
+    m = re.search(r"\[.*\]", raw, re.DOTALL)
+    if not m:
+        return []
+    try:
+        arr = json.loads(m.group(0))
+    except Exception:
+        return []
+    out: list[tuple[float, float, float, float]] = []
+    for it in arr if isinstance(arr, list) else []:
+        bb = it.get("bbox") if isinstance(it, dict) else None
+        if not bb or len(bb) != 4:
+            continue
+        try:
+            x0, y0, x1, y1 = (float(v) for v in bb)
+        except (TypeError, ValueError):
+            continue
+        if x1 > x0 and y1 > y0:
+            out.append((x0, y0, x1, y1))
+    return out
+
+
+def filter_handwriting_pdf(pdf_path: Path, api_key: str | None = None, dpi: int = 200) -> Path:
+    """이미지에서 학생 손풀이를 흰색 마스킹한 새 PDF 생성 — OCR 입력 정화.
+
+    회전보정 직후·OCR **전**에 호출. Claude Vision으로 손글씨 영역만 검출해 흰색으로 덮는다
+    (손글씨가 인쇄와 같은 회색이라 색필터 불가 → Vision이 유일 신뢰 방법).
+    손글씨 없는 페이지는 벡터 그대로 복사(품질 보존). 자격증명 없음/손글씨 없음/오류 →
+    **원본 경로 그대로 반환(no-op, 안전)**. 출력: {stem}_clean.pdf
+    """
+    key = api_key or os.environ.get("ANTHROPIC_API_KEY", "")
+    if not key:
+        print("  [손풀이] ANTHROPIC_API_KEY 없음 — 건너뜀(원본 유지)")
+        return pdf_path
+
+    import fitz  # PyMuPDF
+    import numpy as np
+    from PIL import Image as PILImage
+
+    doc = fitz.open(str(pdf_path))
+    new_doc = fitz.open()
+    masked_pages = 0
+    for i, page in enumerate(doc):
+        rdpi = _safe_dpi(page, dpi, _RENDER_MAX_PX)
+        pix = page.get_pixmap(matrix=fitz.Matrix(rdpi / 72, rdpi / 72))
+        png_bytes = pix.tobytes("png")
+        boxes = _vision_handwriting_boxes(png_bytes, key)
+        if not boxes:
+            new_doc.insert_pdf(doc, from_page=i, to_page=i)   # 손글씨 없음 → 벡터 복사
+            continue
+        arr = np.array(PILImage.open(io.BytesIO(png_bytes)).convert("RGB"))
+        H, W = arr.shape[:2]
+        for (x0, y0, x1, y1) in boxes:
+            px0 = max(0, int(x0 / 100 * W)); px1 = min(W, int(x1 / 100 * W))
+            py0 = max(0, int(y0 / 100 * H)); py1 = min(H, int(y1 / 100 * H))
+            if px1 > px0 and py1 > py0:
+                arr[py0:py1, px0:px1] = 255   # 흰색 마스킹
+        masked_pages += 1
+        buf = io.BytesIO()
+        PILImage.fromarray(arr).save(buf, format="JPEG", quality=_JPG_QUALITY)
+        w_pt = W * 72 / rdpi; h_pt = H * 72 / rdpi
+        np_page = new_doc.new_page(width=w_pt, height=h_pt)
+        np_page.insert_image(np_page.rect, stream=buf.getvalue())
+
+    if masked_pages == 0:
+        new_doc.close(); doc.close()
+        print("  [손풀이] 감지된 손글씨 없음 — 원본 유지")
+        return pdf_path
+    out_path = pdf_path.with_name(pdf_path.stem + "_clean.pdf")
+    new_doc.save(str(out_path), garbage=4, deflate=True)
+    new_doc.close(); doc.close()
+    print(f"  [손풀이 제거] {masked_pages}p 마스킹 → {out_path.name}")
+    return out_path

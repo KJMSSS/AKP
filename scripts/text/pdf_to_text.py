@@ -26,7 +26,7 @@ sys.stdout.reconfigure(encoding='utf-8')
 
 from src.common.ocr.mathpix_client import MathpixClient
 from src.ocr.claude_pdf_reader import read_pdf_as_markdown
-from src.common.pdf_utils import normalize_pdf_rotation
+from src.common.pdf_utils import normalize_pdf_rotation, filter_handwriting_pdf
 from src.text_only.text_builder import build_from_markdown
 from src.text_only.handwriting_filter import filter_handwriting
 from src.text_only.ocr_fallback import apply_fallback, reinforce_placeholders
@@ -58,10 +58,15 @@ def _pick_template() -> Path:
     raise FileNotFoundError("samples/ 폴더에 .hwpx 파일이 없습니다.")
 
 
-def convert(pdf_path: Path, filter_hw: bool = False, ocr_engine: str = "mathpix", full_content: bool = False, force_ocr: bool = False) -> Path:
+def convert(pdf_path: Path, filter_hw: bool = False, ocr_engine: str = "mathpix", full_content: bool = False, force_ocr: bool = False, clean_handwriting: bool = False) -> Path:
     # 회전 정상화 (회전된 페이지가 있으면 보정 PDF로 교체)
     original_pdf = pdf_path                          # 캐시 키는 원본 기준 (rotfix 바이트 변동 무시)
     pdf_path = normalize_pdf_rotation(pdf_path)
+    cache_key = original_pdf                         # Mathpix 캐시 키 (회전 무시)
+    # 손풀이(학생 손글씨) 제거 — OCR 입력 정화 (opt-in). 회전보정 직후·OCR 전.
+    if clean_handwriting:
+        pdf_path = filter_handwriting_pdf(pdf_path)
+        cache_key = pdf_path                         # 정화본은 내용이 달라 별도 캐시
 
     stem    = pdf_path.stem
     out_md  = ROOT / "output_text_temp.md"          # 임시 마크다운 저장
@@ -78,7 +83,7 @@ def convert(pdf_path: Path, filter_hw: bool = False, ocr_engine: str = "mathpix"
         md = read_pdf_as_markdown(pdf_path, full_content=full_content)
     else:
         client = MathpixClient()
-        pdf_id = client.submit_pdf(pdf_path, force=force_ocr, cache_key_path=original_pdf)
+        pdf_id = client.submit_pdf(pdf_path, force=force_ocr, cache_key_path=cache_key)
         if client.last_pdf_cached:
             print(f"  캐시된 pdf_id 재사용 → 재과금 없음 (pdf_id={pdf_id})")
         else:
@@ -226,6 +231,7 @@ if __name__ == "__main__":
     filter_hw    = "--filter-handwriting" in args
     full_content = "--full-content" in args
     force_ocr    = "--force-ocr" in args
+    clean_hw     = "--clean-handwriting" in args
 
     # --ocr-engine 파싱
     ocr_engine = "mathpix"
@@ -241,7 +247,7 @@ if __name__ == "__main__":
     positional = [a for a in args if not a.startswith("--") and a not in ("mathpix", "claude")]
 
     if not positional:
-        print("사용법: py scripts/text/pdf_to_text.py [PDF경로] [--filter-handwriting] [--ocr-engine mathpix|claude] [--full-content] [--force-ocr]")
+        print("사용법: py scripts/text/pdf_to_text.py [PDF경로] [--filter-handwriting] [--ocr-engine mathpix|claude] [--full-content] [--force-ocr] [--clean-handwriting]")
         sys.exit(1)
 
     pdf = Path(positional[0])
@@ -254,4 +260,4 @@ if __name__ == "__main__":
             print(f"파일 없음: {pdf}")
             sys.exit(1)
 
-    convert(pdf, filter_hw=filter_hw, ocr_engine=ocr_engine, full_content=full_content, force_ocr=force_ocr)
+    convert(pdf, filter_hw=filter_hw, ocr_engine=ocr_engine, full_content=full_content, force_ocr=force_ocr, clean_handwriting=clean_hw)
