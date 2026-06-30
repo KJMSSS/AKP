@@ -58,6 +58,52 @@ def _pick_template() -> Path:
     raise FileNotFoundError("samples/ 폴더에 .hwpx 파일이 없습니다.")
 
 
+def _split_by_problem(md: str) -> tuple[str, dict[int, str]]:
+    """마크다운을 헤더 + {문제번호: 블록}으로 분할 (문제번호 줄 기준)."""
+    head: list[str] = []
+    blocks: dict[int, str] = {}
+    cur_num: int | None = None
+    cur: list[str] = []
+    for line in md.split("\n"):
+        m = re.match(r"^\s*(\d{1,2})[.．]\s", line)
+        if m:
+            if cur_num is None:
+                head = cur
+            else:
+                blocks[cur_num] = "\n".join(cur)
+            cur_num, cur = int(m.group(1)), [line]
+        else:
+            cur.append(line)
+    if cur_num is not None:
+        blocks[cur_num] = "\n".join(cur)
+    else:
+        head = cur
+    return "\n".join(head), blocks
+
+
+def _hybrid_merge_ocr(md_claude: str, md_mathpix: str) -> str:
+    """Claude(구조·한글·그림) + Mathpix(수식) 문제 단위 머지 → raw.md.
+
+    문제번호로 양쪽을 분할해 merge_all(수식=Mathpix 위치교체, 개수 큰차이 시 Haiku 보정)로
+    합친다. 구조·선택지·그림 마커는 Claude 기준 유지.
+    """
+    from src.ocr.ocr_merger import merge_all
+    head_c, vis = _split_by_problem(md_claude)
+    _, mpx = _split_by_problem(md_mathpix)
+    client = None
+    key = os.environ.get("ANTHROPIC_API_KEY", "")
+    if key:
+        try:
+            import anthropic
+            client = anthropic.Anthropic(api_key=key)
+        except ImportError:
+            pass
+    merged = merge_all(vis, mpx, client=client)
+    body = "\n\n".join(merged[n] for n in sorted(merged))
+    print(f"  하이브리드 머지: 문제 {len(merged)}개 (구조=Claude, 수식=Mathpix)")
+    return (head_c.rstrip() + "\n\n" + body) if head_c.strip() else body
+
+
 def convert(pdf_path: Path, filter_hw: bool = False, ocr_engine: str = "mathpix", full_content: bool = False, force_ocr: bool = False, clean_handwriting: bool = False) -> Path:
     # 회전 정상화 (회전된 페이지가 있으면 보정 PDF로 교체)
     original_pdf = pdf_path                          # 캐시 키는 원본 기준 (rotfix 바이트 변동 무시)
@@ -81,6 +127,15 @@ def convert(pdf_path: Path, filter_hw: bool = False, ocr_engine: str = "mathpix"
 
     if ocr_engine == "claude":
         md = read_pdf_as_markdown(pdf_path, full_content=full_content)
+    elif ocr_engine == "hybrid":
+        # Claude(구조·한글·그림) + Mathpix(수식) 문제 단위 머지
+        md_claude = read_pdf_as_markdown(pdf_path, full_content=full_content)
+        client = MathpixClient()
+        pdf_id = client.submit_pdf(pdf_path, force=force_ocr, cache_key_path=cache_key)
+        if client.last_pdf_cached:
+            print(f"  Mathpix 캐시 재사용 (pdf_id={pdf_id})")
+        client.poll_pdf(pdf_id, progress=True)
+        md = _hybrid_merge_ocr(md_claude, client.fetch_pdf_markdown(pdf_id))
     else:
         client = MathpixClient()
         pdf_id = client.submit_pdf(pdf_path, force=force_ocr, cache_key_path=cache_key)
@@ -240,7 +295,7 @@ if __name__ == "__main__":
             ocr_engine = args[i + 1]
         elif a.startswith("--ocr-engine="):
             ocr_engine = a.split("=", 1)[1]
-    if ocr_engine not in ("mathpix", "claude"):
+    if ocr_engine not in ("mathpix", "claude", "hybrid"):
         print(f"알 수 없는 OCR 엔진: {ocr_engine}  (mathpix|claude)")
         sys.exit(1)
 
