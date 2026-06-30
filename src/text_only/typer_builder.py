@@ -84,6 +84,7 @@ class FormatProfile:
     ref_template: Path      # header.xml 소스
     prv_title: str
     col_count: int = 2
+    title_block: bool = False   # 상단 제목블록(로고+제목+쪽번호+과목박스+범위) 주입 (수학비서)
 
 
 # 타이퍼 = 기존 동작 (모듈 상수 그대로) → 무회귀
@@ -93,12 +94,20 @@ TYPER = FormatProfile(
     meta_table=True, remap_styles=True, ref_template=_REF_TYPER, prv_title='타이퍼 양식',
 )
 
-# 수학비서(학원) = B4 2단 명조, 메타표 없음, 스타일 유지 (서울세종고.hwpx 기준)
+# 수학비서(학원) = B4 2단 명조, 메타표 없음, 스타일 유지, 제목블록 주입 (서울세종고.hwpx 기준)
 SUHBISEO = FormatProfile(
     name='수학비서', page_w=72852, page_h=103180, ml=5102, mr=5102, mt=4251, mb=3685,
     mh=5669, mf=3685, col_gap=2268, col_w=30190,
     meta_table=False, remap_styles=False, ref_template=_REF_SUHBISEO, prv_title='수학비서 양식',
+    title_block=True,
 )
+
+# 과목 약어 → 정식 표기 (제목블록 과목 박스용)
+_SUBJECT_MAP = {
+    '수상': '수학상', '수하': '수학하', '수1': '수학Ⅰ', '수2': '수학Ⅱ',
+    '미적분': '미적분', '확통': '확률과통계', '기하': '기하',
+    '공수1': '공통수학1', '공수2': '공통수학2', '확률과통계': '확률과통계',
+}
 
 _PROFILES = {'타이퍼': TYPER, '수학비서': SUHBISEO}
 
@@ -284,6 +293,15 @@ def _extract_exam_code(registry_key: str) -> str:
     key = registry_key.strip('[]')
     parts = key.rsplit('_', 1)
     return parts[0] if len(parts) > 1 else key
+
+
+def _find_range(top_paras: list[str]) -> str:
+    """범위줄(예: '다항식의 연산 ~ 이차함수') 추정 — 본문 앞쪽 '~' 포함 짧은 단락."""
+    for p in top_paras[:8]:
+        t = _para_text(p)
+        if '~' in t and not re.match(r'^\s*\d', t) and 4 <= len(t) <= 60:
+            return t
+    return ''
 
 
 # ── 타이퍼 빌더 ──────────────────────────────────────────────────────
@@ -530,6 +548,46 @@ class _TyprWriter:
             r'|centerX|centerY|vertsize|textheight|baseline)="(\d+)"',
             _sc, xml)
 
+    # ── 수학비서 상단 제목블록 ──────────────────────────────────────
+
+    @staticmethod
+    def _title_line(parts: list[str], subj_abbr: str, school: str) -> str:
+        try:
+            yy, grade, sem = parts[0][2:], parts[1], parts[2]
+            mid = '중간' if parts[3] == 'a' else '기말'
+            return f'(기출) {yy} 고{grade}-{sem} {mid} {subj_abbr} {school}'.strip()
+        except Exception:
+            return school
+
+    def _title_block(self, exam_code: str, school: str, range_text: str) -> str:
+        """ref_template(서울세종고)에서 제목블록 6단락을 추출해 텍스트 3개만 치환.
+
+        로고(image2)·쪽번호표(autoNum)·과목 박스(hp:rect) 구조는 그대로 보존.
+        실패하면 '' 반환(제목블록 없이 진행 — 안전).
+        """
+        try:
+            with zipfile.ZipFile(self.pf.ref_template) as zf:
+                ref = zf.read('Contents/section0.xml').decode('utf-8')
+            body  = ref[ref.find('</hp:secPr>') + len('</hp:secPr>'):]
+            paras = _extract_top_paras(body)[:6]
+            if len(paras) < 6:
+                return ''
+            block   = ''.join(paras)
+            ec      = exam_code.split('_')
+            subj_ab = ec[4] if len(ec) > 4 else ''
+            subject = _SUBJECT_MAP.get(subj_ab, subj_ab)
+            title   = self._title_line(ec, subj_ab, school)
+            block = block.replace('(강남 기출) 24 고1-1 중간 수상 서울세종고', _xe(title))
+            block = block.replace('<hp:t>수학상</hp:t>', f'<hp:t>{_xe(subject)}</hp:t>')
+            block = block.replace('다항식의 연산 ~ 이차함수와 이차방정식', _xe(range_text or ''))
+            # 외부 단락 id 재발급(우리 본문과 충돌 방지)
+            return ''.join(
+                re.sub(r'\bid="[^"]*"', f'id="{self._pid()}"', p, count=1)
+                for p in _extract_top_paras(block)
+            )
+        except Exception:
+            return ''
+
     # ── 전체 섹션 XML ────────────────────────────────────────────────
 
     def build_section(
@@ -565,6 +623,11 @@ class _TyprWriter:
 
         # XML 조립
         parts: list[str] = [self._secpr_para()]
+        # 수학비서: 상단 제목블록(로고+제목+쪽번호+과목박스+범위) 주입
+        if self.pf.title_block:
+            tb = self._title_block(exam_code, school, _find_range(top_paras))
+            if tb:
+                parts.append(tb)
         for prob_no, score, paras in problems:
             # 타이퍼만 문제별 1×6 메타표 삽입. 수학비서는 문제번호 본문만(메타표 없음).
             if self.pf.meta_table:
@@ -630,6 +693,16 @@ def build_typer_hwpx(
             for name in zf.namelist()
             if name.startswith('BinData/')
         }
+
+    # 제목블록 양식(수학비서): 로고 등 BinData를 ref_template에서 가져온다(없으면 무시)
+    if profile.title_block:
+        try:
+            with zipfile.ZipFile(ref_template, 'r') as zf:
+                for name in zf.namelist():
+                    if name.startswith('BinData/'):
+                        bindata.setdefault(name, zf.read(name))
+        except Exception:
+            pass
 
     # 멱등 가드: 이미 2단 타이퍼 양식(2단 colCount 또는 1×6 메타표)이면
     # 이중 변환하지 않고 그대로 복사 — 본 변환이 2단을 내보내므로 필요.
