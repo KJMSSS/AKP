@@ -9,6 +9,7 @@ from __future__ import annotations
 import re
 import shutil
 import zipfile
+from dataclasses import dataclass
 from pathlib import Path
 from xml.sax.saxutils import escape as _xe
 
@@ -54,19 +55,63 @@ _1DAN_TW = 48189
 
 # 기본 참조 템플릿 (header.xml 소스)
 # samples/template.hwpx 는 git 추적 파일 — Railway 배포 환경에서도 항상 존재
-_ROOT_DIR  = Path(__file__).resolve().parent.parent.parent
-_REF_TYPER = _ROOT_DIR / 'samples' / 'template.hwpx'
+_ROOT_DIR     = Path(__file__).resolve().parent.parent.parent
+_REF_TYPER    = _ROOT_DIR / 'samples' / 'template.hwpx'
+_REF_SUHBISEO = _ROOT_DIR / 'samples' / 'suhbiseo_template.hwpx'   # 수학비서(서울세종고) 명조 header
+
+
+# ── 출력 양식 프로필 ─────────────────────────────────────────────────
+@dataclass(frozen=True)
+class FormatProfile:
+    """출력 양식 = 페이지 기하 + 메타표/스타일 정책 + header.xml 소스.
+
+    타이퍼: A3 2단 + 문제별 1×6 메타표 + 스타일 재매핑(template.hwpx 화려 폰트).
+    수학비서: B4 2단, 메타표 없음, 1단 스타일 ID 유지(서울세종고 명조 header).
+    """
+    name: str
+    page_w: int
+    page_h: int
+    ml: int
+    mr: int
+    mt: int
+    mb: int
+    mh: int
+    mf: int
+    col_gap: int
+    col_w: int
+    meta_table: bool        # 문제별 1×6 메타표 삽입 (타이퍼 전용)
+    remap_styles: bool      # _adapt_para 스타일 ID 재매핑 (타이퍼 전용)
+    ref_template: Path      # header.xml 소스
+    prv_title: str
+    col_count: int = 2
+
+
+# 타이퍼 = 기존 동작 (모듈 상수 그대로) → 무회귀
+TYPER = FormatProfile(
+    name='타이퍼', page_w=_PW2, page_h=_PH2, ml=_ML2, mr=_MR2, mt=_MT2, mb=_MB2,
+    mh=_MH2, mf=_MF2, col_gap=_COL_GAP, col_w=_COL_W,
+    meta_table=True, remap_styles=True, ref_template=_REF_TYPER, prv_title='타이퍼 양식',
+)
+
+# 수학비서(학원) = B4 2단 명조, 메타표 없음, 스타일 유지 (서울세종고.hwpx 기준)
+SUHBISEO = FormatProfile(
+    name='수학비서', page_w=72852, page_h=103180, ml=5102, mr=5102, mt=4251, mb=3685,
+    mh=5669, mf=3685, col_gap=2268, col_w=30190,
+    meta_table=False, remap_styles=False, ref_template=_REF_SUHBISEO, prv_title='수학비서 양식',
+)
+
+_PROFILES = {'타이퍼': TYPER, '수학비서': SUHBISEO}
 
 
 # ── 보조 XML ─────────────────────────────────────────────────────────
 
-def _masterpage_xml() -> bytes:
+def _masterpage_xml(col_w: int = _COL_W) -> bytes:
     return (
         '<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>'
         f'<masterPage {_NS} id="masterpage0" type="BOTH" '
         'pageNumber="0" pageDuplicate="0" pageFront="0">'
         f'<hp:subList id="" textDirection="HORIZONTAL" lineWrap="BREAK" vertAlign="TOP" '
-        f'linkListIDRef="0" linkListNextIDRef="0" textWidth="{_COL_W}" textHeight="0" '
+        f'linkListIDRef="0" linkListNextIDRef="0" textWidth="{col_w}" textHeight="0" '
         'hasTextRef="0" hasNumRef="0">'
         '<hp:p id="0" paraPrIDRef="0" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">'
         '<hp:run charPrIDRef="0"/>'
@@ -77,7 +122,7 @@ def _masterpage_xml() -> bytes:
     ).encode('utf-8')
 
 
-def _content_hpf_xml(bindata_names: list[str] | None = None) -> bytes:
+def _content_hpf_xml(bindata_names: list[str] | None = None, title: str = '타이퍼 양식') -> bytes:
     """content.hpf — BinData 파일 목록을 포함해 동적 생성."""
     items = (
         '<opf:item id="header" href="Contents/header.xml" media-type="application/xml"/>'
@@ -97,7 +142,7 @@ def _content_hpf_xml(bindata_names: list[str] | None = None) -> bytes:
         '<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>'
         '<opf:package xmlns:opf="http://www.idpf.org/2007/opf/" '
         'xmlns:dc="http://purl.org/dc/elements/1.1/" version="" unique-identifier="" id="">'
-        '<opf:metadata><opf:title>타이퍼 양식</opf:title><opf:language>ko</opf:language></opf:metadata>'
+        f'<opf:metadata><opf:title>{_xe(title)}</opf:title><opf:language>ko</opf:language></opf:metadata>'
         f'<opf:manifest>{items}</opf:manifest>'
         '<opf:spine><opf:itemref idref="section0"/></opf:spine>'
         '</opf:package>'
@@ -245,7 +290,8 @@ def _extract_exam_code(registry_key: str) -> str:
 
 class _TyprWriter:
 
-    def __init__(self):
+    def __init__(self, profile: FormatProfile = TYPER):
+        self.pf       = profile
         self._para_id = 10
         self._eq_id   = 3000
         self._eq_z    = 1
@@ -279,9 +325,9 @@ class _TyprWriter:
             'border="SHOW_ALL" fill="SHOW_ALL" hideFirstPageNum="0" '
             'hideFirstEmptyLine="0" showLineNumber="0"/>'
             '<hp:lineNumberShape restartType="0" countBy="0" distance="0" startNumber="0"/>'
-            f'<hp:pagePr landscape="WIDELY" width="{_PW2}" height="{_PH2}" gutterType="LEFT_ONLY">'
-            f'<hp:margin header="{_MH2}" footer="{_MF2}" gutter="0" '
-            f'left="{_ML2}" right="{_MR2}" top="{_MT2}" bottom="{_MB2}"/>'
+            f'<hp:pagePr landscape="WIDELY" width="{self.pf.page_w}" height="{self.pf.page_h}" gutterType="LEFT_ONLY">'
+            f'<hp:margin header="{self.pf.mh}" footer="{self.pf.mf}" gutter="0" '
+            f'left="{self.pf.ml}" right="{self.pf.mr}" top="{self.pf.mt}" bottom="{self.pf.mb}"/>'
             '</hp:pagePr>'
             '<hp:footNotePr>'
             '<hp:autoNumFormat type="DIGIT" userChar="" prefixChar="" suffixChar=")" supscript="0"/>'
@@ -292,7 +338,7 @@ class _TyprWriter:
             '</hp:footNotePr>'
             '<hp:endNotePr>'
             '<hp:autoNumFormat type="DIGIT" userChar="" prefixChar="" suffixChar=")" supscript="0"/>'
-            f'<hp:noteLine length="{_COL_W}" type="SOLID" width="0.12 mm" color="#000000"/>'
+            f'<hp:noteLine length="{self.pf.col_w}" type="SOLID" width="0.12 mm" color="#000000"/>'
             '<hp:noteSpacing betweenNotes="2834" belowLine="567" aboveLine="850"/>'
             '<hp:numbering type="CONTINUOUS" newNum="1"/>'
             '<hp:placement place="END_OF_DOCUMENT" beneathText="0"/>'
@@ -300,12 +346,12 @@ class _TyprWriter:
             '<hp:masterPage idRef="masterpage0"/>'
             '</hp:secPr>'
             '<hp:ctrl>'
-            f'<hp:colPr id="" type="NEWSPAPER" layout="LEFT" colCount="2" sameSz="1" sameGap="{_COL_GAP}"/>'
+            f'<hp:colPr id="" type="NEWSPAPER" layout="LEFT" colCount="{self.pf.col_count}" sameSz="1" sameGap="{self.pf.col_gap}"/>'
             '</hp:ctrl>'
             '</hp:run>'
             '<hp:linesegarray>'
             f'<hp:lineseg textpos="0" vertpos="0" vertsize="1000" textheight="1000" '
-            f'baseline="850" spacing="600" horzpos="0" horzsize="{_COL_W}" flags="393216"/>'
+            f'baseline="850" spacing="600" horzpos="0" horzsize="{self.pf.col_w}" flags="393216"/>'
             '</hp:linesegarray>'
             '</hp:p>'
         )
@@ -392,7 +438,7 @@ class _TyprWriter:
             f'<hp:run charPrIDRef="8">{tbl_xml}<hp:t/></hp:run>'
             '<hp:linesegarray>'
             f'<hp:lineseg textpos="0" vertpos="0" vertsize="2414" textheight="2414" '
-            f'baseline="2052" spacing="720" horzpos="0" horzsize="{_COL_W}" flags="393216"/>'
+            f'baseline="2052" spacing="720" horzpos="0" horzsize="{self.pf.col_w}" flags="393216"/>'
             '</hp:linesegarray>'
             '</hp:p>'
         )
@@ -406,19 +452,22 @@ class _TyprWriter:
         # 단락 ID 재발급 (외부 hp:p의 첫 번째 id= 만)
         xml = re.sub(r'\bid="[^"]*"', f'id="{self._pid()}"', xml, count=1)
 
-        # 스타일: 외부 hp:p의 첫 출현만 교체 (count=1)
-        xml = xml.replace('paraPrIDRef="8"', 'paraPrIDRef="5"', 1)
-        xml = xml.replace('styleIDRef="0"',  'styleIDRef="1"',  1)
-        xml = xml.replace('charPrIDRef="0"', 'charPrIDRef="8"', 1)
+        # 스타일 재매핑(타이퍼 전용): 외부 hp:p 첫 출현만 교체.
+        # 수학비서는 1단 스타일 ID(paraPr8/style0/charPr0)를 그대로 둔다 — 서울세종고
+        # header에 style id가 0 하나뿐이라 1로 매핑하면 깨짐.
+        if self.pf.remap_styles:
+            xml = xml.replace('paraPrIDRef="8"', 'paraPrIDRef="5"', 1)
+            xml = xml.replace('styleIDRef="0"',  'styleIDRef="1"',  1)
+            xml = xml.replace('charPrIDRef="0"', 'charPrIDRef="8"', 1)
 
         # lineseg horzsize → 2단 열폭
-        xml = re.sub(r'horzsize="\d+"', f'horzsize="{_COL_W}"', xml)
+        xml = re.sub(r'horzsize="\d+"', f'horzsize="{self.pf.col_w}"', xml)
 
         # 그림(hp:pic) 단락은 기하를 열폭에 맞게 따로 스케일 (표/수식 규칙 미적용)
         if '<hp:pic' in xml:
             return self._scale_pic_para(xml)
 
-        ratio = _COL_W / _1DAN_TW
+        ratio = self.pf.col_w / _1DAN_TW
 
         # 수식: ID/zOrder 재발급 + 2단 폰트에 맞춰 sz 비례 축소 (수식 블록 한정)
         def _renumber_eq(m: re.Match) -> str:
@@ -442,9 +491,9 @@ class _TyprWriter:
             if not sm:
                 return block
             tw = int(sm.group(1))
-            if tw <= _COL_W:
+            if tw <= self.pf.col_w:
                 return block  # 이미 단에 들어감
-            f = _COL_W / tw
+            f = self.pf.col_w / tw
             block = re.sub(r'<hp:sz width="\d+"',
                            f'<hp:sz width="{round(tw * f)}"', block, count=1)
             block = re.sub(
@@ -466,7 +515,7 @@ class _TyprWriter:
         if not m:
             return xml
         w0 = int(m.group(1))
-        usable = round(_COL_W * 0.94)
+        usable = round(self.pf.col_w * 0.94)
         if w0 <= usable:
             return xml  # 이미 열 안에 들어감 — 원본 유지
 
@@ -512,12 +561,15 @@ class _TyprWriter:
 
         if cur_no > 0:
             problems.append((cur_no, cur_score, cur_paras))
+        self.prob_count = len(problems)
 
         # XML 조립
         parts: list[str] = [self._secpr_para()]
         for prob_no, score, paras in problems:
-            difficulty = difficulty_map.get(prob_no, '')
-            parts.append(self._meta_table_para(school, prob_no, exam_code, difficulty, score))
+            # 타이퍼만 문제별 1×6 메타표 삽입. 수학비서는 문제번호 본문만(메타표 없음).
+            if self.pf.meta_table:
+                difficulty = difficulty_map.get(prob_no, '')
+                parts.append(self._meta_table_para(school, prob_no, exam_code, difficulty, score))
             for p in paras:
                 # 내용 없는 순수 빈 단락은 제외 (메타 표가 구분자 역할)
                 # ★ 그림(hp:pic) 단락은 텍스트·수식·표가 없어도 보존해야 함
@@ -544,23 +596,25 @@ def build_typer_hwpx(
     ref_template: Path | None = None,
     difficulty_map: dict[int, str] | None = None,
     school_name: str = '',
+    profile: FormatProfile = TYPER,
 ) -> Path:
     """
-    1단 HWPX → 2단 타이퍼 양식 변환.
+    1단 HWPX → 2단 양식 변환 (기본 타이퍼, profile로 수학비서 등 선택).
 
     Args:
         one_dan_path:   1단 파이프라인 출력 HWPX
         registry_key:   레지스트리 키 (exam_code/학교명 추출용)
         out_path:       출력 HWPX 경로
-        ref_template:   2단 참조 템플릿 (header.xml 소스). None이면 기본값 사용
-        difficulty_map: {문제번호: 난이도문자열} — 빈 셀이면 ''
+        ref_template:   header.xml 소스 override. None이면 profile.ref_template
+        difficulty_map: {문제번호: 난이도문자열} — 빈 셀이면 '' (타이퍼 메타표용)
         school_name:    학교명 override (없으면 registry_key에서 추출)
+        profile:        출력 양식 프로필 (TYPER | SUHBISEO)
 
     Returns:
         저장된 HWPX 경로
     """
     if ref_template is None:
-        ref_template = _REF_TYPER
+        ref_template = profile.ref_template
     if not ref_template.exists():
         raise FileNotFoundError(f'참조 템플릿 없음: {ref_template}')
 
@@ -589,14 +643,14 @@ def build_typer_hwpx(
         header_xml = zf.read('Contents/header.xml')
 
     # section0.xml 생성
-    writer    = _TyprWriter()
+    writer    = _TyprWriter(profile)
     sec_xml   = writer.build_section(one_dan_xml, school, exam_code, difficulty_map)
     sec_bytes = sec_xml.encode('utf-8')
 
-    prob_count = sec_xml.count('rowCnt="1" colCnt="6"')
+    prob_count = writer.prob_count
     eq_count   = sec_xml.count('<hp:equation')
     para_count = sec_xml.count('<hp:p ')
-    print(f'  [typer] 문제 {prob_count}건 / 수식 {eq_count}건 / 단락 {para_count}건')
+    print(f'  [{profile.name}] 문제 {prob_count}건 / 수식 {eq_count}건 / 단락 {para_count}건')
 
     # ZIP 패키징
     out_path.parent.mkdir(parents=True, exist_ok=True)
@@ -606,14 +660,14 @@ def build_typer_hwpx(
         zout.writestr(zipfile.ZipInfo('mimetype'), 'application/hwp+zip')
         zout.writestr('version.xml',              _VERSION_XML)
         zout.writestr('Contents/header.xml',      header_xml)
-        zout.writestr('Contents/masterpage0.xml', _masterpage_xml())
+        zout.writestr('Contents/masterpage0.xml', _masterpage_xml(profile.col_w))
         zout.writestr('Contents/section0.xml',    sec_bytes)
-        zout.writestr('Contents/content.hpf',     _content_hpf_xml(list(bindata.keys())))
+        zout.writestr('Contents/content.hpf',     _content_hpf_xml(list(bindata.keys()), profile.prv_title))
         zout.writestr('META-INF/container.xml',   _CONTAINER_XML)
         zout.writestr('META-INF/container.rdf',   _CONTAINER_RDF)
         zout.writestr('META-INF/manifest.xml',    _MANIFEST_XML)
         zout.writestr('settings.xml',             _SETTINGS_XML)
-        zout.writestr('Preview/PrvText.txt',      '타이퍼 양식'.encode('utf-8'))
+        zout.writestr('Preview/PrvText.txt',      profile.prv_title.encode('utf-8'))
         for name, data in bindata.items():
             zout.writestr(name, data)
 
@@ -627,3 +681,31 @@ def build_typer_hwpx(
         out_path = alt
 
     return out_path
+
+
+def build_suhbiseo_hwpx(
+    one_dan_path: Path,
+    registry_key: str,
+    out_path: Path,
+    ref_template: Path | None = None,
+    school_name: str = '',
+) -> Path:
+    """1단 HWPX → 2단 수학비서(학원) 양식 (B4 2단 명조, 메타표 없음)."""
+    return build_typer_hwpx(
+        one_dan_path, registry_key, out_path,
+        ref_template=ref_template, school_name=school_name, profile=SUHBISEO,
+    )
+
+
+def build_by_format(
+    one_dan_path: Path,
+    registry_key: str,
+    out_path: Path,
+    fmt: str,
+    **kwargs,
+) -> Path:
+    """양식명('타이퍼'|'수학비서')으로 2단 변환 디스패치."""
+    profile = _PROFILES.get(fmt)
+    if profile is None:
+        raise ValueError(f"알 수 없는 양식: {fmt} (가능: {', '.join(_PROFILES)})")
+    return build_typer_hwpx(one_dan_path, registry_key, out_path, profile=profile, **kwargs)

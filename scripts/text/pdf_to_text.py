@@ -11,6 +11,8 @@ PDF → 빈 HWPX 직접 타이핑 변환 (템플릿 불필요)
     --ocr-engine mathpix  (기본값) Mathpix API 사용
     --ocr-engine claude   Claude API 직접 사용 (Mathpix 구독 불필요)
     --full-content        정답·해설 포함 전체 내용 전사 (--ocr-engine claude 전용)
+    --format 수학비서      B4 2단 명조 학원(수학비서) 양식으로 2단 변환
+    --format 타이퍼        A3 2단 메타표 타이퍼 양식으로 2단 변환 (미지정 시 1단까지만)
 
 동작:
     파일명에 풀이본 마커(쫑/쭌/DJ/훈)가 있으면 OCR을 자동 스킵한다(정형화본+손풀이라 무의미).
@@ -123,7 +125,7 @@ def _hw_marker_in(name: str):
     return None
 
 
-def convert(pdf_path: Path, filter_hw: bool = False, ocr_engine: str = "mathpix", full_content: bool = False, force_ocr: bool = False, clean_handwriting: bool = False) -> Path | None:
+def convert(pdf_path: Path, filter_hw: bool = False, ocr_engine: str = "mathpix", full_content: bool = False, force_ocr: bool = False, clean_handwriting: bool = False, output_format: str = "") -> Path | None:
     # 0단계: 풀이본(쫑/쭌/DJ/훈) 스킵 — 정형화본+손풀이라 OCR 무의미(과금·출력 없음).
     #         단, --clean-handwriting 명시 시엔 의도적 처리로 보고 스킵하지 않는다(손풀이 지우고 읽기).
     _mk = _hw_marker_in(pdf_path.name)
@@ -253,7 +255,12 @@ def convert(pdf_path: Path, filter_hw: bool = False, ocr_engine: str = "mathpix"
     print("[ 2단계 ] HWPX 생성")
     print("─" * 62)
 
-    base = _pick_template()
+    # 양식별 header 소스: 수학비서=서울세종고(명조), 그 외=워드초벌/template glob
+    if output_format == "수학비서":
+        _suh = SAMPLES_DIR / "suhbiseo_template.hwpx"
+        base = _suh if _suh.exists() else _pick_template()
+    else:
+        base = _pick_template()
     print(f"  헤더 참조: {base.name}")
 
     t1 = time.time()
@@ -300,6 +307,17 @@ def convert(pdf_path: Path, filter_hw: bool = False, ocr_engine: str = "mathpix"
         )
     print("  ✓ PASS")
 
+    # 양식 변환 (2단): 수학비서(B4 명조·메타표없음) / 타이퍼(A3 메타표)
+    if output_format:
+        from src.text_only.typer_builder import build_by_format
+        print()
+        print("─" * 62)
+        print(f"[ 3단계 ] {output_format} 양식 2단 변환")
+        print("─" * 62)
+        two_path = SAMPLES_DIR / f"output_text_{stem}_{output_format}.hwpx"
+        out_hwpx = build_by_format(out_hwpx, stem, two_path, output_format)
+        fix_hwpx_namespaces(str(out_hwpx))
+
     print()
     print("─" * 62)
     print(" 완료")
@@ -327,10 +345,23 @@ if __name__ == "__main__":
         print(f"알 수 없는 OCR 엔진: {ocr_engine}  (mathpix|claude)")
         sys.exit(1)
 
-    positional = [a for a in args if not a.startswith("--") and a not in ("mathpix", "claude")]
+    # --format 파싱 (출력 양식: 수학비서 | 타이퍼). 미지정이면 1단까지만.
+    output_format = ""
+    for i, a in enumerate(args):
+        if a == "--format" and i + 1 < len(args):
+            output_format = args[i + 1]
+        elif a.startswith("--format="):
+            output_format = a.split("=", 1)[1]
+    if output_format and output_format not in ("타이퍼", "수학비서"):
+        print(f"알 수 없는 양식: {output_format}  (타이퍼|수학비서)")
+        sys.exit(1)
+
+    # --ocr-engine/--format 값이 위치인자로 새지 않게 제외
+    _flag_vals = {"mathpix", "claude", "hybrid", "타이퍼", "수학비서"}
+    positional = [a for a in args if not a.startswith("--") and a not in _flag_vals]
 
     if not positional:
-        print("사용법: py scripts/text/pdf_to_text.py [PDF경로] [--filter-handwriting] [--ocr-engine mathpix|claude] [--full-content] [--force-ocr] [--clean-handwriting]")
+        print("사용법: py scripts/text/pdf_to_text.py [PDF경로] [--ocr-engine mathpix|claude|hybrid] [--format 수학비서|타이퍼] [--full-content] [--force-ocr] [--clean-handwriting]")
         sys.exit(1)
 
     pdf = Path(positional[0])
@@ -343,4 +374,4 @@ if __name__ == "__main__":
             print(f"파일 없음: {pdf}")
             sys.exit(1)
 
-    convert(pdf, filter_hw=filter_hw, ocr_engine=ocr_engine, full_content=full_content, force_ocr=force_ocr, clean_handwriting=clean_hw)
+    convert(pdf, filter_hw=filter_hw, ocr_engine=ocr_engine, full_content=full_content, force_ocr=force_ocr, clean_handwriting=clean_hw, output_format=output_format)
