@@ -323,17 +323,34 @@ def _vision_handwriting_boxes(png_bytes: bytes, api_key: str) -> list[tuple[floa
     return out
 
 
-def filter_handwriting_pdf(pdf_path: Path, api_key: str | None = None, dpi: int = 200) -> Path:
+_MIN_COLORED_PX = 800   # 유색 픽셀이 이 미만이면 잡티로 보고 마스킹 안 함
+
+
+def _colored_ink_mask(arr, sat_th: int = 45):
+    """RGB 배열에서 채도 높은(유색 펜) 픽셀 boolean 마스크 + 픽셀수.
+    인쇄 글씨(검정·회색)는 채도가 낮아 보존, 유색 펜(주황·빨강·파랑 손글씨)만 잡는다."""
+    import numpy as np
+    rgb = arr[:, :, :3].astype(np.int16)
+    sat = rgb.max(axis=2) - rgb.min(axis=2)
+    mask = sat > sat_th
+    return mask, int(mask.sum())
+
+
+def filter_handwriting_pdf(pdf_path: Path, api_key: str | None = None, dpi: int = 200,
+                           method: str = "color", sat_th: int = 45) -> Path:
     """이미지에서 학생 손풀이를 흰색 마스킹한 새 PDF 생성 — OCR 입력 정화.
 
-    회전보정 직후·OCR **전**에 호출. Claude Vision으로 손글씨 영역만 검출해 흰색으로 덮는다
-    (손글씨가 인쇄와 같은 회색이라 색필터 불가 → Vision이 유일 신뢰 방법).
-    손글씨 없는 페이지는 벡터 그대로 복사(품질 보존). 자격증명 없음/손글씨 없음/오류 →
+    회전보정 직후·OCR **전**에 호출. method:
+      "color"(기본): 유색 펜(주황·빨강·파랑 손글씨) 픽셀을 채도로 정밀 마스킹 — 무과금·픽셀단위.
+                     학원 실데이터(주황 손풀이)에 가장 효과적. 인쇄 검정 글씨는 보존.
+      "vision": Claude Vision으로 손글씨 영역 bbox 검출(연필 등 무채색 손글씨용, 과금).
+    손글씨 없는 페이지는 벡터 그대로 복사(품질 보존). 마스킹할 것 없음/오류 →
     **원본 경로 그대로 반환(no-op, 안전)**. 출력: {stem}_clean.pdf
     """
+    method = method.lower()
     key = api_key or os.environ.get("ANTHROPIC_API_KEY", "")
-    if not key:
-        print("  [손풀이] ANTHROPIC_API_KEY 없음 — 건너뜀(원본 유지)")
+    if method == "vision" and not key:
+        print("  [손풀이] (vision) ANTHROPIC_API_KEY 없음 — 원본 유지")
         return pdf_path
 
     import fitz  # PyMuPDF
@@ -347,17 +364,24 @@ def filter_handwriting_pdf(pdf_path: Path, api_key: str | None = None, dpi: int 
         rdpi = _safe_dpi(page, dpi, _RENDER_MAX_PX)
         pix = page.get_pixmap(matrix=fitz.Matrix(rdpi / 72, rdpi / 72))
         png_bytes = pix.tobytes("png")
-        boxes = _vision_handwriting_boxes(png_bytes, key)
-        if not boxes:
-            new_doc.insert_pdf(doc, from_page=i, to_page=i)   # 손글씨 없음 → 벡터 복사
-            continue
         arr = np.array(PILImage.open(io.BytesIO(png_bytes)).convert("RGB"))
         H, W = arr.shape[:2]
-        for (x0, y0, x1, y1) in boxes:
-            px0 = max(0, int(x0 / 100 * W)); px1 = min(W, int(x1 / 100 * W))
-            py0 = max(0, int(y0 / 100 * H)); py1 = min(H, int(y1 / 100 * H))
-            if px1 > px0 and py1 > py0:
-                arr[py0:py1, px0:px1] = 255   # 흰색 마스킹
+        if method == "vision":
+            boxes = _vision_handwriting_boxes(png_bytes, key)
+            if not boxes:
+                new_doc.insert_pdf(doc, from_page=i, to_page=i)   # 손글씨 없음 → 벡터 복사
+                continue
+            for (x0, y0, x1, y1) in boxes:
+                px0 = max(0, int(x0 / 100 * W)); px1 = min(W, int(x1 / 100 * W))
+                py0 = max(0, int(y0 / 100 * H)); py1 = min(H, int(y1 / 100 * H))
+                if px1 > px0 and py1 > py0:
+                    arr[py0:py1, px0:px1] = 255
+        else:   # color — 유색 펜 픽셀 정밀 마스킹
+            cmask, n_col = _colored_ink_mask(arr, sat_th)
+            if n_col < _MIN_COLORED_PX:
+                new_doc.insert_pdf(doc, from_page=i, to_page=i)   # 유색 손글씨 없음 → 벡터 복사
+                continue
+            arr[cmask] = 255
         masked_pages += 1
         buf = io.BytesIO()
         PILImage.fromarray(arr).save(buf, format="JPEG", quality=_JPG_QUALITY)
