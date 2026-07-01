@@ -71,6 +71,18 @@ def test_suhbiseo_b4_no_meta(tmp_path):
     assert 'styleIDRef="0"' in xml
 
 
+def test_suhbiseo_prob_meta_line(tmp_path):
+    """매 문제 앞 1×2 번호줄: "{제목} {번호} [{배점}점]" | "난이도 {상/중/하}"."""
+    one = _one_dan(tmp_path, _REF_SUHBISEO)
+    two = tmp_path / "suhbiseo_meta.hwpx"
+    build_suhbiseo_hwpx(one, "2026_1_1_a_공수1_테스트고", two)
+    xml = _section(two)
+    assert xml.count('rowCnt="1" colCnt="2"') == 2      # 문제 2건 → 번호줄 2개
+    assert '테스트고 1 [4.00점]' in xml                   # 1번 문제 [4점]
+    assert '테스트고 2 [3.00점]' in xml                   # 2번 문제 [3점]
+    assert '<hp:t>난이도</hp:t>' in xml                   # 난이도 미지정 시 빈 값
+
+
 def test_build_by_format_dispatch(tmp_path):
     one = _one_dan(tmp_path, _REF_SUHBISEO)
     out = build_by_format(one, "x_테스트고", tmp_path / "f.hwpx", "수학비서")
