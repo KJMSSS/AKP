@@ -85,7 +85,6 @@ class FormatProfile:
     prv_title: str
     col_count: int = 2
     title_block: bool = False   # 상단 제목블록(로고+제목+쪽번호+과목박스+범위) 주입 (수학비서)
-    prob_meta_line: bool = False  # 매 문제 앞 1×2 번호줄("{제목} {번호} [{배점}점]" | "난이도") 주입 (수학비서)
 
 
 # 타이퍼 = 기존 동작 (모듈 상수 그대로) → 무회귀
@@ -100,7 +99,7 @@ SUHBISEO = FormatProfile(
     name='수학비서', page_w=72852, page_h=103180, ml=5102, mr=5102, mt=4251, mb=3685,
     mh=5669, mf=3685, col_gap=2268, col_w=30190,
     meta_table=False, remap_styles=False, ref_template=_REF_SUHBISEO, prv_title='수학비서 양식',
-    title_block=True, prob_meta_line=True,
+    title_block=True,
 )
 
 # 과목 약어 → 정식 표기 (제목블록 과목 박스용)
@@ -111,9 +110,6 @@ _SUBJECT_MAP = {
 }
 
 _PROFILES = {'타이퍼': TYPER, '수학비서': SUHBISEO}
-
-# 매 문제 앞 번호줄(1×2) 셀 폭 비율 — 동성고 250409 실측(23302:6322 ≈ 0.7865:0.2135)
-_PMETA_W0_RATIO = 0.7865
 
 
 # ── 보조 XML ─────────────────────────────────────────────────────────
@@ -308,119 +304,16 @@ def _find_range(top_paras: list[str]) -> str:
     return ''
 
 
-def _patch_header_for_meta_line(header_xml: bytes) -> tuple[bytes, dict[str, int]]:
-    """수학비서 header.xml에 매-문제 번호줄 스타일(난이도 초록색 포함) 항목을 새 ID로 주입.
-
-    서울세종고 header에는 해당 스타일이 없고, 동성고 250409 참조본의 같은 ID 번호는
-    다른(충돌하는) 정의라 그대로 재사용할 수 없다(예: borderFill id=6 서울=가시선/동성=투명).
-    그래서 항목을 헤더에 실재하는 최대 ID + 1로 새로 추가한다.
-    borderFillIDRef="1"(무테두리)은 두 header가 바이트 동일해 그대로 재사용.
-    """
-    xml = header_xml.decode('utf-8')
-
-    def _next_id(tag: str) -> int:
-        ids = [int(m) for m in re.findall(rf'<hh:{tag} id="(\d+)"', xml)]
-        return (max(ids) + 1) if ids else 0
-
-    bf_id   = _next_id('borderFill')
-    char_lb = _next_id('charPr')
-    char_df = char_lb + 1
-    para_lb = _next_id('paraPr')
-    para_df = para_lb + 1
-
-    bf_xml = (
-        f'<hh:borderFill id="{bf_id}" threeD="0" shadow="0" centerLine="NONE" breakCellSeparateLine="0">'
-        '<hh:slash type="NONE" Crooked="0" isCounter="0"/><hh:backSlash type="NONE" Crooked="0" isCounter="0"/>'
-        '<hh:leftBorder type="NONE" width="0.12 mm" color="#000000"/>'
-        '<hh:rightBorder type="NONE" width="0.12 mm" color="#000000"/>'
-        '<hh:topBorder type="NONE" width="0.12 mm" color="#000000"/>'
-        '<hh:bottomBorder type="NONE" width="0.12 mm" color="#000000"/>'
-        '<hh:diagonal type="SOLID" width="0.1 mm" color="#000000"/>'
-        '<hc:fillBrush><hc:winBrush faceColor="none" hatchColor="#000000" alpha="0"/></hc:fillBrush>'
-        '</hh:borderFill>'
-    )
-    char_lb_xml = (
-        f'<hh:charPr id="{char_lb}" height="900" textColor="#000000" shadeColor="none" '
-        f'useFontSpace="0" useKerning="0" symMark="NONE" borderFillIDRef="{bf_id}">'
-        '<hh:fontRef hangul="1" latin="1" hanja="1" japanese="1" other="1" symbol="1" user="1"/>'
-        '<hh:ratio hangul="95" latin="95" hanja="95" japanese="95" other="95" symbol="95" user="95"/>'
-        '<hh:spacing hangul="-5" latin="-5" hanja="-5" japanese="-5" other="-5" symbol="-5" user="-5"/>'
-        '<hh:relSz hangul="100" latin="100" hanja="100" japanese="100" other="100" symbol="100" user="100"/>'
-        '<hh:offset hangul="0" latin="0" hanja="0" japanese="0" other="0" symbol="0" user="0"/>'
-        '<hh:underline type="NONE" shape="SOLID" color="#000000"/>'
-        '<hh:strikeout shape="NONE" color="#000000"/><hh:outline type="NONE"/>'
-        '<hh:shadow type="NONE" color="#C0C0C0" offsetX="10" offsetY="10"/>'
-        '</hh:charPr>'
-    )
-    char_df_xml = (
-        f'<hh:charPr id="{char_df}" height="900" textColor="#4F7429" shadeColor="none" '
-        'useFontSpace="0" useKerning="0" symMark="NONE" borderFillIDRef="1">'
-        '<hh:fontRef hangul="0" latin="0" hanja="0" japanese="0" other="0" symbol="0" user="0"/>'
-        '<hh:ratio hangul="95" latin="95" hanja="95" japanese="95" other="95" symbol="95" user="95"/>'
-        '<hh:spacing hangul="-5" latin="-5" hanja="-5" japanese="-5" other="-5" symbol="-5" user="-5"/>'
-        '<hh:relSz hangul="100" latin="100" hanja="100" japanese="100" other="100" symbol="100" user="100"/>'
-        '<hh:offset hangul="0" latin="0" hanja="0" japanese="0" other="0" symbol="0" user="0"/>'
-        '<hh:bold/>'
-        '<hh:underline type="NONE" shape="SOLID" color="#000000"/>'
-        '<hh:strikeout shape="NONE" color="#000000"/><hh:outline type="NONE"/>'
-        '<hh:shadow type="NONE" color="#C0C0C0" offsetX="10" offsetY="10"/>'
-        '</hh:charPr>'
-    )
-
-    def _para_xml(id_: int, align: str, bf: int) -> str:
-        return (
-            f'<hh:paraPr id="{id_}" tabPrIDRef="0" condense="0" fontLineHeight="0" snapToGrid="0" '
-            f'suppressLineNumbers="0" checked="0"><hh:align horizontal="{align}" vertical="BASELINE"/>'
-            '<hh:heading type="NONE" idRef="0" level="0"/>'
-            '<hh:breakSetting breakLatinWord="KEEP_WORD" breakNonLatinWord="BREAK_WORD" widowOrphan="0" '
-            'keepWithNext="0" keepLines="0" pageBreakBefore="0" lineWrap="BREAK"/>'
-            '<hh:autoSpacing eAsianEng="0" eAsianNum="0"/>'
-            '<hp:switch><hp:case hp:required-namespace="http://www.hancom.co.kr/hwpml/2016/HwpUnitChar">'
-            '<hh:margin><hc:intent value="0" unit="HWPUNIT"/><hc:left value="500" unit="HWPUNIT"/>'
-            '<hc:right value="500" unit="HWPUNIT"/><hc:prev value="0" unit="HWPUNIT"/>'
-            '<hc:next value="0" unit="HWPUNIT"/></hh:margin>'
-            '<hh:lineSpacing type="PERCENT" value="165" unit="HWPUNIT"/></hp:case>'
-            '<hp:default><hh:margin><hc:intent value="0" unit="HWPUNIT"/><hc:left value="1000" unit="HWPUNIT"/>'
-            '<hc:right value="1000" unit="HWPUNIT"/><hc:prev value="0" unit="HWPUNIT"/>'
-            '<hc:next value="0" unit="HWPUNIT"/></hh:margin>'
-            '<hh:lineSpacing type="PERCENT" value="165" unit="HWPUNIT"/></hp:default></hp:switch>'
-            f'<hh:border borderFillIDRef="{bf}" offsetLeft="0" offsetRight="0" offsetTop="0" offsetBottom="0" '
-            'connect="0" ignoreMargin="0"/></hh:paraPr>'
-        )
-
-    para_lb_xml = _para_xml(para_lb, 'LEFT', bf_id)
-    para_df_xml = _para_xml(para_df, 'RIGHT', 1)
-
-    def _insert_before(xml_: str, list_close: str, addition: str, count: int) -> str:
-        idx = xml_.index(list_close)
-        xml_ = xml_[:idx] + addition + xml_[idx:]
-        open_tag = '<hh:' + list_close[len('</hh:'):-1] + ' itemCnt="'
-        oi = xml_.index(open_tag) + len(open_tag)
-        oe = xml_.index('"', oi)
-        return xml_[:oi] + str(int(xml_[oi:oe]) + count) + xml_[oe:]
-
-    xml = _insert_before(xml, '</hh:borderFills>', bf_xml, 1)
-    xml = _insert_before(xml, '</hh:charProperties>', char_lb_xml + char_df_xml, 2)
-    xml = _insert_before(xml, '</hh:paraProperties>', para_lb_xml + para_df_xml, 2)
-
-    ids = {
-        'char_label': char_lb, 'char_diff': char_df,
-        'para_label': para_lb, 'para_diff': para_df,
-    }
-    return xml.encode('utf-8'), ids
-
-
 # ── 타이퍼 빌더 ──────────────────────────────────────────────────────
 
 class _TyprWriter:
 
-    def __init__(self, profile: FormatProfile = TYPER, meta_line_ids: dict[str, int] | None = None):
+    def __init__(self, profile: FormatProfile = TYPER):
         self.pf       = profile
         self._para_id = 10
         self._eq_id   = 3000
         self._eq_z    = 1
         self._tbl_id  = 1000
-        self._meta_line_ids = meta_line_ids
 
     def _pid(self) -> int:
         v = self._para_id; self._para_id += 1; return v
@@ -568,83 +461,6 @@ class _TyprWriter:
             '</hp:p>'
         )
 
-    # ── 매 문제 앞 1×2 번호줄 (수학비서 전용) ─────────────────────────
-
-    def _prob_meta_line_para(
-        self,
-        title_line: str,
-        prob_no: int,
-        score: float,
-        difficulty: str,
-    ) -> str:
-        """"{제목} {번호} [{배점}점]" | "난이도 {상/중/하}" 1×2 표 — 매 문제 앞 반복.
-
-        서울세종고 header에 없는 스타일이라 build_typer_hwpx가 미리 주입한
-        _meta_line_ids(charPr/paraPr)를 사용한다. 표 테두리는 borderFillIDRef="1"
-        (무테두리, 두 header 공통 정의)로 재사용해 header 패치를 최소화한다.
-        """
-        ids = self._meta_line_ids
-        prob_label = f'서술형 {prob_no - 100}' if prob_no > 100 else str(prob_no)
-        cell0_text = f'{title_line} {prob_label} [{score:.2f}점]'
-        cell1_text = f'난이도 {difficulty}'.rstrip()
-
-        tbl_h   = 2032
-        total_w = self.pf.col_w
-        w0      = round(total_w * _PMETA_W0_RATIO)
-        w1      = total_w - w0
-
-        def _cell(text: str, col_addr: int, width: int, para_pr: int, char_pr: int) -> str:
-            horzsize = width - 1020
-            return (
-                '<hp:tc name="" header="0" hasMargin="0" protect="0" editable="0" dirty="0" '
-                'borderFillIDRef="1">'
-                '<hp:subList id="" textDirection="HORIZONTAL" lineWrap="BREAK" vertAlign="CENTER" '
-                'linkListIDRef="0" linkListNextIDRef="0" textWidth="0" textHeight="0" '
-                'hasTextRef="0" hasNumRef="0">'
-                f'<hp:p id="0" paraPrIDRef="{para_pr}" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">'
-                f'<hp:run charPrIDRef="{char_pr}"><hp:t>{_xe(text)}</hp:t></hp:run>'
-                '<hp:linesegarray>'
-                f'<hp:lineseg textpos="0" vertpos="0" vertsize="900" textheight="900" '
-                f'baseline="765" spacing="584" horzpos="500" horzsize="{horzsize}" flags="393216"/>'
-                '</hp:linesegarray></hp:p></hp:subList>'
-                f'<hp:cellAddr colAddr="{col_addr}" rowAddr="0"/><hp:cellSpan colSpan="1" rowSpan="1"/>'
-                f'<hp:cellSz width="{width}" height="{tbl_h}"/>'
-                '<hp:cellMargin left="510" right="510" top="141" bottom="141"/></hp:tc>'
-            )
-
-        cells_xml = (
-            _cell(cell0_text, 0, w0, ids['para_label'], ids['char_label'])
-            + _cell(cell1_text, 1, w1, ids['para_diff'], ids['char_diff'])
-        )
-
-        tbl_xml = (
-            f'<hp:tbl id="{self._tid()}" zOrder="{self._ez()}" '
-            'numberingType="TABLE" textWrap="TOP_AND_BOTTOM" textFlow="BOTH_SIDES" '
-            'lock="0" dropcapstyle="None" pageBreak="CELL" repeatHeader="1" '
-            'rowCnt="1" colCnt="2" cellSpacing="0" borderFillIDRef="1" noAdjust="0">'
-            f'<hp:sz width="{total_w}" widthRelTo="ABSOLUTE" height="{tbl_h}" '
-            'heightRelTo="ABSOLUTE" protect="0"/>'
-            '<hp:pos treatAsChar="1" affectLSpacing="0" flowWithText="1" allowOverlap="0" '
-            'holdAnchorAndSO="0" vertRelTo="PARA" horzRelTo="PARA" vertAlign="TOP" '
-            'horzAlign="LEFT" vertOffset="0" horzOffset="0"/>'
-            '<hp:outMargin left="0" right="0" top="0" bottom="0"/>'
-            '<hp:inMargin left="0" right="0" top="566" bottom="566"/>'
-            f'<hp:tr>{cells_xml}</hp:tr>'
-            '</hp:tbl>'
-        )
-
-        return (
-            f'<hp:p id="{self._pid()}" paraPrIDRef="8" styleIDRef="0" '
-            'pageBreak="0" columnBreak="0" merged="0">'
-            f'<hp:run charPrIDRef="0">{tbl_xml}<hp:t/></hp:run>'
-            '<hp:linesegarray>'
-            f'<hp:lineseg textpos="0" vertpos="0" vertsize="{tbl_h}" textheight="{tbl_h}" '
-            f'baseline="{round(tbl_h * 0.85)}" spacing="{round(tbl_h * 0.3)}" horzpos="0" '
-            f'horzsize="{total_w}" flags="393216"/>'
-            '</hp:linesegarray>'
-            '</hp:p>'
-        )
-
     # ── 1단 → 2단 단락 변환 ─────────────────────────────────────────
 
     def _adapt_para(self, para_xml: str) -> str:
@@ -743,7 +559,7 @@ class _TyprWriter:
         except Exception:
             return school
 
-    def _title_block(self, title: str, subj_ab: str, range_text: str) -> str:
+    def _title_block(self, exam_code: str, school: str, range_text: str) -> str:
         """ref_template(서울세종고)에서 제목블록 6단락을 추출해 텍스트 3개만 치환.
 
         로고(image2)·쪽번호표(autoNum)·과목 박스(hp:rect) 구조는 그대로 보존.
@@ -757,7 +573,10 @@ class _TyprWriter:
             if len(paras) < 6:
                 return ''
             block   = ''.join(paras)
+            ec      = exam_code.split('_')
+            subj_ab = ec[4] if len(ec) > 4 else ''
             subject = _SUBJECT_MAP.get(subj_ab, subj_ab)
+            title   = self._title_line(ec, subj_ab, school)
             block = block.replace('(강남 기출) 24 고1-1 중간 수상 서울세종고', _xe(title))
             block = block.replace('<hp:t>수학상</hp:t>', f'<hp:t>{_xe(subject)}</hp:t>')
             block = block.replace('다항식의 연산 ~ 이차함수와 이차방정식', _xe(range_text or ''))
@@ -803,23 +622,17 @@ class _TyprWriter:
         self.prob_count = len(problems)
 
         # XML 조립
-        ec      = exam_code.split('_')
-        subj_ab = ec[4] if len(ec) > 4 else ''
-        title_line = self._title_line(ec, subj_ab, school)
-
         parts: list[str] = [self._secpr_para()]
         # 수학비서: 상단 제목블록(로고+제목+쪽번호+과목박스+범위) 주입
         if self.pf.title_block:
-            tb = self._title_block(title_line, subj_ab, _find_range(top_paras))
+            tb = self._title_block(exam_code, school, _find_range(top_paras))
             if tb:
                 parts.append(tb)
         for prob_no, score, paras in problems:
-            difficulty = difficulty_map.get(prob_no, '')
-            # 타이퍼만 문제별 1×6 메타표 삽입. 수학비서는 문제별 1×2 번호줄 삽입.
+            # 타이퍼만 문제별 1×6 메타표 삽입. 수학비서는 문제번호 본문만(메타표 없음).
             if self.pf.meta_table:
+                difficulty = difficulty_map.get(prob_no, '')
                 parts.append(self._meta_table_para(school, prob_no, exam_code, difficulty, score))
-            if self.pf.prob_meta_line:
-                parts.append(self._prob_meta_line_para(title_line, prob_no, score, difficulty))
             for p in paras:
                 # 내용 없는 순수 빈 단락은 제외 (메타 표가 구분자 역할)
                 # ★ 그림(hp:pic) 단락은 텍스트·수식·표가 없어도 보존해야 함
@@ -902,13 +715,8 @@ def build_typer_hwpx(
     with zipfile.ZipFile(ref_template, 'r') as zf:
         header_xml = zf.read('Contents/header.xml')
 
-    # 수학비서: 매 문제 앞 번호줄 스타일(charPr/paraPr/borderFill) 신규 ID로 주입
-    meta_line_ids = None
-    if profile.prob_meta_line:
-        header_xml, meta_line_ids = _patch_header_for_meta_line(header_xml)
-
     # section0.xml 생성
-    writer    = _TyprWriter(profile, meta_line_ids)
+    writer    = _TyprWriter(profile)
     sec_xml   = writer.build_section(one_dan_xml, school, exam_code, difficulty_map)
     sec_bytes = sec_xml.encode('utf-8')
 
