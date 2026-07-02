@@ -281,15 +281,32 @@ def _parse_prob_header(para_xml: str) -> tuple[int, float]:
     return int(m.group(1)), _score(text)
 
 
+# 정규 시험코드 패턴 YYYY_G_S_[ab]_과목_학교 — 지역/범위 태그가 붙은 파일명 stem에서도 코드부만 추출
+# 예: '(광주)[2024_1_1_a_수상_고려고][다항식의 연산 ~ …]' → (2024,1,1,a,수상,고려고)
+_EXAM_CODE_RE = re.compile(r'(\d{4})_(\d)_(\d)_([ab])_([^_\[\]]+)_([^_\[\]]+)')
+
+
+def _extract_region(registry_key: str) -> str:
+    """'(광주)[2024_1_1_a_수상_고려고]…' → '광주' (제목줄 지역 태그). 없으면 ''."""
+    m = re.match(r'\s*\(([가-힣A-Za-z]{1,8})\)', registry_key)
+    return m.group(1) if m else ''
+
+
 def _extract_school(registry_key: str) -> str:
-    """'[2025_2_1_b_공수1_경신여고]' → '경신여고'"""
+    """'[2025_2_1_b_공수1_경신여고]' / '(광주)[2024_1_1_a_수상_고려고][범위]' → 학교명."""
+    m = _EXAM_CODE_RE.search(registry_key)
+    if m:
+        return m.group(6)
     key = registry_key.strip('[]')
     parts = key.rsplit('_', 1)
     return parts[-1] if parts else key
 
 
 def _extract_exam_code(registry_key: str) -> str:
-    """'[2025_2_1_b_공수1_경신여고]' → '2025_2_1_b_공수1'"""
+    """'[2025_2_1_b_공수1_경신여고]' / '(광주)[2024…][범위]' → '2025_2_1_b_공수1'(코드부, 학교 제외)."""
+    m = _EXAM_CODE_RE.search(registry_key)
+    if m:
+        return '_'.join(m.groups()[:5])  # YYYY_G_S_ab_과목
     key = registry_key.strip('[]')
     parts = key.rsplit('_', 1)
     return parts[0] if len(parts) > 1 else key
@@ -551,15 +568,16 @@ class _TyprWriter:
     # ── 수학비서 상단 제목블록 ──────────────────────────────────────
 
     @staticmethod
-    def _title_line(parts: list[str], subj_abbr: str, school: str) -> str:
+    def _title_line(parts: list[str], subj_abbr: str, school: str, region: str = '') -> str:
         try:
             yy, grade, sem = parts[0][2:], parts[1], parts[2]
             mid = '중간' if parts[3] == 'a' else '기말'
-            return f'(기출) {yy} 고{grade}-{sem} {mid} {subj_abbr} {school}'.strip()
+            tag = f'({region} 기출)' if region else '(기출)'  # 지역: 광주/강남 … (파일명에서)
+            return f'{tag} {yy} 고{grade}-{sem} {mid} {subj_abbr} {school}'.strip()
         except Exception:
             return school
 
-    def _title_block(self, exam_code: str, school: str, range_text: str) -> str:
+    def _title_block(self, exam_code: str, school: str, range_text: str, region: str = '') -> str:
         """ref_template(서울세종고)에서 제목블록 6단락을 추출해 텍스트 3개만 치환.
 
         로고(image2)·쪽번호표(autoNum)·과목 박스(hp:rect) 구조는 그대로 보존.
@@ -576,7 +594,7 @@ class _TyprWriter:
             ec      = exam_code.split('_')
             subj_ab = ec[4] if len(ec) > 4 else ''
             subject = _SUBJECT_MAP.get(subj_ab, subj_ab)
-            title   = self._title_line(ec, subj_ab, school)
+            title   = self._title_line(ec, subj_ab, school, region)
             block = block.replace('(강남 기출) 24 고1-1 중간 수상 서울세종고', _xe(title))
             block = block.replace('<hp:t>수학상</hp:t>', f'<hp:t>{_xe(subject)}</hp:t>')
             block = block.replace('다항식의 연산 ~ 이차함수와 이차방정식', _xe(range_text or ''))
@@ -596,6 +614,7 @@ class _TyprWriter:
         school: str,
         exam_code: str,
         difficulty_map: dict[int, str],
+        region: str = '',
     ) -> str:
         top_paras = _extract_top_paras(one_dan_xml)
 
@@ -625,7 +644,7 @@ class _TyprWriter:
         parts: list[str] = [self._secpr_para()]
         # 수학비서: 상단 제목블록(로고+제목+쪽번호+과목박스+범위) 주입
         if self.pf.title_block:
-            tb = self._title_block(exam_code, school, _find_range(top_paras))
+            tb = self._title_block(exam_code, school, _find_range(top_paras), region)
             if tb:
                 parts.append(tb)
         for prob_no, score, paras in problems:
@@ -684,6 +703,7 @@ def build_typer_hwpx(
     difficulty_map = difficulty_map or {}
     school    = school_name or _extract_school(registry_key)
     exam_code = _extract_exam_code(registry_key)
+    region    = _extract_region(registry_key)   # 파일명 앞 (광주)/(강남) → 제목줄 지역 태그
 
     # 1단 section0.xml 읽기
     with zipfile.ZipFile(one_dan_path, 'r') as zf:
@@ -717,7 +737,7 @@ def build_typer_hwpx(
 
     # section0.xml 생성
     writer    = _TyprWriter(profile)
-    sec_xml   = writer.build_section(one_dan_xml, school, exam_code, difficulty_map)
+    sec_xml   = writer.build_section(one_dan_xml, school, exam_code, difficulty_map, region)
     sec_bytes = sec_xml.encode('utf-8')
 
     prob_count = writer.prob_count

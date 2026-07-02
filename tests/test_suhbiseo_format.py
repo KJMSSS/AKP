@@ -16,6 +16,7 @@ from src.text_only.text_builder import build_from_markdown
 from src.text_only.typer_builder import (
     build_typer_hwpx, build_suhbiseo_hwpx, build_by_format,
     _REF_TYPER, _REF_SUHBISEO,
+    _extract_region, _extract_school, _extract_exam_code,
 )
 
 pytestmark = pytest.mark.skipif(
@@ -69,6 +70,37 @@ def test_suhbiseo_b4_no_meta(tmp_path):
     assert 'rowCnt="1" colCnt="6"' not in xml    # 메타표 없음(수학비서)
     # 수학비서는 스타일 재매핑 안 함 → 본문 단락이 1단 스타일(styleIDRef=0) 유지
     assert 'styleIDRef="0"' in xml
+
+
+def test_region_extraction():
+    """파일명 앞 (광주)/(강남) → 지역 태그. 지저분한 stem에서도 코드/학교 견고 추출."""
+    # 광주 학교 (범위 태그까지 붙은 실제 파일명 stem)
+    k = "(광주)[2024_1_1_a_수상_고려고][다항식의 연산 ~ 여러 가지 방정식]"
+    assert _extract_region(k) == "광주"
+    assert _extract_school(k) == "고려고"
+    assert _extract_exam_code(k) == "2024_1_1_a_수상"
+    # 강남 학교
+    k2 = "(강남)[2024_1_1_a_수상_서울세종고"
+    assert _extract_region(k2) == "강남"
+    assert _extract_school(k2) == "서울세종고"
+    # 지역 없는 깨끗한 키 → 지역 '' (하위호환)
+    assert _extract_region("2026_1_1_a_공수1_테스트고") == ""
+    assert _extract_school("2026_1_1_a_공수1_테스트고") == "테스트고"
+    assert _extract_exam_code("2026_1_1_a_공수1_테스트고") == "2026_1_1_a_공수1"
+
+
+def test_suhbiseo_title_region(tmp_path):
+    """수학비서 제목줄에 지역 태그가 (광주 기출)/(강남 기출) 형태로 들어간다."""
+    one = _one_dan(tmp_path, _REF_SUHBISEO)
+    # 실제 광주 파일명 stem을 registry_key로 전달
+    two = tmp_path / "suhbiseo_region.hwpx"
+    build_suhbiseo_hwpx(one, "(광주)[2024_1_1_a_수상_고려고][다항식~방정식]", two)
+    xml = _section(two)
+    assert "(광주 기출) 24 고1-1 중간 수상 고려고" in xml
+    # 강남
+    three = tmp_path / "suhbiseo_gangnam.hwpx"
+    build_suhbiseo_hwpx(one, "(강남)[2024_1_1_a_수상_서울세종고]", three)
+    assert "(강남 기출) 24 고1-1 중간 수상 서울세종고" in _section(three)
 
 
 def test_build_by_format_dispatch(tmp_path):
