@@ -568,14 +568,16 @@ class _TyprWriter:
     # ── 수학비서 상단 제목블록 ──────────────────────────────────────
 
     @staticmethod
-    def _title_line(parts: list[str], subj_abbr: str, school: str, region: str = '') -> str:
-        try:
-            yy, grade, sem = parts[0][2:], parts[1], parts[2]
-            mid = '중간' if parts[3] == 'a' else '기말'
-            tag = f'({region} 기출)' if region else '(기출)'  # 지역: 광주/강남 … (파일명에서)
-            return f'{tag} {yy} 고{grade}-{sem} {mid} {subj_abbr} {school}'.strip()
-        except Exception:
+    def _title_line(parts: list[str], school: str, region: str = '') -> str:
+        """제목줄 = canonical 기본명 '(지역)[연도_학년_학기_ab_과목_학교]'.
+
+        구버전 확장형 '(지역 기출) YY 고G-S 중간 과목 학교'는 2026-07-02 폐기.
+        """
+        code = '_'.join(p for p in parts if p)          # 2024_1_1_a_수상
+        if not (code and school):
             return school
+        prefix = f'({region})' if region else ''        # 지역: 광주/강남 (파일명에서)
+        return f'{prefix}[{code}_{school}]'             # (광주)[2024_1_1_a_수상_고려고]
 
     def _title_block(self, exam_code: str, school: str, range_text: str, region: str = '') -> str:
         """ref_template(서울세종고)에서 제목블록 6단락을 추출해 텍스트 3개만 치환.
@@ -594,7 +596,7 @@ class _TyprWriter:
             ec      = exam_code.split('_')
             subj_ab = ec[4] if len(ec) > 4 else ''
             subject = _SUBJECT_MAP.get(subj_ab, subj_ab)
-            title   = self._title_line(ec, subj_ab, school, region)
+            title   = self._title_line(ec, school, region)
             block = block.replace('(강남 기출) 24 고1-1 중간 수상 서울세종고', _xe(title))
             block = block.replace('<hp:t>수학상</hp:t>', f'<hp:t>{_xe(subject)}</hp:t>')
             block = block.replace('다항식의 연산 ~ 이차함수와 이차방정식', _xe(range_text or ''))

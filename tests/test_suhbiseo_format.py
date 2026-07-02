@@ -90,17 +90,18 @@ def test_region_extraction():
 
 
 def test_suhbiseo_title_region(tmp_path):
-    """수학비서 제목줄에 지역 태그가 (광주 기출)/(강남 기출) 형태로 들어간다."""
+    """수학비서 제목줄 = canonical 기본명 '(지역)[코드_학교]' 그대로 (구버전 '기출' 확장 폐기)."""
     one = _one_dan(tmp_path, _REF_SUHBISEO)
-    # 실제 광주 파일명 stem을 registry_key로 전달
+    # 실제 광주 파일명 stem(범위 태그까지)을 registry_key로 전달 → 범위는 제외한 기본명만
     two = tmp_path / "suhbiseo_region.hwpx"
     build_suhbiseo_hwpx(one, "(광주)[2024_1_1_a_수상_고려고][다항식~방정식]", two)
     xml = _section(two)
-    assert "(광주 기출) 24 고1-1 중간 수상 고려고" in xml
+    assert "(광주)[2024_1_1_a_수상_고려고]" in xml
+    assert "기출" not in xml                              # 구버전 확장형 제거 확인
     # 강남
     three = tmp_path / "suhbiseo_gangnam.hwpx"
     build_suhbiseo_hwpx(one, "(강남)[2024_1_1_a_수상_서울세종고]", three)
-    assert "(강남 기출) 24 고1-1 중간 수상 서울세종고" in _section(three)
+    assert "(강남)[2024_1_1_a_수상_서울세종고]" in _section(three)
 
 
 def test_build_by_format_dispatch(tmp_path):
