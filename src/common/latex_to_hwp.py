@@ -11,10 +11,31 @@ HWP 수식 표기는 LaTeX와 유사하지만 몇 가지 핵심 차이가 있다
   \\alpha               ->  alpha
   \\leq / \\geq          ->  le / ge  (ss.hwp 통일표 기준)
   x^{2}, a_{n}          ->  그대로 (동일 문법)
+  x^2, a_n (무중괄호)    ->  x^{2}, a_{n} 로 브레이스 정규화 — HWP는 ^ 뒤를 공백까지
+                            탐욕 흡수하므로(x^2+2x → x^(2+2x)) 피연산자를 반드시 {}로
+                            감싼다. 타이퍼 원본 실측: ^ 피연산자 4천여 수식에서 100% 중괄호.
 """
 import re
 
 # ── 내부 헬퍼 ─────────────────────────────────────────────────────
+
+# 지수/아래첨자 브레이스 정규화 (타이퍼 원본 실측: ^ 피연산자 100% 중괄호)
+# ※ 순서 중요 — 명령(^\alpha) → 부호(^-2) → 단일문자(^2). 이미 중괄호면 무변화.
+_SUPSUB_CMD_RE  = re.compile(r'([\^_])\s*(\\[A-Za-z]+)(?!\s*\{)')  # ^\alpha → ^{\alpha} (\frac 등 브레이스 명령 제외)
+_SUPSUB_SIGN_RE = re.compile(r'([\^_])\s*([+-])(\d)')              # ^-2 → ^{-2} (OCR 현실 보정)
+_SUPSUB_CHAR_RE = re.compile(r'([\^_])\s*([A-Za-z0-9])')           # ^2 → ^{2} (LaTeX 단일 토큰: x^23 → x^{2}3)
+
+
+def _normalize_supsub(s: str) -> str:
+    """무중괄호 지수/아래첨자를 {}로 감싼다 — 중첩(x^{2^k})까지 고정점 루프."""
+    prev = None
+    while prev != s:
+        prev = s
+        s = _SUPSUB_CMD_RE.sub(r'\1{\2}', s)
+        s = _SUPSUB_SIGN_RE.sub(r'\1{\2\3}', s)
+        s = _SUPSUB_CHAR_RE.sub(r'\1{\2}', s)
+    return s
+
 
 # 중첩 3단계까지 허용하는 브레이스 그룹
 # \frac{\sqrt{a^{2}+b^{2}}}{c} 같은 수식을 한 패스에서 처리하기 위해 3단계 필요
@@ -304,6 +325,9 @@ def convert(latex: str) -> str:
     # OCR이 \displaystyle\sum 을 \displaystylesum 으로 붙여 출력하면 sum 키워드가
     # 죽어 'displaystylesum' 리터럴로 렌더된다(18번). limits/nolimits 도 동일.
     s = re.sub(r'\\(?:display|text|script)style|\\(?:no)?limits', '', s)
+    # 무중괄호 지수/아래첨자 → {} 정규화 (x^2+2x가 x^(2+2x)로 흡수되는 것 방지).
+    # DEG 규칙보다 먼저 실행해 60^\circ 무중괄호도 ^{\circ}로 만든 뒤 DEG로 흡수.
+    s = _normalize_supsub(s)
     # ^{\circ} → DEG (ss.hwp: 60DEG not 60^{DEG})
     # 다른 변환보다 먼저 처리해야 \circ → CIRC 규칙과 충돌하지 않음
     s = re.sub(r'\^\s*\{\s*\\circ\s*\}', 'DEG', s)

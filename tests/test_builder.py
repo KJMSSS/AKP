@@ -139,7 +139,7 @@ class TestLatexToHwp:
 
     def test_left_brace(self):
         result = convert(r"\left\{ a_n \right\}")
-        assert result == "LEFT { a_n RIGHT }"
+        assert result == "LEFT { a_{n} RIGHT }"      # a_n → a_{n} 브레이스 정규화
 
     def test_set_braces_escaped(self):
         # \{...\} = 집합 리터럴 → 보이는 괄호. HWP는 맨 {}를 그룹화(비표시)로 처리해
@@ -148,8 +148,9 @@ class TestLatexToHwp:
         assert convert(r"A \cap B = \{5,7\}") == "A cap B = LEFT {5,7 RIGHT }"
 
     def test_set_builder_mid(self):
-        # \mid (집합 빌더 세로줄) → | , 중괄호 함께
-        assert convert(r"\{x \mid x^2<3\}") == "LEFT {x | x^2<3 RIGHT }"
+        # \mid (집합 빌더 세로줄) → | , 중괄호 함께. x^2 → x^{2} 정규화
+        # (구버전 x^2<3 통과는 HWP가 지수로 '2<3'을 흡수하던 잠복 버그)
+        assert convert(r"\{x \mid x^2<3\}") == "LEFT {x | x^{2}<3 RIGHT }"
 
     def test_grouping_braces_untouched(self):
         # 맨 중괄호(그룹화)는 그대로 — 지수/첨자 깨지면 안 됨
@@ -180,10 +181,24 @@ class TestLatexToHwp:
         assert result == "t LEFT (0<t<{pi} over {2} RIGHT )"
 
     def test_left_after_letter_e(self):
-        # 상일여고 6번: \int_1^e\left(...) → 'eLEFT' 붙던 버그
+        # 상일여고 6번: \int_1^e\left(...) → 'eLEFT' 붙던 버그.
+        # 브레이스 정규화 후 _1^e가 _{1}^{e}가 되어 from/to 구조로 완전 매칭(부수 개선).
         result = convert(r"\int_1^e\left(\frac{1}{x}-\frac{1}{x^2}\right)dx")
         assert "eLEFT" not in result
-        assert "e LEFT (" in result
+        assert "to {e} LEFT (" in result
+
+    def test_supsub_braced(self):
+        # 무중괄호 지수/아래첨자 → {} 정규화 (타이퍼 원본 실측 100% 중괄호 규칙).
+        # HWP는 ^ 뒤를 공백까지 탐욕 흡수하므로 x^2+2x가 x^(2+2x)로 렌더되던 버그.
+        assert convert(r"x^2+2x") == "x^{2}+2x"                  # 미리보기 1번 문제
+        assert convert(r"x^3-1") == "x^{3}-1"                    # 2번 문제
+        assert convert(r"x^2-3x+2=0") == "x^{2}-3x+2=0"          # 3번 문제
+        assert convert(r"a_1") == "a_{1}"                        # 아래첨자
+        assert convert(r"x^\alpha") == "x^{alpha}"               # 명령 지수
+        assert convert(r"x^{2}") == "x^{2}"                      # 이미 중괄호 → 무변화
+        assert convert(r"x^23") == "x^{2}3"                      # LaTeX 단일 토큰 의미 보존
+        assert convert(r"10^-2") == "10^{-2}"                    # 부호 지수 (OCR 현실 보정)
+        assert convert(r"x^{2^k}") == "x^{2^{k}}"                # 중첩 고정점
 
     def test_displaystyle_stripped(self):
         # 상일여고 18번: \displaystyle\sum → OCR이 \displaystylesum 으로 붙여
