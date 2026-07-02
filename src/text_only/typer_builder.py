@@ -85,6 +85,10 @@ class FormatProfile:
     prv_title: str
     col_count: int = 2
     title_block: bool = False   # 상단 제목블록(로고+제목+쪽번호+과목박스+범위) 주입 (수학비서)
+    gold_body: bool = False     # 골드형 본문 정형화(수학비서): 번호/배점 텍스트 제거 +
+                                # 자동번호 paraPr(6) + 선택지 가로 패킹 + 풀이공간 빈 단락
+    tab_stop: int = 7000        # secPr 탭 그리드 — 선택지 탭 정렬 기준
+    tab_stop_val: int = 3500
 
 
 # 타이퍼 = 기존 동작 (모듈 상수 그대로) → 무회귀
@@ -99,7 +103,7 @@ SUHBISEO = FormatProfile(
     name='수학비서', page_w=72852, page_h=103180, ml=5102, mr=5102, mt=4251, mb=3685,
     mh=5669, mf=3685, col_gap=2268, col_w=30190,
     meta_table=False, remap_styles=False, ref_template=_REF_SUHBISEO, prv_title='수학비서 양식',
-    title_block=True,
+    title_block=True, gold_body=True, tab_stop=8000, tab_stop_val=4000,
 )
 
 # 과목 약어 → 정식 표기 (제목블록 과목 박스용)
@@ -281,6 +285,70 @@ def _parse_prob_header(para_xml: str) -> tuple[int, float]:
     return int(m.group(1)), _score(text)
 
 
+# ── 수학비서 골드형 본문 (실측: (강남)[2024_1_1_a_수상_서울세종고.hwpx) ─────
+# 골드 업로드본은 문제 번호·배점 텍스트가 없다 — 번호는 paraPr6(heading NUMBER,
+# numbering id=2 "^1.")의 한글 자동 문단번호가 렌더하고, '점]' 표기는 0회.
+_SUHBISEO_SOLVE_GAP = 10    # 문제 뒤 풀이공간 빈 단락 수 (골드 큰 런 중앙값)
+_CHOICE_TAB_W  = 4000       # 선택지 구분 탭 폭 — 한글이 tabStop 그리드로 재계산
+_CHOICE_MARK_W = 1600       # '① ' 문자 폭 근사 (HWPUNIT)
+_CHAR_W        = 1150       # 본문 글자 폭 근사 (charPr0 height=1150)
+_CHOICE_MARKS  = '①②③④⑤'
+
+# 문제 서두의 번호/유형 레이블: "[서술형1] 19." / "19. [단답형2]" / "서술형1)" 등 순서 불문
+_GOLD_HDR_STRIP = re.compile(
+    r'^\s*'
+    r'(?:\[\s*(?:단답형|서술형)\s*\d*\s*\]\s*)?'    # [서술형1] (브래킷형, 번호 앞)
+    r'(?:서술형\s*\d{1,2}\s*[.)）]?\s*)?'           # 서술형1) (무브래킷형)
+    r'(?:\d{1,3}\s*[.．)）]\s*)?'                   # "19." / "5)"
+    r'(?:\[\s*(?:단답형|서술형)\s*\d*\s*\]\s*)?'    # 번호 뒤 레이블
+)
+_GOLD_SCORE_STRIP = re.compile(r'\s*\[\d+(?:\.\d+)?\s*점\]')
+
+
+def _gold_strip_prob_header(para_xml: str) -> str:
+    """문제 서두 단락의 첫 텍스트 run에서 선두 번호/유형 레이블 제거 (수학비서 골드형)."""
+    done = [False]
+
+    def repl(m: re.Match) -> str:
+        if done[0] or not m.group(1).strip():
+            return m.group(0)
+        done[0] = True
+        return f'<hp:t>{_GOLD_HDR_STRIP.sub("", m.group(1), count=1)}</hp:t>'
+
+    return re.sub(r'<hp:t>(.*?)</hp:t>', repl, para_xml, flags=re.DOTALL)
+
+
+def _gold_strip_scores(para_xml: str) -> str:
+    """모든 텍스트 run에서 배점 '[N점]'/'[N.5점]' 제거 (골드에 배점 표기 없음)."""
+    return re.sub(
+        r'<hp:t>(.*?)</hp:t>',
+        lambda m: f'<hp:t>{_GOLD_SCORE_STRIP.sub("", m.group(1))}</hp:t>',
+        para_xml, flags=re.DOTALL)
+
+
+def _is_choice_para(para_xml: str) -> bool:
+    """①~⑤로 시작하는 단순 선택지 단락(표/그림 없는)만 가로 패킹 대상."""
+    if '<hp:tbl' in para_xml or '<hp:pic' in para_xml:
+        return False
+    t = _para_text(para_xml)
+    return bool(t) and t[0] in _CHOICE_MARKS
+
+
+def _choice_slot_w(para_xml: str) -> int:
+    """선택지 1개의 렌더 폭 추정: ① 마크 + 수식 sz 합 + 잔여 텍스트 근사."""
+    eq_w = sum(int(w) for w in re.findall(r'<hp:sz width="(\d+)"', para_xml))
+    txt  = _para_text(para_xml)
+    extra = txt[1:].strip() if txt else ''
+    return _CHOICE_MARK_W + eq_w + len(extra) * _CHAR_W
+
+
+def _para_runs(para_xml: str) -> str:
+    """단락 XML에서 run들만 추출 (외부 hp:p 태그·linesegarray 제거) — 선택지 병합용."""
+    inner = re.sub(r'^<hp:p\b[^>]*>', '', para_xml)
+    inner = re.sub(r'</hp:p>$', '', inner)
+    return re.sub(r'<hp:linesegarray>.*?</hp:linesegarray>', '', inner, flags=re.DOTALL)
+
+
 # 정규 시험코드 패턴 YYYY_G_S_[ab]_과목_학교 — 지역/범위 태그가 붙은 파일명 stem에서도 코드부만 추출
 # 예: '(광주)[2024_1_1_a_수상_고려고][다항식의 연산 ~ …]' → (2024,1,1,a,수상,고려고)
 _EXAM_CODE_RE = re.compile(r'(\d{4})_(\d)_(\d)_([ab])_([^_\[\]]+)_([^_\[\]]+)')
@@ -352,7 +420,7 @@ class _TyprWriter:
             'pageBreak="0" columnBreak="0" merged="0">'
             '<hp:run charPrIDRef="0">'
             '<hp:secPr id="" textDirection="HORIZONTAL" spaceColumns="1200" '
-            'tabStop="7000" tabStopVal="3500" tabStopUnit="HWPUNIT" '
+            f'tabStop="{self.pf.tab_stop}" tabStopVal="{self.pf.tab_stop_val}" tabStopUnit="HWPUNIT" '
             'outlineShapeIDRef="0" memoShapeIDRef="0" textVerticalWidthHead="0" masterPageCnt="1">'
             '<hp:grid lineGrid="0" charGrid="0" wonggojiFormat="0"/>'
             '<hp:startNum pageStartsOn="BOTH" page="0" pic="0" tbl="0" equation="0"/>'
@@ -480,20 +548,26 @@ class _TyprWriter:
 
     # ── 1단 → 2단 단락 변환 ─────────────────────────────────────────
 
-    def _adapt_para(self, para_xml: str) -> str:
-        """1단 단락 XML → 2단 스타일/크기로 변환."""
+    def _adapt_para(self, para_xml: str, para_pr: str | None = None) -> str:
+        """1단 단락 XML → 2단 스타일/크기로 변환.
+
+        para_pr: 수학비서 골드형 본문 paraPr 재매핑 — 문제 서두 '6'(자동번호·165%),
+        그 외 본문 '1'(165%). None이면 재매핑 없음(1단 paraPr8=90%가 그대로 남음).
+        """
         xml = para_xml
 
         # 단락 ID 재발급 (외부 hp:p의 첫 번째 id= 만)
         xml = re.sub(r'\bid="[^"]*"', f'id="{self._pid()}"', xml, count=1)
 
         # 스타일 재매핑(타이퍼 전용): 외부 hp:p 첫 출현만 교체.
-        # 수학비서는 1단 스타일 ID(paraPr8/style0/charPr0)를 그대로 둔다 — 서울세종고
+        # 수학비서는 1단 스타일 ID(style0/charPr0)를 그대로 둔다 — 서울세종고
         # header에 style id가 0 하나뿐이라 1로 매핑하면 깨짐.
         if self.pf.remap_styles:
             xml = xml.replace('paraPrIDRef="8"', 'paraPrIDRef="5"', 1)
             xml = xml.replace('styleIDRef="0"',  'styleIDRef="1"',  1)
             xml = xml.replace('charPrIDRef="0"', 'charPrIDRef="8"', 1)
+        elif para_pr is not None:
+            xml = re.sub(r'paraPrIDRef="\d+"', f'paraPrIDRef="{para_pr}"', xml, count=1)
 
         # lineseg horzsize → 2단 열폭
         xml = re.sub(r'horzsize="\d+"', f'horzsize="{self.pf.col_w}"', xml)
@@ -564,6 +638,66 @@ class _TyprWriter:
             r'\b(width|height|x|y|right|bottom|dimwidth|dimheight'
             r'|centerX|centerY|vertsize|textheight|baseline)="(\d+)"',
             _sc, xml)
+
+    # ── 수학비서 골드형 본문 (풀이공간·선택지 패킹) ─────────────────
+
+    def _gap_para(self) -> str:
+        """풀이공간 빈 단락 — 골드와 동일 형태(paraPr1/charPr0 빈 run)."""
+        return (
+            f'<hp:p id="{self._pid()}" paraPrIDRef="1" styleIDRef="0" '
+            'pageBreak="0" columnBreak="0" merged="0">'
+            '<hp:run charPrIDRef="0"/>'
+            '<hp:linesegarray>'
+            f'<hp:lineseg textpos="0" vertpos="0" vertsize="1150" textheight="1150" '
+            f'baseline="978" spacing="748" horzpos="0" horzsize="{self.pf.col_w}" flags="393216"/>'
+            '</hp:linesegarray>'
+            '</hp:p>'
+        )
+
+    def _pack_choices(self, paras: list[str]) -> list[str]:
+        """연속된 ①~⑤ 단락을 골드처럼 탭 구분 가로 묶음(2~3개/줄)으로 병합."""
+        out: list[str] = []
+        i = 0
+        while i < len(paras):
+            if not _is_choice_para(paras[i]):
+                out.append(paras[i])
+                i += 1
+                continue
+            j = i
+            while j < len(paras) and _is_choice_para(paras[j]):
+                j += 1
+            out.extend(self._merge_choice_group(paras[i:j]))
+            i = j
+        return out
+
+    def _merge_choice_group(self, group: list[str]) -> list[str]:
+        """선택지 묶음 → 줄당 n개 병합. n은 최대 슬롯폭 기준(골드: 짧으면 3+2, 길면 2+2+1)."""
+        if len(group) < 2:
+            return group
+        slot = max(_choice_slot_w(p) for p in group)
+        col  = self.pf.col_w
+        if 3 * slot + 2 * _CHOICE_TAB_W <= col:
+            n = 3
+        elif 2 * slot + _CHOICE_TAB_W <= col:
+            n = 2
+        else:
+            return group    # 한 줄에 1개 — 세로 유지
+        glue = ('<hp:run charPrIDRef="0"><hp:t>'
+                f'<hp:tab width="{_CHOICE_TAB_W}" leader="0" type="1"/>'
+                '</hp:t></hp:run>')
+        merged: list[str] = []
+        for k in range(0, len(group), n):
+            chunk = group[k:k + n]
+            if len(chunk) == 1:
+                merged.append(chunk[0])
+                continue
+            first = chunk[0]
+            extra = ''.join(glue + _para_runs(p) for p in chunk[1:])
+            if '<hp:linesegarray>' in first:
+                merged.append(first.replace('<hp:linesegarray>', extra + '<hp:linesegarray>', 1))
+            else:
+                merged.append(first.replace('</hp:p>', extra + '</hp:p>'))
+        return merged
 
     # ── 수학비서 상단 제목블록 ──────────────────────────────────────
 
@@ -654,13 +788,27 @@ class _TyprWriter:
             if self.pf.meta_table:
                 difficulty = difficulty_map.get(prob_no, '')
                 parts.append(self._meta_table_para(school, prob_no, exam_code, difficulty, score))
+            adapted: list[str] = []
+            first_body = True
             for p in paras:
                 # 내용 없는 순수 빈 단락은 제외 (메타 표가 구분자 역할)
                 # ★ 그림(hp:pic) 단락은 텍스트·수식·표가 없어도 보존해야 함
                 if (not _para_text(p) and '<hp:equation' not in p
                         and '<hp:tbl' not in p and '<hp:pic' not in p):
                     continue
-                parts.append(self._adapt_para(p))
+                if self.pf.gold_body:
+                    # 골드형: 번호는 paraPr6 자동 문단번호가 렌더 — 텍스트 번호/배점 제거
+                    p = _gold_strip_scores(p)
+                    if first_body:
+                        p = _gold_strip_prob_header(p)
+                    adapted.append(self._adapt_para(p, para_pr='6' if first_body else '1'))
+                else:
+                    adapted.append(self._adapt_para(p))
+                first_body = False
+            if self.pf.gold_body:
+                adapted = self._pack_choices(adapted)
+                adapted.extend(self._gap_para() for _ in range(_SUHBISEO_SOLVE_GAP))
+            parts.extend(adapted)
 
         sec = (
             '<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>'

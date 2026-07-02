@@ -72,6 +72,36 @@ def test_suhbiseo_b4_no_meta(tmp_path):
     assert 'styleIDRef="0"' in xml
 
 
+def test_suhbiseo_gold_body(tmp_path):
+    """골드형 본문: 번호/배점 텍스트 제거·자동번호 paraPr6·선택지 가로 패킹·풀이공간.
+
+    근거 = 실제 업로드 골드 (강남)[2024_1_1_a_수상_서울세종고.hwpx 실측:
+    번호 텍스트 없음(paraPr6 heading NUMBER가 자동 렌더), '점]' 0회,
+    선택지 ①~⑤는 탭으로 2~3개씩 한 단락, 문제 뒤 빈 단락 다수.
+    """
+    one = _one_dan(tmp_path, _REF_SUHBISEO)
+    two = tmp_path / "suhbiseo_gold.hwpx"
+    build_suhbiseo_hwpx(one, "2026_1_1_a_공수1_테스트고", two)
+    xml = _section(two)
+
+    # (a) 배점 표기 제거
+    assert '점]' not in xml
+    # (b) 인라인 번호 제거 (원문 "1. 두 다항식…" / "2. 다음을…")
+    assert '1. 두' not in xml and '2. 다' not in xml
+    assert '두 다항식' in xml                     # 본문 자체는 보존
+    # (c) 문제 서두 = paraPr6 (자동 문단번호) — 문제 수(2)와 일치
+    assert xml.count('paraPrIDRef="6"') == 2
+    # (d) 선택지 가로 패킹 — ①과 ②가 같은 단락(탭 구분)
+    packed = [p for p in re.findall(r'<hp:p\b.*?</hp:p>', xml, re.S)
+              if '①' in p and '②' in p]
+    assert packed and '<hp:tab ' in packed[0]
+    # (e) 풀이공간 빈 단락 (문제 2개 × 10)
+    assert xml.count('<hp:run charPrIDRef="0"/>') >= 20
+    # (f) 본문 90% 줄간격 paraPr8 잔재 없음 (제목블록 밖)
+    body = xml.split('</hp:tbl>')[-1]            # 제목블록 표 이후 본문
+    assert 'paraPrIDRef="8"' not in body
+
+
 def test_region_extraction():
     """파일명 앞 (광주)/(강남) → 지역 태그. 지저분한 stem에서도 코드/학교 견고 추출."""
     # 광주 학교 (범위 태그까지 붙은 실제 파일명 stem)
