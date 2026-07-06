@@ -1,5 +1,5 @@
 # Railway(nixpacks) 빌드 설정
-# Tesseract 바이너리 — PDF 회전 보정(OSD)·그림 신뢰도 측정(kor+eng)에 필요.
-# 없으면 변환은 동작하지만 내용 기반 회전 보정이 조용히 무력화된다.
+# opencv-python(일반판)은 libGL 이 필요하다 — headless 를 못 쓰는 이유는
+# simple-lama-inpainting 이 일반판을 의존해 이중설치가 되기 때문(requirements.txt 참조).
 [phases.setup]
-aptPkgs = ["tesseract-ocr", "tesseract-ocr-kor"]
+aptPkgs = ["libgl1", "libglib2.0-0"]

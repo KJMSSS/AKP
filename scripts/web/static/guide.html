@@ -63,6 +63,7 @@
     .b-ok   { color: #15803d; border-color: #22c55e; }
     .b-edit { color: #475569; border-color: #94a3b8; }
     .b-blue { color: #fff; background: #2563eb; border-color: #2563eb; }
+    .b-red  { color: #dc2626; border-color: #fca5a5; background: #fef2f2; }
     .chip {
       display: inline-block; padding: 1px 8px; border-radius: 14px;
       font-size: 12px; font-weight: 600; background: #fef2f2;
@@ -85,6 +86,12 @@
     table.qa td { border: 1px solid #e2e8f0; padding: 8px 10px; vertical-align: top; }
     table.qa td:first-child { width: 42%; font-weight: 600; color: #334155; background: #f8fafc; }
     .red { color: #dc2626; font-weight: 700; }
+    .flow {
+      display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
+      background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;
+      padding: 10px 14px; font-size: 13.5px; font-weight: 600; color: #334155;
+    }
+    .flow .arrow { color: #94a3b8; }
     @media print {
       .topbar, .toc { display: none; }
       body { background: #fff; }
@@ -106,114 +113,178 @@
       <h2>목차</h2>
       <ol>
         <li><a href="#s0">0. 한눈에 보는 전체 흐름</a></li>
-        <li><a href="#s1">1. 로그인 · 작업 화면</a></li>
-        <li><a href="#s2">2. PDF 올려서 변환하기</a></li>
+        <li><a href="#s1">1. 로그인 · 작업 화면(매트릭스)</a></li>
+        <li><a href="#s2">2. 변환 시작 — 업로드와 회전 확인</a></li>
         <li><a href="#s3">3. 검수하기 (가장 중요)</a></li>
-        <li><a href="#s4">4. 수식을 몰라도 고치는 법</a></li>
-        <li><a href="#s5">5. 🔴 확인 필요 처리</a></li>
-        <li><a href="#s6">6. 그림 검수 (그림이 있을 때)</a></li>
-        <li><a href="#s7">7. 자주 하는 실수 · 주의</a></li>
+        <li><a href="#s4">4. 그림 넣기 · 낙서 지우기 · AI 재작도</a></li>
+        <li><a href="#s5">5. 한글파일 생성 · 완료</a></li>
+        <li><a href="#s6">6. 🔴 확인 필요 처리</a></li>
+        <li><a href="#s7">7. 완성본 올리기 (한글완성본·타이퍼·해설)</a></li>
+        <li><a href="#s8">8. 자주 하는 실수 · 주의</a></li>
       </ol>
     </div>
 
     <section id="s0">
       <h2>0. 한눈에 보는 전체 흐름</h2>
-      <p>한 시험지를 처리하는 순서는 이렇습니다. 한 학교씩 차례대로 합니다.</p>
-      <div class="step"><div class="n">1</div><div class="b"><strong>PDF 올리기</strong> — 작업 화면에서 학교 칸에 시험지 PDF를 올립니다. (자동으로 글자·수식을 읽어 한글 파일을 만듭니다)</div></div>
-      <div class="step"><div class="n">2</div><div class="b"><strong>검수하기</strong> — 만들어진 결과를 원본 PDF와 비교하며 문제마다 "맞음 / 고침"을 표시합니다.</div></div>
-      <div class="step"><div class="n">3</div><div class="b"><strong>제출 · 다운로드</strong> — 검수 완료를 누르면 2단 한글(HWPX) 파일이 나옵니다. 그걸 받아 타이핑 마무리에 씁니다.</div></div>
-      <div class="tip">💡 컴퓨터가 시험지를 100% 완벽히 읽지는 못합니다. <strong>검수</strong>가 품질을 좌우합니다 — 천천히 정확히 봐주세요.</div>
+      <div class="flow">
+        매트릭스에서 학교 선택 <span class="arrow">→</span> PDF 업로드 <span class="arrow">→</span>
+        회전 확인 <span class="arrow">→</span> AI 분석 <span class="arrow">→</span>
+        검수(문제·그림) <span class="arrow">→</span> 한글파일 생성 <span class="arrow">→</span>
+        드라이브 자동 저장
+      </div>
+      <p style="margin-top:10px">한 시험지는 이 순서로 <strong>한 화면 안에서</strong> 끝납니다. 위쪽 단계 표시
+        (① 업로드 → ② 회전 확인 → ③ AI 분석 → ④ 검수 → ⑤ 완료)가 지금 어디인지 항상 알려줍니다.</p>
+      <div class="tip">💡 AI가 시험지를 100% 완벽히 읽지는 못합니다. <strong>④ 검수 단계</strong>가 품질을
+        좌우합니다 — 원본과 비교하며 천천히 봐주세요. 한 학교씩 차례대로 진행합니다.</div>
     </section>
 
     <section id="s1">
-      <h2>1. 로그인 · 작업 화면</h2>
+      <h2>1. 로그인 · 작업 화면(매트릭스)</h2>
       <ul>
         <li>주소로 접속해 <strong>구글 계정으로 로그인</strong>합니다. (권한이 없다면 관리자에게 등록을 요청하세요.)</li>
-        <li>로그인하면 <strong>작업 화면(매트릭스)</strong>이 나옵니다. 위쪽에서 <strong>연도</strong>와 <strong>과목 탭</strong>을 고릅니다.</li>
-        <li>아래에 <strong>학교 목록</strong>이 줄지어 있고, 각 학교 줄에서 변환 단계(PDF → 검수전 → 검수완 …)를 볼 수 있습니다.</li>
+        <li>로그인하면 <strong>작업 화면(매트릭스)</strong>이 나옵니다. 위쪽에서 <strong>연도</strong>와
+          <strong>과목 탭</strong>을 먼저 고릅니다. (결과 파일 이름이 이걸로 정해집니다)</li>
+        <li>아래 <strong>학교 목록</strong>의 각 줄을 클릭하면 단계 카드가 펼쳐집니다:
+          <strong>PDF → HWPX 변환 → 한글완성본 → 타이퍼 양식 → 해설</strong></li>
+        <li>줄 오른쪽 상태: <span class="spinner"></span><strong>변환 중</strong> /
+          <strong>변환완료</strong> / <span class="chip">🔴 확인 필요</span> / <strong>오류</strong></li>
       </ul>
     </section>
 
     <section id="s2">
-      <h2>2. PDF 올려서 변환하기</h2>
-      <div class="step"><div class="n">1</div><div class="b">위에서 <strong>연도·과목</strong>을 먼저 선택합니다. (파일 이름이 이걸로 정해집니다)</div></div>
-      <div class="step"><div class="n">2</div><div class="b">해당 <strong>학교 줄</strong>에서 <span class="btn-ex b-edit">📄 PDF 업로드</span> 를 누르고 시험지 PDF를 선택합니다. (또는 파일을 그 줄에 끌어다 놓기)</div></div>
-      <div class="step"><div class="n">3</div><div class="b"><strong>변환 중</strong> 표시가 돌아갑니다. 끝나면 <strong>변환완료</strong>가 됩니다. (보통 1~2분)</div></div>
-      <div class="step"><div class="n">4</div><div class="b">변환이 끝나면 그 학교 줄에서 <span class="btn-ex b-edit">검수하기</span> 를 눌러 검수 화면으로 들어갑니다.</div></div>
-      <div class="tip">💡 사진이 옆으로 누운 시험지여도 자동으로 똑바로 돌려서 처리합니다. 그냥 올리시면 됩니다.</div>
-      <div class="warn">⚠️ 같은 PDF를 또 올리면 변환이 다시 돌아가니, 한 번만 올립니다. 잘못 올렸으면 검수 화면 위쪽 <strong>삭제</strong> 후 다시 올리세요.</div>
+      <h2>2. 변환 시작 — 업로드와 회전 확인</h2>
+      <div class="step"><div class="n">1</div><div class="b">연도·과목을 고른 뒤, 학교 줄의
+        <span class="btn-ex b-edit">📄 변환 시작</span> 을 누릅니다. <strong>변환 화면으로 이동</strong>합니다.
+        (위쪽에 <span class="key">2026_1_1_a_공수1_○○고</span> 같은 배지가 보이면 정상 — 이 칸에 결과가 등록됩니다)</div></div>
+      <div class="step"><div class="n">2</div><div class="b"><strong>업로드</strong>: 점선 상자에 시험지 PDF를
+        <strong>끌어다 놓거나 클릭해서 선택</strong>합니다. 학교·코드는 자동으로 채워져 있고,
+        지역·과목·주제(범위)는 시험지 <strong>1페이지 상단 표에 인쇄될 값</strong>이니 아는 만큼 적어주세요.
+        <span class="btn-ex b-blue">변환 시작 →</span></div></div>
+      <div class="step"><div class="n">3</div><div class="b"><strong>회전 확인</strong>: 페이지 미리보기가 나옵니다.
+        누워 있는 페이지가 있으면 <span class="key">↻</span> <span class="key">↺</span> 로 <strong>제목이 위로</strong>
+        오게 돌립니다. (전체를 한 번에 돌리는 버튼도 있음) 다 맞으면
+        <span class="btn-ex b-blue">이 방향으로 분석 시작 →</span></div></div>
+      <div class="warn">⚠️ <strong>회전은 자동이 아닙니다.</strong> 누운 페이지를 그대로 두면 AI가 글자를 못 읽어
+        문제가 통째로 빠집니다. 반드시 눈으로 확인 후 시작하세요.</div>
+      <div class="step"><div class="n">4</div><div class="b"><strong>AI 분석</strong>: 자동으로 진행됩니다.
+        쪽수에 따라 수십 초 ~ 수 분. 끝나면 검수 화면으로 넘어갑니다.</div></div>
+      <div class="tip">💡 분석은 비용이 드는 단계입니다. 같은 시험지를 불필요하게 여러 번 돌리지 마세요.
+        하루 사용 한도를 넘으면 "비용 한도 초과" 안내가 뜹니다 — 관리자에게 문의.</div>
     </section>
 
     <section id="s3">
       <h2>3. 검수하기 (가장 중요)</h2>
       <h3>화면 보는 법</h3>
       <ul>
-        <li><strong>왼쪽</strong>: 원본 시험지 이미지 (페이지 탭으로 넘기고, +/− 로 확대)</li>
-        <li><strong>오른쪽</strong>: 컴퓨터가 읽은 문제들이 카드로 한 개씩 나옵니다.</li>
-        <li>왼쪽 원본과 오른쪽 글자가 <strong>같은지</strong> 문제마다 비교합니다.</li>
+        <li><strong>왼쪽</strong>: AI가 읽은 <strong>문제 목록</strong> — 번호·배점·발문·보기(①~⑤)를 직접 고칠 수 있습니다.</li>
+        <li><strong>오른쪽</strong>: <strong>원본 페이지</strong> — 그림을 드래그로 지정하는 곳입니다. (4장)</li>
+        <li>원본 시험지(PDF)를 옆에 띄워 놓고 <strong>문제마다 대조</strong>하세요.</li>
       </ul>
-
-      <h3>문제마다 두 가지 중 하나를 누릅니다</h3>
-      <div class="step"><div class="n">①</div><div class="b"><span class="btn-ex b-ok">✓ 정확</span> — 원본과 똑같으면 누릅니다. (잘못 눌렀으면 다시 누르면 풀립니다)</div></div>
-      <div class="step"><div class="n">②</div><div class="b"><span class="btn-ex b-edit">✎ 수정 / 오류</span> — 틀린 곳이 있으면 누릅니다. 편집 칸이 열립니다.</div></div>
-
-      <h3>"수정"을 누르면 — ⚠️ 여기가 핵심</h3>
-      <div class="warn">
-        편집 칸에 두 곳이 있습니다. <span class="red">반드시 구분하세요.</span>
-        <table class="qa">
-          <tr><td>✅ 올바른 내용</td><td>여기 글자를 고치면 <strong>최종 한글 파일에 반영됩니다.</strong> 실제 고칠 내용을 여기에 적습니다.</td></tr>
-          <tr><td>📝 오류 메모</td><td>관리자 <strong>기록용 메모</strong>일 뿐, <strong class="red">본문은 바뀌지 않습니다.</strong> "여기 틀림" 같은 설명만 적는 칸입니다.</td></tr>
-        </table>
-        <p style="margin-top:8px">즉 <strong>"집합기호 없음" 처럼 메모만 적으면 결과물은 안 고쳐집니다.</strong> 실제로 고치려면 <strong>"올바른 내용"</strong> 칸에서 글자를 바로잡아야 합니다.</p>
-      </div>
-      <div class="step"><div class="n">③</div><div class="b">고쳤으면 <span class="btn-ex b-blue">반영</span> 을 누릅니다. 카드가 "수정됨"으로 바뀝니다.</div></div>
-
-      <h3>다 봤으면 제출</h3>
+      <h3>텍스트·수식 고치기</h3>
+      <div class="step"><div class="n">①</div><div class="b">틀린 글자는 <strong>발문/보기 칸에서 바로 타이핑</strong>해 고칩니다. 저장 버튼 없이 즉시 반영됩니다.</div></div>
+      <div class="step"><div class="n">②</div><div class="b">수식은 <span class="key">$ ... $</span> 사이에 들어 있습니다
+        (예: <span class="key">$x^2+3x+2$</span>). <strong>$ 기호는 지우지 말고</strong> 그 안의 내용만 고치세요.
+        $ 밖은 일반 글자, $ 안은 수식으로 한글파일에 들어갑니다.</div></div>
+      <div class="step"><div class="n">③</div><div class="b">잘못 인식된 문제(문제가 아닌 안내문 등)는 카드 오른쪽 위
+        <span class="btn-ex b-edit">삭제</span> 로 뺍니다.</div></div>
+      <h3>보기 기호(ㄱㄴㄷㄹ / ㉠㉡㉢㉣) 확인</h3>
       <ul>
-        <li>모든 문제를 ✓정확 또는 ✎수정 처리한 뒤, 맨 아래 <span class="btn-ex b-blue">검수 완료 → HWPX 재생성</span> 을 누릅니다.</li>
-        <li>완료되면 <strong>다운로드</strong> 링크가 뜹니다. 그 한글 파일을 받아 마무리 작업에 씁니다.</li>
+        <li>&lt;보기&gt; 상자 라벨은 항상 <strong>사전순(ㄱ→ㄴ→ㄷ→ㄹ→ㅁ, ㉠→㉡→㉢→㉣→㉤)</strong>입니다.
+          자동 교정이 들어가 있지만, <strong>순서가 어긋나거나 같은 기호가 두 번</strong> 보이면 오독이니 직접 고쳐주세요.</li>
+        <li>발문에 &lt;보기&gt; 상자 글자가 있고 그 영역을 그림으로 배정하면, <strong>글자는 자동 제거</strong>되고
+          그림 상자가 대신 들어갑니다. (카드 아래 안내 문구가 알려줍니다)</li>
       </ul>
-      <div class="tip">💡 메모만 적고 본문을 안 고쳤으면, 제출할 때 <strong>"메모만 있고 본문이 안 고쳐졌다"</strong>는 경고가 뜹니다. 한 번 더 확인하세요.</div>
+      <div class="warn">⚠️ <span class="red">검수 중 새로고침·뒤로가기 금지!</span> 문제 수정과 그림 배정이
+        <strong>모두 사라집니다</strong>. 실수로 닫으려 하면 브라우저가 경고를 띄우지만, 확인을 누르면 정말 날아갑니다.</div>
     </section>
 
     <section id="s4">
-      <h2>4. 수식을 몰라도 고치는 법</h2>
-      <p>수식(LaTeX)을 몰라도 됩니다. "수정"을 열면 위에 <strong>수식 기호 버튼판</strong>이 있습니다.</p>
-      <div class="step"><div class="n">1</div><div class="b">분류 탭을 고릅니다 — <strong>집합 · 분수·지수 · 부등호 · 그리스 · 도형 · 함수</strong></div></div>
-      <div class="step"><div class="n">2</div><div class="b">고칠 자리에 <strong>커서</strong>를 두고, 넣고 싶은 기호 <strong>버튼을 클릭</strong>하면 그 자리에 들어갑니다. (예: 집합 탭의 <span class="key">U</span> <span class="key">∩</span> <span class="key">∪</span>, 조건제시 <span class="key">{x|…}</span>)</div></div>
-      <div class="step"><div class="n">3</div><div class="b">아래 <strong>미리보기</strong>에 실제 보이는 수식 모양이 나옵니다. 제대로 들어갔는지 눈으로 확인하고 <span class="btn-ex b-blue">반영</span>.</div></div>
-      <div class="tip">💡 분수는 <span class="key">분수 a/b</span>, 루트는 <span class="key">√</span>, 제곱은 <span class="key">x²</span> 버튼을 누르면 됩니다. 직접 타이핑할 필요 없습니다.</div>
+      <h2>4. 그림 넣기 · 낙서 지우기 · AI 재작도</h2>
+      <p><strong>그림은 자동으로 안 들어갑니다.</strong> 오른쪽 패널에서 직접 지정한 것만 들어갑니다.</p>
+      <div class="step"><div class="n">1</div><div class="b"><strong>페이지 탭</strong>(1쪽, 2쪽…)에서 그림이 있는 쪽을 열고,
+        그림 영역을 <strong>마우스로 드래그</strong>(초록 네모) → <span class="btn-ex b-blue">＋ 그림 추가(크롭)</span>.
+        여러 개 반복 가능합니다.</div></div>
+      <div class="step"><div class="n">2</div><div class="b">추가된 그림 카드에서 <strong>배정 문제</strong>를 반드시 선택합니다.
+        <span class="red">미배정(빨간 표시) 그림이 있으면 한글파일을 만들 수 없습니다.</span></div></div>
+      <div class="step"><div class="n">3</div><div class="b"><strong>종류</strong>를 고릅니다 —
+        <span class="btn-ex b-edit">그림</span>(도형·그래프) / <span class="btn-ex b-edit">📊 표</span>(격자·실선 표).
+        표를 '그림'으로 두면 재작도 품질이 떨어집니다.</div></div>
+      <div class="step"><div class="n">4</div><div class="b"><strong>낙서 지우기</strong>: 학생 필기가 섞였으면 그림 위에서
+        지울 부분을 <strong>빨갛게 드래그</strong> → <span class="btn-ex b-red">🧹 낙서 지우기</span>.
+        (브러시 크기 조절 가능, 잘못 칠했으면 <strong>초기화</strong>)</div></div>
+      <div class="step"><div class="n">5</div><div class="b"><strong>🎨 AI 재작도</strong>: 스캔 그림을 깨끗하게 다시 그립니다.
+        그림이 여러 개면 <span class="btn-ex b-blue">🎨 전체 AI 재작도</span> 한 번으로 모두 처리.
+        재작도 후에는 <strong>원본↔재작도 비교</strong>가 자동으로 뜹니다 —
+        <span class="red">숫자·라벨(F/F′ 등)·식이 바뀌지 않았는지 꼭 비교</span>하세요.</div></div>
+      <div class="step"><div class="n">6</div><div class="b">품질이 아쉬우면 <span class="btn-ex b-edit">🔁 Pro로 다시 생성</span>
+        (고품질·비용↑). AI가 원본과 다르게 그렸다고 판단하면 <strong>자동 반려</strong>되고 원본이 유지됩니다 —
+        그땐 다시 시도하거나 '낙서 지우기'한 원본을 그대로 쓰면 됩니다.</div></div>
+      <div class="tip">💡 재작도는 필수가 아닙니다. 스캔이 깨끗하면 크롭한 원본 그대로 넣어도 됩니다.</div>
     </section>
 
     <section id="s5">
-      <h2>5. 🔴 확인 필요 처리</h2>
-      <p>컴퓨터가 <strong>못 읽은 자리</strong>는 <span class="chip">🔴 확인 필요</span> 표시로 남습니다. (예: 흐릿한 집합기호)</p>
-      <ul>
-        <li>그 문제 카드에 <span class="chip">🔴 확인 필요 N곳</span> 칩이 보입니다.</li>
-        <li><strong>원본 PDF를 보고</strong> 그 자리에 무엇이 들어가야 하는지 확인합니다.</li>
-        <li>"수정" → <strong>"올바른 내용"</strong> 칸에서 <span class="key">【★ 확인 필요】</span> 글자를 지우고, 기호 버튼으로 알맞은 내용을 채웁니다.</li>
-      </ul>
-      <div class="warn">⚠️ 만약 채우지 않고 제출하면, 최종 한글 파일에 <span class="red">빨간 글자</span>로 <span class="key">【★ 확인 필요】</span> 가 남습니다. 빨간 글자는 "사람이 채워야 할 곳"이라는 뜻이니, 가능하면 검수에서 다 채워주세요.</div>
+      <h2>5. 한글파일 생성 · 완료</h2>
+      <div class="step"><div class="n">1</div><div class="b">검수가 끝나면 위쪽
+        <span class="btn-ex b-blue">한글파일(.hwpx) 생성 →</span> 을 누릅니다.</div></div>
+      <div class="step"><div class="n">2</div><div class="b"><strong>완료 화면</strong>에서 결과 요약(문제 수·수식 변환·그림 삽입)을
+        확인하고 <span class="btn-ex b-blue">⬇ 한글파일 다운로드</span>. 파일은 <strong>구글 드라이브
+        (AKP/연도/과목 폴더)에도 자동 저장</strong>되고, 매트릭스 칸이 <strong>변환완료</strong>로 바뀝니다.</div></div>
+      <div class="step"><div class="n">3</div><div class="b"><span class="btn-ex b-edit">📋 매트릭스로 돌아가기</span> 로 복귀합니다.</div></div>
+      <div class="warn">⚠️ <strong>한글에서 꼭 열어 확인하세요.</strong> 단·페이지 배치와 수식 모양은 한글에서만
+        정확히 보입니다. 문제 간격·그림 위치가 이상하면 관리자에게 알려주세요.</div>
+      <div class="tip">💡 완료 화면을 닫기 전이라면 검수 화면으로는 못 돌아가지만, <strong>새 변환</strong> 없이
+        다운로드는 매트릭스의 <strong>다운로드</strong> 버튼으로 언제든 가능합니다.
+        (작업 파일은 <strong>3일 뒤 자동 삭제</strong>되지만 드라이브 저장본은 계속 남습니다)</div>
     </section>
 
     <section id="s6">
-      <h2>6. 그림 검수 (그림이 있을 때)</h2>
-      <p>그림이 있는 시험지는 작업 화면 학교 줄에 <strong>🖼 검수 N건</strong> 배지가 뜹니다.</p>
-      <div class="step"><div class="n">1</div><div class="b">배지를 클릭하면 그림 검수 화면이 열립니다.</div></div>
-      <div class="step"><div class="n">2</div><div class="b">문제마다 왼쪽 <strong>빨간 박스</strong>(자동으로 잡은 그림 영역)를 봅니다. 맞으면 <span class="btn-ex b-blue">자동 선택</span>.</div></div>
-      <div class="step"><div class="n">3</div><div class="b">박스가 틀리면 오른쪽 그림에서 <strong>마우스로 올바른 영역을 드래그</strong>한 뒤 <strong>수동 영역 적용</strong>. 그림이 아니면 <strong>건너뛰기</strong>.</div></div>
-      <div class="step"><div class="n">4</div><div class="b">다 했으면 위쪽 <span class="btn-ex b-blue">HWPX 반영</span> 을 누릅니다. 검수한 그림이 한글 파일에 들어갑니다.</div></div>
+      <h2>6. 🔴 확인 필요 처리</h2>
+      <p>AI가 <strong>한글 수식으로 못 바꾼 수식</strong>이 있으면, 그 자리는 문서에
+        <span class="key">【확인필요】</span> 표시와 함께 원본 수식 코드가 그대로 들어갑니다.
+        이런 파일은 매트릭스에 <span class="chip">🔴 확인 필요</span> 배지가 뜹니다.</p>
+      <div class="step"><div class="n">1</div><div class="b">완료 화면 또는 매트릭스에서
+        <span class="chip">🔴 확인 필요</span> 를 확인합니다. (배지에 마우스를 올리면 몇 곳인지 나옵니다)</div></div>
+      <div class="step"><div class="n">2</div><div class="b">다운로드한 파일을 한글에서 열고
+        <strong>Ctrl+F 로 "확인필요"를 검색</strong>합니다. 표시된 자리마다 원본 시험지를 보고
+        수식을 직접 입력해 바로잡고, <span class="key">【확인필요】</span> 글자는 지웁니다.</div></div>
+      <div class="step"><div class="n">3</div><div class="b">다 채웠으면 매트릭스 학교 줄을 펼쳐
+        <span class="btn-ex b-blue">확인 완료</span> 를 누릅니다. 배지가 사라지고 누가 확인했는지 기록됩니다.</div></div>
+      <div class="warn">⚠️ 배지를 무시하고 그대로 쓰면 <span class="red">수식 대신 영문 코드가 인쇄</span>됩니다.
+        배지가 있는 파일은 반드시 채운 뒤 사용하세요. (배지가 없어도 한글에서 배치 확인은 항상 권장)</div>
     </section>
 
     <section id="s7">
-      <h2>7. 자주 하는 실수 · 주의</h2>
+      <h2>7. 완성본 올리기 (한글완성본 · 타이퍼 양식 · 해설)</h2>
+      <p>변환 후의 마무리 산출물은 매트릭스 단계 카드에 <strong>직접 업로드해 보관</strong>합니다.</p>
+      <ul>
+        <li>학교 줄을 펼쳐 해당 단계 카드에서 <span class="btn-ex b-edit">업로드</span> — 파일을 선택하면 등록됩니다.</li>
+        <li>이미 있으면 <span class="btn-ex b-edit">교체</span> / <span class="btn-ex b-edit">다운로드</span> /
+          <span class="btn-ex b-edit">삭제</span>.</li>
+        <li>🔒 잠금으로 보이는 단계는 내 권한 밖입니다 — 필요하면 관리자에게 요청하세요.</li>
+        <li>시험지를 다른 학교·과목 칸으로 옮기려면 PDF 카드의 <span class="btn-ex b-edit">이동</span> 을 씁니다.</li>
+      </ul>
+    </section>
+
+    <section id="s8">
+      <h2>8. 자주 하는 실수 · 주의</h2>
       <table class="qa">
-        <tr><td>메모만 적었는데 결과가 안 고쳐져요</td><td>"오류 메모"는 기록용입니다. 실제로 고치려면 <strong>"올바른 내용"</strong> 칸에서 글자를 바꿔야 합니다. (3장 참고)</td></tr>
-        <tr><td>수식을 어떻게 입력하죠?</td><td>타이핑 말고 <strong>기호 버튼판</strong>을 쓰세요. 미리보기로 확인. (4장)</td></tr>
-        <tr><td>빨간 【★ 확인 필요】가 뭐예요?</td><td>컴퓨터가 못 읽은 자리입니다. 원본 보고 채워주세요. (5장)</td></tr>
-        <tr><td>"정확"을 잘못 눌렀어요</td><td>그 버튼을 <strong>다시 누르면</strong> 풀립니다.</td></tr>
-        <tr><td>변환이 안 끝나요 / 오류가 떠요</td><td>잠시 기다려도 그대로면 관리자에게 알려주세요. 화면의 오류 메시지를 함께 전달하면 좋습니다.</td></tr>
-        <tr><td>결과 한글 파일은 어디 있죠?</td><td>검수 완료 후 나오는 <strong>다운로드</strong> 링크, 또는 작업 화면 학교 줄의 <strong>다운로드</strong> 버튼. (구글 드라이브 AKP 폴더에도 자동 저장됨)</td></tr>
+        <tr><td>검수하다 새로고침했더니 다 날아갔어요</td><td>검수 화면의 수정·그림 배정은 저장 전(한글파일 생성 전)에는
+          브라우저에만 있습니다. <span class="red">새로고침·뒤로가기 금지.</span> 날아갔으면 처음부터 다시 변환해야 합니다.</td></tr>
+        <tr><td>그림 추가를 눌러도 안 돼요</td><td>드래그로 영역(초록 네모)을 먼저 그려야 버튼이 켜집니다.
+          오류 알림이 뜨면 그 내용을 관리자에게 전달하세요.</td></tr>
+        <tr><td>"한글파일 생성"이 안 눌려요 / 경고가 떠요</td><td><strong>미배정 그림</strong>이 있어서입니다.
+          각 그림 카드에서 배정 문제를 선택하거나, 안 쓸 그림은 삭제하세요.</td></tr>
+        <tr><td>수식이 이상하게 나와요</td><td>검수에서 <span class="key">$ ... $</span> 안 내용을 확인하세요.
+          $ 기호를 지웠으면 수식이 일반 글자가 됩니다. 생성 후라면 6장(확인 필요)을 보세요.</td></tr>
+        <tr><td>보기 기호(ㄹ/ㅁ, ㉣/㉤)가 틀려요</td><td>자동 교정이 있지만 완벽하진 않습니다.
+          검수에서 사전순(ㄱㄴㄷㄹㅁ / ㉠㉡㉢㉣㉤)에 맞게 직접 고쳐주세요.</td></tr>
+        <tr><td>다운로드 버튼이 없어졌어요</td><td>작업 파일은 <strong>3일 뒤 자동 삭제</strong>됩니다.
+          그 후엔 <strong>구글 드라이브 AKP 폴더</strong>에서 받으세요. (드라이브엔 계속 남습니다)</td></tr>
+        <tr><td>"비용 한도 초과"가 떠요</td><td>하루 AI 사용 한도에 도달했습니다. 내일 다시 하거나 관리자에게 문의하세요.</td></tr>
+        <tr><td>변환이 안 끝나요 / 오류가 떠요</td><td>잠시 기다려도 그대로면 화면의 오류 메시지와 함께
+          관리자에게 알려주세요. 매트릭스에서 <strong>다시 변환</strong>으로 재시도할 수 있습니다.</td></tr>
+        <tr><td>잘못 변환했어요 / 지우고 싶어요</td><td>매트릭스 학교 줄을 펼쳐 HWPX 카드의 <strong>삭제</strong>.
+          드라이브 저장본까지 함께 지워지니 신중히.</td></tr>
       </table>
       <div class="tip">💡 막히면 언제든 관리자에게 물어보세요. 이 설명서는 위쪽 <strong>🖨 인쇄</strong> 로 종이로도 뽑을 수 있습니다.</div>
     </section>

@@ -1,602 +1,79 @@
-# AKP 프로젝트 전체 플랜
+# AKP 프로젝트 플랜 (단일 진실 출처)
 
-> 한국 수학 시험지 PDF → HWPX(한글 문서) 자동 변환 파이프라인  
-> 학원 운영 도구 — 학원장이 타이퍼 양식(2단 HWPX)으로 직원에게 배포하는 것이 최종 목표  
-> 최종 수정: 2026-06-09 (그림 파이프라인 BBoxDetector 통합 — 문제별 crop·실측 신뢰도)
+> 2026-07-06 대전환 반영. 이전 플랜(구엔진 v5 텍스트 파이프라인)은 git 이력 참조.
+> 엔진 내부 절대규칙(배치·수식·그림·재작도)은 [ENGINE_RULES.md](ENGINE_RULES.md).
 
-> **핵심 방향 (2026-06-05 확정)**  
-> 중간 검수·재빌드 루프 없이 **한 번에 최고 품질**로 출력하는 것이 목표.  
-> OCR 품질이 전부 — 사람이 고쳐줄 거라는 전제로 파이프라인을 설계하지 않는다.
+## 1. 개요
 
----
+한국 수학 시험지 PDF → HWPX 자동 변환. 학원 운영 도구(직원 사용).
+2026-07-06, 별도 프로젝트(examconv, ~/Desktop/test)에서 실전 검증된 엔진을 통째로 이식하고
+구엔진(src/ 51파일 13,300줄 + CLI 70여 개)을 전면 삭제했다.
 
-## 목차
+- **유지(AKP 셸)**: Google OAuth 로그인·사용자 관리, 학교×과목 매트릭스·레지스트리,
+  Google Drive 업로드, Railway 배포
+- **이식(examconv)**: 변환 엔진 전체 + React 검수 UI (회전·그림 크롭·낙서 지우개·Gemini 재작도)
 
-1. [프로젝트 개요](#1-프로젝트-개요)
-2. [현재 완성된 기능](#2-현재-완성된-기능)
-3. [아키텍처](#3-아키텍처)
-4. [웹 매트릭스 UI](#4-웹-매트릭스-ui)
-5. [로드맵](#5-로드맵)
-6. [OCR 품질 개선 로드맵](#6-ocr-품질-개선-로드맵)
-7. [알려진 버그 / 미결 이슈](#7-알려진-버그--미결-이슈)
-8. [절대 정책](#8-절대-정책-위반-금지)
-9. [파일 네이밍 컨벤션](#9-파일-네이밍-컨벤션)
-10. [배포 환경](#10-배포-환경)
-11. [주요 명령어](#11-주요-명령어)
-12. [핵심 파일 구조](#12-핵심-파일-구조)
-
----
-
-## 1. 프로젝트 개요
-
-학원에서 수집한 수학 시험지 PDF를 직원이 직접 타이핑하는 대신,  
-OCR + LLM으로 자동 추출하고 한글(HWPX) 문서로 변환하는 시스템이다.
-
-### 최종 목표 흐름
+## 2. 변환 흐름
 
 ```
-학원장이 PDF 업로드
-    ↓
-OCR + 자동 변환 (1회, 고품질)
-    ↓
-2단 타이퍼 양식 HWPX 자동 생성
-    ↓
-학원장이 결과물 확인 (최종 1회)
-    ↓
-직원이 한글에서 편집·인쇄
+매트릭스 셀 클릭 ─→ /converter/?key=…&school=…&subject=…
+  1) 업로드           POST /api/analyze (registry_key 포함, 레지스트리 converting 등록)
+  2) 페이지 렌더       PyMuPDF → page-*.png  (무과금)
+  3) 회전 맞추기       사용자 수동 (PreviewRotate — 자동 OSD 없음)
+  4) 분석             POST /api/jobs/{id}/run → Claude 비전 구조화 (opus, 과금)
+  5) 검수             Review UI — 문제 편집 + 그림 드래그 크롭 / 지우개 / Gemini 재작도
+                      (재작도는 Claude 검증 게이트 통과해야 채택, 실패 시 반려)
+  6) 빌드             POST /api/jobs/{id}/build → base.hwpx 템플릿에 주입
+                      → Drive 업로드(AKP/{연도}/{과목}/[key].hwpx) + 레지스트리 done
+  7) 다운로드          GET /api/jobs/{id}/download
 ```
 
-> 이전 목표였던 "직원 검수 → 수정 → 재빌드" 반복 루프는 제거.  
-> 대신 **OCR 파이프라인 자체의 품질을 높여** 첫 출력이 곧 최종본이 되는 구조를 목표로 한다.
-
-### 사용자
-
-| 역할 | 책임 |
-|------|------|
-| **학원장** | PDF 업로드, 결과물 최종 확인 |
-| **직원** | 타이퍼 양식 수령 후 한글 편집·인쇄 |
-
----
-
-## 2. 현재 완성된 기능
-
-### ✅ PDF OCR
-- **Mathpix**: 수식 정확도 최고. 별도 구독 필요. `src/common/ocr/mathpix_client.py`
-- **Claude**: API 하나로 통합. `full_content` 모드로 해설 포함. `src/ocr/claude_pdf_reader.py`
-- 두 엔진 모두 `$...$` / `$$...$$` 통일 포맷 출력 → 이후 파이프라인 공통
-
-### ✅ LaTeX → HWP Script 변환
-파일: `src/common/latex_to_hwp.py`
-
-| LaTeX | HWP Script |
-|-------|-----------|
-| `\frac{a}{b}`, `\dfrac{}{}` | `{a} over {b}` |
-| `\sqrt{x}` | `sqrt {x}` |
-| `\sqrt[n]{x}` | `nroot {n} {x}` |
-| `\int_{a}^{b}` | `int from {a} to {b}` |
-| `\sum_{k=1}^{n}` | `sum from {k=1} to {n}` |
-| `\binom{n}{k}` | `LEFT ( {n} atop {k} RIGHT )` |
-| `\lim_{x\to a}` | `lim from {x to a}` |
-
-3단계 중첩 브레이스까지 처리 (`\frac{\sqrt{a^{2}+b^{2}}}{c}` 등).
-
-### ✅ HWPX 빌더 v5 (텍스트 기반)
-파일: `src/text_only/text_builder.py`
-
-- 마크다운 → `section0.xml` 새 생성 (템플릿 본문 재사용 안 함)
-- `header.xml`(폰트·스타일)만 템플릿에서 복사
-- 조건표 `（가）（나）` → `1×1 hp:tbl` (`src/common/hwpx_table_inserter.py`)
-- 보기표 `ㄱ/ㄴ/ㄷ` → `1×1 hp:tbl`
-- **데이터표(도수·통계·격자 등)** → `N×M hp:tbl` (`build_section` 내 마크다운 표 자동 변환).
-  **스코프 가드**(`_keep_table_block`): 첫 문제 이전(표지·결재칸·배점 안내)·결재/채점기준
-  키워드·구분선 없는 고아 1행·이미지 전용 셀은 제외 → 텍스트로 렌더. 셀 내용은
-  `_parse_segments`로 수식까지 변환(`$\mathbf{A}$`→수식 셀), `<br>`→공백.
-  `_preprocess_md`의 `$$` 합치기가 표 행(`\n|`)을 삼키지 않도록 가드.
-  **원자 보존**(`problem_segmenter._extract_tables`): `parse_problems`가 `[N점]` 분리·선택지
-  수집 전에 표 블록을 떼어 `ProblemSegment.data_tables`에 보관 → `rebuild_markdown`이 본문
-  직후 재부착. 표행이 선택지로 오분류·폐기되던 문제 해결(광주고 16번 8행 유실→3표 복원).
-  채점기준표/결재칸은 `_TABLE_SKIP_KW`로 추출 제외(국제고 본문 노이즈 방지). 머릿말로
-  밀려난 표(2단 스캔)는 미복구.
-- HWPX 네임스페이스 자동 수정 (`src/common/hwpx_namespace_fixer.py`)
-- HWPX 구조 검증 (`src/common/hwpx_validator.py`)
-
-### ✅ 그림 삽입
-파일: `src/common/image_extractor.py`, `src/common/hwpx_image_inserter.py`
-
-- PyMuPDF로 PDF 이미지 영역 추출
-- Claude OCR이 `【★ 그림:N번】` 마커 출력 → 세그먼트에서 감지
-- PyMuPDF 실패 시 Vision 폴백 (Claude Haiku)
-- BinData PNG 삽입 + 위치 플레이스홀더
-
-### ✅ 웹 검수 인터페이스
-파일: `scripts/web/static/review.html`
-
-- FastAPI SSE 스트리밍으로 변환 진행 실시간 표시
-- 문제별 텍스트 편집 → 재빌드 → 검수완 HWPX 다운로드
-- 검수 완료 시 레지스트리에 `review_status: completed` 반영
-
-### ✅ 2단 타이퍼 양식 자동 변환
-파일: `src/text_only/typer_builder.py`
-
-- 1단 HWPX → A3 2단 자동 변환 (`build_typer_hwpx()`)
-- 문제별 그룹화 → 1×6 메타 표 + 본문 단락 조립
-- BinData 이미지 보존
-- 웹: `POST /api/pipeline/{key}/typer/generate` — 자동 생성/재생성 버튼
-
-### ✅ 웹 매트릭스 UI
-파일: `scripts/web/static/matrix.html`
-
-- 학교 × 과목 매트릭스 (행: 학교, 탭: 과목)
-- 잡 이동 (연도·학교·과목·학년·학기·중간/기말 변경 가능)
-- 단계별 파일 업로드 (한글완성본·타이퍼·해설)
-- Google Drive 자동 업로드
-- Railway 배포 (GitHub push → 자동 재배포)
-
-### ✅ 인증 & 보안
-- Google OAuth2 (이메일 허용 목록 + 관리자 구분)
-- 일일 비용 캡 ($5 전체, 사용자별 설정 가능)
-- `_require_login` / `_require_admin` 전 엔드포인트 적용
-- `_validate_safe_key()` — 경로 탈출(`../`) 방지
-- `/download/{job_id}` 인증 필수
-
----
-
-## 3. 아키텍처
-
-### 핵심 변환 흐름
-
-```
-PDF
- └─ OCR (Mathpix 또는 Claude) → raw.md  ($...$ 인라인, $$...$$ 디스플레이)
-      └─ apply_fallback()           ← 손상 감지 + 플레이스홀더 삽입
-           └─ parse_problems()      ← 문제 단위 세그먼트 분리
-                └─ rebuild_markdown()
-                     └─ build_from_markdown() ← LaTeX→HWP Script + ZIP 패키징
-                          ├─ replace_condition_tables()    ← （가）（나）→ 1×1 hp:tbl
-                          └─ replace_boilerplate_tables()  ← ㄱ/ㄴ/ㄷ → 1×1 hp:tbl
-```
-
-### HWPX 내부 구조
-
-```
-파일명.hwpx  (ZIP 아카이브)
-├── Contents/
-│   ├── header.xml      ← 스타일·폰트 정의 (템플릿에서 복사)
-│   └── section0.xml    ← 본문 전체 (hp:p 단락 + hp:equation 수식)
-└── BinData/
-    └── BIN*.png        ← 삽입 이미지
-```
-
-### 두 가지 파이프라인
-
-| 방식 | 파일 | 용도 |
-|------|------|------|
-| **텍스트 기반 v5** (현행) | `src/text_only/text_builder.py` | 마크다운 → HWPX 신규 생성 |
-| **템플릿 기반** (레거시) | `src/template_based/builder.py` | 기존 HWPX 슬롯 치환 (미사용) |
-
-### 문제 파서
-
-파일: `src/text_only/problem_segmenter.py`
-
-- `parse_problems(md)` → `(header, List[ProblemSegment])`
-- `ProblemSegment`: `number, problem_text, choices, conditions, boilerplate, images, is_subjective`
-- 객관식 번호: 1–22
-- 서술형 번호: 101–104 (`[단답형N]`/`[서술형N]` 접두사 필수)
-
-### 비용 관리
-
-파일: `src/ocr/cost_guard.py`
-
-- 일일 $5 캡. API 호출 전 `guard.check_or_raise()`, 이후 `guard.record()`
-
----
-
-## 4. 웹 매트릭스 UI
-
-### 레지스트리 키 형식
-
-```
-연도_학년_학기_a(중간)/b(기말)_과목_학교
-```
-
-예시: `2026_1_1_a_공수1_경신여고`
-
-| 위치 | 의미 | 값 |
-|------|------|-----|
-| 0 | 연도 | 2026, 2025 ... |
-| 1 | 학년 | 1, 2, 3 |
-| 2 | 학기 | 1, 2 |
-| 3 | 시험 종류 | `a` (중간), `b` (기말) |
-| 4 | 과목 ID | 공수1, 공수2, 대수, 확통, 기하, 미적1, 미적2 |
-| 5~ | 학교 | 경신여고, 광주제일고 ... |
-
-### 기본 과목 목록
-
-| ID | 전체명 | 학년 | 학기 |
-|----|--------|------|------|
-| 공수1 | 공통수학1 | 1 | 1 |
-| 공수2 | 공통수학2 | 1 | 2 |
-| 대수 | 대수 | 2 | 1 |
-| 확통 | 확률과 통계 | 2 | 2 |
-| 기하 | 기하 | 2 | 2 |
-| 미적1 | 미적분1 | 2 | 2 |
-| 미적2 | 미적분2 | 3 | 1 |
-
-### 파이프라인 단계 (STEP)
-
-| STEP | 이름 | 방식 | 설명 |
-|------|------|------|------|
-| 1 | PDF | 자동 | PDF 업로드 + OCR + HWPX 변환 |
-| 2 | HWPX 검수전 | 자동 | 변환 완료 HWPX |
-| 3 | HWPX 검수완 | 자동 | 웹 검수 후 재빌드 HWPX |
-| 4 | 한글완성본 | 수동 | 학원장이 편집한 최종본 업로드 |
-| 5 | 타이퍼 양식 | 자동/수동 | 2단 A3 HWPX (자동 생성 가능) |
-| 6 | 해설 | 수동 | 해설 파일 업로드 |
-
-### 잡 이동 기능
-
-이동 모달에서 변경 가능한 항목:
-- **연도** (2020~2030)
-- **학교** (등록된 전체 학교)
-- **과목** (등록된 전체 과목)
-- **학년** (1~3)
-- **학기** (1~2)
-- **중간/기말** (a/b)
-
-이동 시 자동 처리:
-- 레지스트리 키 변경
-- `_review.json`의 `custom_filename` 갱신 (다운로드 파일명 동기화)
-- stages 디렉토리 이동 (한글완성본·타이퍼·해설 파일 포함)
-
----
-
-## 5. 로드맵
-
-> **우선순위 원칙**: OCR 품질이 모든 것의 전제. 파이프라인 품질이 충분히 높아야 나머지 STEP이 의미가 있다.
-
----
-
-### ★ OCR 품질 개선 (A+B+C) `✅ 완료` (2026-06-05)
-
-기존 플랜의 "6번 부가 작업"에서 **전체 1순위**로 격상 → 완료.
-
-→ 상세 내용은 [6절 OCR 품질 개선 로드맵](#6-ocr-품질-개선-로드맵) 참조
-
----
-
-### STEP 1 — 그림 파이프라인 `진행 중` (P1+P2+E1+E2+큐연결+BBox통합 완료)
-
-**목표**: PDF의 그림 영역을 자동 감지해 HWPX에 삽입 (첫 빌드에서 올바른 위치에)
-
-#### ✅ 완료 항목 (commit: `c33a030`, 2026-06-08)
-
-| 항목 | 내용 |
-|------|------|
-| **P1** | `FigureCandidate` dataclass + `extract_with_confidence()` — Tesseract bbox × Density bbox IoU로 신뢰도 측정 |
-| **P2** | 기존 6개 추출 전략 무수정 유지, bbox 계산 헬퍼(`_bbox_iou`, `_tesseract_bbox`, `_density_bbox`)만 신규 추가 |
-| **E1** | 웹 검수 API — `GET /figure/{key}`, `GET /api/figure/{key}/queue`, `POST /api/figure/{key}/{prob_no}/decision` (auto/manual/skip + bbox %) |
-| **E2** | `figure_crop.html` — 2패널 비교 UI + Canvas 드래그 + 자동 다음 이동, PIL 빨간 박스 오버레이 |
-| **큐연결** | `_run_conversion` → `_register_figure_queue()` → `figure_queue/{key}/items.json` 자동 저장 (commit: `4b255d7`) |
-
-#### ✅ BBoxDetector 통합 (2026-06-09)
-
-| 항목 | 내용 |
-|------|------|
-| **crop 분리** | `crop_problems_by_bbox()` — BBoxDetector로 문제별 crop 생성 (`extract_figures_with_bbox_detection`에서 재사용) |
-| **신뢰도 복구** | 변환부에서 `extract_with_confidence()`를 문제별 crop에 적용 → 큐의 `confidence`/`strategy`/`auto_bbox_pct`가 실측값 |
-| **crop_path 교체** | 큐 `crop_path`가 전체 페이지 PNG → **문제별 crop**으로 교체 (검수 UI가 문제 단위로 동작) |
-| **비용 가드** | `BBoxDetector.detect_all()`은 Claude API 호출 → **그림 마커(`figure_items_from_claude`)가 있을 때만** 실행, 그림 없는 시험지는 추가 비용 0 |
-
-#### 🔲 남은 작업
-
-- **threshold 튜닝** `데이터 블록 — 0.7 유지`: IoU agreement≥0.7→auto, 단독=0.5→pending.
-  - **임계값은 출력이 아니라 검수 큐 라우팅(auto/pending)에만 영향** — 변환부는 그림을
-    confidence 무관하게 삽입(`vision_map`→`figure_map`). 즉 튜닝 목표 = "교정 필요한 그림만
-    검수로 보내기"이고 이건 **bbox 정확성 라벨**이 있어야 데이터 기반 조정 가능.
-  - **가용 라벨 = 수완고 큐 3건뿐**(2026-06: conf 0.233·0.477·0.635, 셋 다 사람이 교정 →
-    auto-crop 틀림). 셋 다 conf<0.7이라 **0.7이 전부 올바르게 pending 처리(미스 0)**. 특히
-    0.635는 **0.6으로 낮추면 auto로 새서 놓침** → 데이터는 0.7 유지 지지, 낮추기 반대(올리는
-    쪽 데이터 없음). 검증일 2026-06-20.
-  - **비교 하네스는 골드 2단 구조 난제로 미완**: 골드 HWPX `hp:pic`을 문제 번호로 매핑하려면
-    수기 2단 양식(메타표 셀 숫자) 파싱이 필요해 naive `^\d+\.` 매칭은 0% 매칭(오매핑). gold_manifest는
-    `total_pics`(개수)만 있고 bbox 좌표 없음. → 라벨 누적(검수 결정)·과금 검출 전까지 **0.7 고정**.
-
-**관련 파일**:
-- `src/common/image_extractor.py` — PyMuPDF 추출 + `crop_problems_by_bbox` + `extract_with_confidence`
-- `src/common/hwpx_image_inserter.py` — BinData 삽입
-- `scripts/web/static/figure_crop.html` — 수동 검수 UI
-- `scripts/web/app.py` — `/figure/` 라우트, `_register_figure_queue`, 변환부 crop·신뢰도 연결
-
----
-
-### STEP 2 — 결과물 확인 뷰어 (최소화) `방향 변경`
-
-~~웹 검수 인터페이스 강화~~ → **단순 결과 확인 뷰어**로 방향 변경.
-
-**변경 이유**: "직원이 오류 수정 → 재빌드" 반복 루프는 이 프로젝트의 목표가 아님.  
-OCR 품질이 높아지면 검수 자체가 필요 없어지는 구조를 목표로 한다.
-
-**남길 것**: 학원장이 변환 결과를 빠르게 훑어볼 수 있는 최소 뷰어  
-**제거할 것**: 수정 텍스트 입력 → 재빌드 루프, 직원 검수 워크플로우
-
----
-
-### STEP 3 — 2단 타이퍼 양식 자동 변환 `✅ 완료` (2026-06-04)
-
-- `src/text_only/typer_builder.py` — `build_typer_hwpx()` 함수
-- 1단 `section0.xml` 파싱 → 문제별 그룹화 → 1×6 메타 표 + 본문 단락 조립
-- A3 2단 HWPX 생성, BinData 이미지 보존, 구조 검증 PASS
-- 웹: `POST /api/pipeline/{key}/typer/generate` 엔드포인트
-- 매트릭스 UI: 자동 생성/재생성 버튼
-
----
-
-### STEP 4 — 통합 배포 `미착수`
-
-**목표**: PDF 업로드 → 1회 변환 → 타이퍼 양식 다운로드 (검수 루프 없음)
-
-**작업 항목**:
-- 전체 흐름 연결: PDF 업로드 → OCR+변환 → 타이퍼 양식 자동 생성 → 다운로드
-- 결과물 Google Drive 자동 업로드
-- 모바일 반응형 UI
-
----
-
-## 6. OCR 품질 개선 로드맵
-
-> **이 섹션이 전체 프로젝트의 핵심.**  
-> commit: `0541c89` (2026-06-05)
-
-### STEP A — 프롬프트 수식 예시 추가 `✅ 완료`
-
-파일: `src/ocr/claude_pdf_reader.py`
-
-`_SYSTEM` 프롬프트에 `[수식 정확도]` + `[수식 오류 주의]` 섹션 추가:
-- 지수·첨자 중괄호 필수: `x^{2}`, `3^{-x}`, `a_{n}`
-- 백슬래시 필수: `\sin`, `\cos`, `\log`, `\lim`, `\frac`, `\sqrt`
-- ❌/✅ 대비 예시로 자주 틀리는 패턴 명시
-
----
-
-### STEP B — 과목별 출제 범위 주입 `✅ 완료`
-
-파일: `src/ocr/claude_pdf_reader.py`, `scripts/web/app.py`
-
-- `SUBJECT_HINTS` 딕셔너리 (공수1·공수2·대수·확통·기하·미적1·미적2)
-- `read_pdf_as_markdown(subject=)` 파라미터 추가
-- `_run_conversion`에서 레지스트리 키 파싱 → subject 자동 전달
-
----
-
-### STEP C — 2차 LaTeX 교정 패스 `✅ 완료`
-
-신규 파일: `src/ocr/latex_corrector.py`
-
-- **Claude Haiku** 로 수식만 교정 (텍스트 불변, 비용 절감)
-- 파이프라인: `read_pdf_as_markdown()` → `correct_latex()` → `apply_fallback()` → 빌드
-- 수식 없는 마크다운은 API 호출 없이 원문 반환
-
----
-
-## 7. 알려진 버그 / 미결 이슈
-
-| 심각도 | 항목 | 내용 |
-|--------|------|------|
-| 🔴 | 서강고 선택지 마커 초과 | 75건 검출, 기대 70건 — 파서 선택지 인식 로직 검토 필요 |
-| 🟠 | 웹 검수 크롭 PNG | 문제별 크롭 PNG + 텍스트 나란히 표시 미구현 |
-| 🟡 | 서강고 HWPX D안 | 3번 집합기호·7번 손글씨 OCR 잡음 수정 완료 (2026-06-05) |
-| 🟢 | 양면 스캔 회전 유실 | 광주여고 문제 유실 — 회전 보정 2중 버그 + OSD 거짓양성 수정 완료 (2026-06-17) |
-
----
-
-## 7-2. 회전 보정 실전 교훈 (2026-06-17, 광주여고 사건)
-
-양면 스캔 PDF(광주여고)에서 문제가 유실됐다. 골드셋 하네스로 파고들어 **세 겹의 버그**를 발견·수정. `src/common/pdf_utils.py`.
-
-### 버그 1: 메타 회전이 내용 OSD를 가림
-`page.rotation != 0`이면 내용 OSD를 통째로 건너뛰었다. 양면 스캔은 메타가 일정(270)이어도 **뒷면이 물리적으로 180° 뒤집혀** 있어, 메타만 적용하면 짝수 페이지가 거꾸로 남는다.
-→ 항상 내용 OSD로 추가각을 확인, **최종각 = (메타 base + 추가각) % 360**. (`_plan_rotations`)
-
-### 버그 2: `TESSDATA_PREFIX`가 OSD를 조용히 죽임
-`.env`의 `TESSDATA_PREFIX=.../.tessdata`(equ만 담고 `osd.traineddata` 누락)를 `load_dotenv()`가 주입 → `image_to_osd`가 **항상 실패** → 회전 보정이 한 번도 작동 안 함(에러는 조용히 삼켜짐).
-→ osd 가진 디렉터리를 찾아 OSD 호출 동안만 `TESSDATA_PREFIX` 교체(`_osd_tessdata_dir`), `.tessdata`에 `osd.traineddata` 동봉, 실패 시 경고 출력.
-
-### 버그 3: OSD 거짓양성이 멀쩡한 페이지를 뒤집음 ★가장 위험
-버그 2를 고쳐 OSD가 "작동"하자, **수식 많은 멀쩡한 페이지를 180° 돌리라 오판**(거짓양성)해서 똑바른 페이지를 뒤집어 OCR을 망쳤다. 문성고 51%→24% 폭락.
-- **신뢰도가 결정적 분리 신호**: 골드셋 실측 — 진짜 뒤집힘 conf **15.6~17.6**, 거짓양성 전부 **<3.6**.
-- 문턱 `_OSD_CONF_MIN` 1.0 → **8.0**. 거짓 수용(멀쩡한 페이지 회전)이 거짓 기각(안 돌림)보다 훨씬 치명적이므로 보수적으로 높게.
-- (향후) 양면 교차 패턴이 뚜렷하면(base≠0 + 교대) 중간 신뢰도도 보간 수용하는 결맞음 가드 검토 여지.
-
-### 결과 (골드셋 18쌍 정량화)
-진짜 회전 문제는 **광주여고 1개뿐**(양면 교차회전). 55%→**77%**, 문제 19→20건, 겹침 0.30→0.82. 거짓양성 4개(동성고·명진고·문성고·동아여고)는 가드로 차단, **나머지 17개 무회귀**.
-> 교훈: OCR이 항상 실패하던 부품을 "고쳐서 켜면", 그 부품의 거짓양성이 새 회귀를 만든다. **켜는 수정과 거짓양성 가드는 한 세트.** 골드셋 before/after 비교가 이 회귀를 잡았다.
-
----
-
-## 7-1. HWPX 수식 직접 편집 시 주의사항 (실전 교훈)
-
-서강고 vD 수정 작업에서 수식을 직접 XML로 조작했더니 **수식이 전부 빈 박스로 표시**되는 현상 발생.  
-4번 시도 실패 후 파악한 3대 원인:
-
-### 원인 1: `<hp:outMargin>` 누락
-```xml
-<!-- 필수 구조 (이 태그 없으면 HWP에서 빈 박스) -->
-<hp:equation id="..." ...>
-  <hp:sz .../>
-  <hp:pos .../>
-  <hp:outMargin left="0" right="0" top="0" bottom="0"/>  ← 필수!
-  <hp:script>HWP Script</hp:script>
-</hp:equation>
-```
-
-### 원인 2: LaTeX를 HWP Script로 변환하지 않음
-`hp:script`에는 LaTeX가 아니라 **HWP Script**가 들어가야 한다.
-
-| LaTeX | HWP Script |
-|-------|-----------|
-| `\times` | `times` |
-| `\frac{a}{b}` | `{a} over {b}` |
-| `\sqrt{x}` | `sqrt {x}` |
-
-`from src.common.latex_to_hwp import convert as latex_to_hwp`로 변환.
-
-### 원인 3: 단락/수식 ID 충돌
-다른 HWPX에서 단락을 가져올 때, `hp:p id`, `hp:equation id`, `zOrder`가  
-기존 문서 값과 겹치면 HWP가 오작동한다.
-
-### 올바른 수정 절차
-```
-1. 올바른 마크다운 작성 ($...$로 수식 감싸기)
-2. build_from_markdown()으로 임시 HWPX 생성
-3. 임시 HWPX에서 목표 단락 추출
-4. 대상 문서의 최대 id/zOrder 파악 후 오프셋 적용
-5. 교체 범위 통째로 교체 (문제 단락 + 선택지 단락들)
-```
-
-> **규칙**: 수식 포함 단락은 절대 직접 XML 조합하지 않는다. **항상 build_from_markdown 파이프라인 경유.**
-
----
-
-## 8. 절대 정책 (위반 금지)
-
-1. **학교 단위 순차 처리** — 여러 학교 병렬 빌드 금지
-2. **LLM은 패턴 발견기** — `temperature=0`, 자동 적용 금지, `approved` 항목만 자동 적용
-3. **학원장 PDF 원본 = 진짜 정답** — LLM/OCR 결과보다 원본 PDF 우선
-4. **크롭 OCR 표준 순서**: 전체 OCR 후 공란 발견해서 재빌드하는 방식 금지.  
-   반드시 `크롭 OCR 먼저 → raw.md 완성 → 빌드 1회`
-5. **push 정책**: 로컬 확인 후 명시적 요청 시에만 push.  
-   단, 자동 pre-compact 커밋 생성 시는 push 포함.
-
----
-
-## 9. 파일 네이밍 컨벤션
-
-```
-레지스트리 키 = 연도_학년_학기_a(중간)/b(기말)_과목_학교
-예시: 2026_1_1_a_공수1_경신여고
-```
-
-| 파일 종류 | 이름 형식 | 예시 |
-|-----------|----------|------|
-| HWPX (자동) | `{레지스트리키}.hwpx` | `2026_1_1_a_공수1_경신여고.hwpx` |
-| HWPX (검수완) | `{레지스트리키}_검수.hwpx` | `2026_1_1_a_공수1_경신여고_검수.hwpx` |
-| 타이퍼 양식 | `{레지스트리키}_타이퍼양식.hwpx` | `2026_1_1_a_공수1_경신여고_타이퍼양식.hwpx` |
-| 임시 마크다운 | `output_text_temp.md` | 루트에 덮어씀, git 무시 |
-
----
-
-## 10. 배포 환경
-
-### Railway
-
-- GitHub `main` 브랜치 push → 자동 재배포
-- Volume 마운트: `/data` 영속 저장 (`matrix_config.json`, `matrix_registry.json`, `uploads/`)
-- 환경 변수:
-
-| 변수 | 설명 |
-|------|------|
-| `GOOGLE_CLIENT_ID` | Google OAuth2 |
-| `GOOGLE_CLIENT_SECRET` | Google OAuth2 |
-| `SECRET_KEY` | 세션 서명 키 |
-| `ADMIN_EMAIL` | 관리자 이메일 |
-| `ANTHROPIC_API_KEY` | Claude OCR |
-| `DAILY_COST_CAP` | 전체 일일 비용 한도 (기본 5.0) |
-| `DATA_DIR` | 데이터 저장 경로 (Railway Volume) |
-
-### 로컬 실행
-
-```powershell
-# 서버 시작
-py -m uvicorn scripts.web.app:app --host 0.0.0.0 --port 8080
-
-# 접속
-http://localhost:8080
-```
-
----
-
-## 11. 주요 명령어
-
-```powershell
-# 테스트 전체 실행
-pytest tests/
-
-# 테스트 단일 실행
-pytest tests/test_builder.py::TestLatexToHwp::test_frac_simple -v
-
-# PDF → HWPX (Mathpix OCR, 문제만)
-py scripts/text/pdf_to_text.py "samples/시험지.pdf"
-
-# PDF → HWPX (Claude OCR, 정답·해설 포함)
-py scripts/text/pdf_to_text.py "samples/시험지.pdf" --ocr-engine claude --full-content
-
-# 재실행 (같은 PDF는 자동 캐시로 불필요한 재과금만 회피 — 품질·효율상 필요하면 --force-ocr로 재과금)
-py scripts/text/pdf_to_text.py "samples/시험지.pdf"
-# 캐시 무시하고 강제 새 OCR (의도적 재과금): --force-ocr
-
-# 플랜 PDF 재생성
-py docs/_gen_plan_pdf.py
-```
-
----
-
-## 12. 핵심 파일 구조
-
-```
-AKP/
-├── scripts/
-│   └── web/
-│       ├── app.py                    ← FastAPI 서버 (OCR·변환·검수·매트릭스 API)
-│       ├── static/
-│       │   ├── matrix.html           ← 매트릭스 UI (잡 관리)
-│       │   ├── review.html           ← 검수 인터페이스
-│       │   ├── figure_crop.html      ← 그림 수동 검수 UI (2패널 비교)
-│       │   ├── admin.html            ← 관리자 화면
-│       │   └── login.html            ← 로그인 화면
-│       ├── data/
-│       │   ├── matrix_config.json    ← 학교·과목 설정
-│       │   └── matrix_registry.json  ← 잡 레지스트리
-│       ├── usage_log.py              ← 비용 기록
-│       ├── corrections_log.py        ← 검수 교정 로그
-│       ├── users.py                  ← 사용자 관리
-│       └── gdrive_uploader.py        ← Google Drive 업로드
-│
-├── src/
-│   ├── text_only/
-│   │   ├── text_builder.py           ← 마크다운 → HWPX (v5 현행)
-│   │   ├── typer_builder.py          ← 1단 → 2단 타이퍼 양식
-│   │   ├── problem_segmenter.py      ← 문제 파서
-│   │   └── ocr_fallback.py           ← 손상 감지·플레이스홀더
-│   ├── common/
-│   │   ├── latex_to_hwp.py           ← LaTeX → HWP Script
-│   │   ├── hwpx_table_inserter.py    ← 조건표·보기표 → hp:tbl
-│   │   ├── hwpx_image_inserter.py    ← BinData PNG 삽입
-│   │   ├── hwpx_namespace_fixer.py   ← 네임스페이스 수정
-│   │   ├── hwpx_validator.py         ← HWPX 구조 검증
-│   │   ├── image_extractor.py        ← PDF 이미지 추출
-│   │   ├── pdf_utils.py              ← PDF 회전 정상화 등
-│   │   └── ocr/
-│   │       └── mathpix_client.py     ← Mathpix OCR 엔진
-│   └── ocr/
-│       ├── claude_pdf_reader.py      ← Claude OCR 엔진
-│       ├── latex_corrector.py        ← 2차 LaTeX 교정 패스 (Claude Haiku)
-│       └── cost_guard.py             ← 일일 비용 캡
-│
-├── docs/
-│   ├── PLAN.md                       ← 이 파일
-│   ├── AKP_프로젝트_플랜.pdf         ← PDF 버전 (3페이지)
-│   └── _gen_plan_pdf.py              ← PDF 생성 스크립트
-│
-├── samples/
-│   ├── 11b_production/               ← 배포용 HWPX
-│   ├── 2026/                         ← 2026년 결과물
-│   └── *.hwpx                        ← 템플릿 HWPX
-│
-├── tests/                            ← pytest 테스트
-├── log/                              ← 사이클별 로그
-└── CLAUDE.md                         ← Claude Code 설정
-```
-
----
-
-*이 문서는 `docs/_gen_plan_pdf.py`로 PDF 버전을 생성할 수 있습니다.*
+## 3. 모듈 구조
+
+| 경로 | 역할 |
+|---|---|
+| `backend/pipeline/ingest.py` | PDF → 페이지 PNG (fitz) |
+| `backend/pipeline/vision_claude.py` | Claude REST — 구조화·검증·발문/표 중복제거 (usage 누적) |
+| `backend/pipeline/figure.py` | 크롭·배경 흰색화·deskew·지우개 인페인팅(OpenCV) |
+| `backend/pipeline/redraw_gemini.py` | Gemini image-to-image 재작도 (Flash/Pro) |
+| `backend/pipeline/build_exam.py` | 오케스트레이터 — 배치(2문제/단 columnBreak)·수식·그림 삽입 |
+| `backend/pipeline/assemble_hwpx.py` | 순수 stdlib HWPX 엔진 (템플릿 열고 본문 주입) |
+| `backend/mathconv/latex_to_hwp.py` | LaTeX → 한글 수식 스크립트 |
+| `backend/templates/base.hwpx` | 빌드 골격 (A3 2단 신문형 — 구조 의존, 임의 교체 금지) |
+| `scripts/web/app.py` | 웹 셸 라우트 (인증·매트릭스·레지스트리·수동 업로드 슬롯) |
+| `scripts/web/engine_api.py` | 엔진 라우터 — 인증 가드·비용 로깅·Drive/레지스트리 연동·3일 정리 |
+| `scripts/web/store.py` | 경로(DATA_DIR/WORK_DIR)·config/registry I/O 단일 출처 |
+| `scripts/web/auth.py` | 세션 인증 헬퍼 |
+| `frontend/` | React 검수 UI — 수정 시 `npm run build` 후 dist 커밋 |
+
+## 4. 데이터·비용
+
+- **작업 파일**: `DATA_DIR/work/{job}/` (원본·페이지 PNG·크롭·state.json·result.hwpx).
+  3일 보관 후 자동 삭제. 매트릭스에서 잡 삭제 시 즉시 삭제(+Drive 파일).
+- **영속 데이터**: matrix_config.json(시드 커밋) · matrix_registry.json · users.json ·
+  usage.jsonl · gdrive_token.json — 전부 DATA_DIR(Railway 볼륨).
+- **비용**: opus 단가로 usage.jsonl 기록(analyze/build/redraw). 일일 캡
+  `DAILY_COST_CAP`(전체) + 사용자별 cap_usd. 초과 시 429.
+- **모델**: 구조화·검증 `claude-opus-4-8` / 재작도 `gemini-3.1-flash-image`(기본),
+  `gemini-3-pro-image`(pro).
+
+## 5. 검증 한계 (절대 잊지 말 것)
+
+hwpx 레이아웃은 **한글 없이 검증 불가**. 코드로 확인 가능한 것은 XML 사실뿐 —
+"XML이 올바르다" ≠ "한글에서 잘 보인다". 실제 배치는 반드시 한글에서 열어 확인.
+(ENGINE_RULES.md 검증 절 참조)
+
+## 6. 배포 (Railway)
+
+- `railway.toml`: uvicorn 8080, healthcheck `/api/usage`
+- 시스템 패키지 불필요 (tesseract 제거 — nixpacks.toml 삭제됨. opencv 는 headless 휠)
+- frontend/dist 커밋 필수 (배포 환경에 node 없음)
+- 볼륨: `RAILWAY_VOLUME_MOUNT_PATH` 최우선 → DATA_DIR env → scripts/web/data
+
+## 7. 미결 이슈 / 다음 작업
+
+- [ ] 검수 중 새로고침 시 프론트 상태(그림 배정) 소실 — job_id localStorage + 재구성 API
+- [ ] 학기 칸 표기 형식 — 현재 코드값(registry key) 그대로. "2024년 3학년 1학기 기말" 형식
+      원하면 별도 입력 필드 필요 (examconv 2026-07-05 세션 미결 그대로 승계)
+- [ ] guide.html 내용이 구엔진 흐름 기준 — 새 흐름으로 갱신 필요
+- [ ] hwpx → hwp 자동 변환은 이 환경(맥)에서 불가 결론 — 한글에서 다른 이름으로 저장

@@ -14,9 +14,9 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 def _data_dir() -> Path:
-    """DATA_DIR 환경변수가 있으면 그 경로, 없으면 scripts/web/logs/"""
-    d = os.environ.get("DATA_DIR", "")
-    return Path(d) if d else Path(__file__).resolve().parent / "logs"
+    """경로 단일 출처(store.DATA_DIR) — 볼륨마운트 > DATA_DIR > scripts/web/data."""
+    from scripts.web.store import DATA_DIR
+    return DATA_DIR
 
 _LOG_DIR  = _data_dir()
 _LOG_FILE = _LOG_DIR / "usage.jsonl"
@@ -60,10 +60,13 @@ def today_summary() -> dict:
     for e in read_entries(days=1):
         if not e.get("ts", "").startswith(today):
             continue
-        if e.get("status") == "ok":
-            total_cost += e.get("cost_usd", 0.0)
-            total_in   += e.get("in_tok", 0)
-            total_out  += e.get("out_tok", 0)
+        # 비용은 상태 무관 합산 — 재작도 '반려(rejected)'나 '오류(error)'도
+        # Gemini 생성·opus 검증의 실제 청구가 발생한 경로다(2026-07-06 QA:
+        # ok 만 합산하면 반려 연발 시 일일 캡이 사실상 뚫린다). 개인 캡
+        # (users.user_today_cost)과 기준도 이걸로 일치한다.
+        total_cost += e.get("cost_usd", 0.0)
+        total_in   += e.get("in_tok", 0)
+        total_out  += e.get("out_tok", 0)
         count += 1
     return {
         "date": today,

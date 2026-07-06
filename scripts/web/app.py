@@ -1,238 +1,68 @@
 """
-AKP 웹 변환 서버 — FastAPI + Google OAuth + SSE
+AKP 웹 변환 서버 — FastAPI + Google OAuth + examconv 엔진
 
 실행:
-    py -m uvicorn scripts.web.app:app --host 0.0.0.0 --port 8080
+    python -m uvicorn scripts.web.app:app --host 0.0.0.0 --port 8080
+
+구성:
+    - 인증/사용자 관리: Google OAuth (scripts/web/auth.py, users.py)
+    - 학교×과목 매트릭스: matrix_config.json / matrix_registry.json (scripts/web/store.py)
+    - 변환 엔진: backend/ (examconv 이식) — 라우트는 scripts/web/engine_api.py
+    - 검수 UI: frontend/dist (React) — /converter 에 마운트
+    - Google Drive 업로드: scripts/web/gdrive_uploader.py
 
 환경변수:
     GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET  — Google OAuth2
     SECRET_KEY       — 세션 서명 키
     ADMIN_EMAIL      — 관리자 이메일
-    ANTHROPIC_API_KEY
+    ANTHROPIC_API_KEY — 분석(비전 구조화)·검증
+    GEMINI_API_KEY   — 그림 재작도
     DAILY_COST_CAP   — 전체 일일 비용 한도 (기본 5.0)
     DATA_DIR         — 데이터 저장 경로 (Railway Volume)
 """
 from __future__ import annotations
 
-import asyncio
-import io
-import json
 import os
-import queue
 import shutil
-import re
 import sys
-import threading
-import time
-import uuid
 from datetime import datetime
 from pathlib import Path
 
-import fitz  # PyMuPDF
 from authlib.integrations.starlette_client import OAuth
 from dotenv import load_dotenv
-from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
-from fastapi.concurrency import run_in_threadpool
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse, Response, StreamingResponse
+from fastapi import FastAPI, File, HTTPException, Request, UploadFile
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 
 load_dotenv()
 
-# ── 경로 설정 ──────────────────────────────────────────────────────────
-_HERE    = Path(__file__).resolve().parent
-_ROOT    = _HERE.parent.parent
-
-# Railway 볼륨이 마운트돼 있으면 그 경로가 유일한 영속 저장소다. DATA_DIR 환경변수가
-# 볼륨과 다른 경로(예: 오타 /data vs 실제 마운트 /date)를 가리키면 앱이 휘발성 컨테이너
-# 디스크에 쓰게 돼 재배포마다 변환물·교정·패턴이 통째로 사라진다 — 볼륨 마운트를 최우선한다.
-_VOL_MOUNT = os.environ.get("RAILWAY_VOLUME_MOUNT_PATH", "").strip()
-_DATA_DIR = Path(_VOL_MOUNT or os.environ.get("DATA_DIR") or str(_HERE / "data"))
-_DATA_DIR.mkdir(exist_ok=True, parents=True)
-
-# 변환 결과물(HWPX·review.json·OCR·PDF)도 영속 볼륨 아래 둔다 — 재배포에도 유지.
-# (TMP_DIR 미설정 시 _HERE/tmp 휘발성 폴더로 가던 것이 데이터 소실의 주원인이었다.)
-_TMP_DIR = Path(os.environ.get("TMP_DIR") or str(_DATA_DIR / "tmp"))
-_TMP_DIR.mkdir(exist_ok=True, parents=True)
-_CONFIG_FILE   = _DATA_DIR / "matrix_config.json"
-_REGISTRY_FILE = _DATA_DIR / "matrix_registry.json"
-_UPLOADS_DIR   = _DATA_DIR / "uploads"
-_UPLOADS_DIR.mkdir(exist_ok=True, parents=True)
-
-_MANUAL_STAGES = {"hangeul", "typer", "solution"}
-_FIGQ_DIR      = _DATA_DIR / "figure_queue"
-_FIGQ_DIR.mkdir(exist_ok=True, parents=True)
-
-# 영속 경로 확인용 — 재배포 후 railway logs 에서 볼륨 경로가 맞는지 한눈에.
-print(f"  [경로] DATA_DIR={_DATA_DIR}  TMP_DIR={_TMP_DIR}"
-      f"  (볼륨마운트={_VOL_MOUNT or '없음'})")
-_config_lock   = threading.Lock()
-_registry_lock = threading.Lock()
-_figq_lock     = threading.Lock()
-
-_DEFAULT_SUBJECTS = [
-    {"id": "공수1", "name": "공통수학1", "grade": "1", "sem": "1"},
-    {"id": "공수2", "name": "공통수학2", "grade": "1", "sem": "2"},
-    {"id": "대수",  "name": "대수",      "grade": "2", "sem": "1"},
-    {"id": "확통",  "name": "확률과 통계","grade": "2", "sem": "2"},
-    {"id": "기하",  "name": "기하",      "grade": "2", "sem": "2"},
-    {"id": "미적1", "name": "미적분1",   "grade": "2", "sem": "2"},
-    {"id": "미적2", "name": "미적분2",   "grade": "3", "sem": "1"},
-]
-
-# 레포에 커밋된 번들 config (학교·과목 목록) — 신규 DATA_DIR 볼륨 부트스트랩용.
-# Railway 볼륨(/data)은 git과 분리돼 비어 시작하므로, 비어 있으면 이 시드로 채운다.
-_SEED_CONFIG_FILE = _HERE / "data" / "matrix_config.json"
-
-def _load_seed_config() -> dict | None:
-    """번들 시드 config 로드. _CONFIG_FILE과 같은 경로(로컬)면 시드 의미 없으므로 None."""
-    if _SEED_CONFIG_FILE == _CONFIG_FILE or not _SEED_CONFIG_FILE.exists():
-        return None
-    try:
-        return json.loads(_SEED_CONFIG_FILE.read_text(encoding="utf-8"))
-    except Exception:
-        return None
-
-def _load_mconfig() -> dict:
-    with _config_lock:
-        existed = _CONFIG_FILE.exists()
-        cfg: dict | None = None
-        if existed:
-            try:
-                cfg = json.loads(_CONFIG_FILE.read_text(encoding="utf-8"))
-            except Exception:
-                cfg = None
-        need_write = (cfg is None) or (not existed)
-        if cfg is None:
-            cfg = {"subjects": _DEFAULT_SUBJECTS, "schools": []}
-
-        # 학교 목록이 비어 있으면(신규 Railway 볼륨 등) 번들 시드로 부트스트랩
-        if not cfg.get("schools"):
-            seed = _load_seed_config()
-            if seed and seed.get("schools"):
-                cfg["schools"]  = seed["schools"]
-                cfg["subjects"] = seed.get("subjects") or cfg.get("subjects") or _DEFAULT_SUBJECTS
-                need_write = True
-                print(f"  [config] 번들 시드 부트스트랩 — 학교 {len(cfg['schools'])}개 등록")
-
-        if need_write:
-            _CONFIG_FILE.write_text(json.dumps(cfg, ensure_ascii=False, indent=2), encoding="utf-8")
-        return cfg
-
-def _save_mconfig(cfg: dict) -> None:
-    with _config_lock:
-        _CONFIG_FILE.write_text(json.dumps(cfg, ensure_ascii=False, indent=2), encoding="utf-8")
-
-
-def _validate_safe_key(key: str) -> str:
-    """레지스트리 키/잡ID에 경로 탈출 문자가 없는지 확인."""
-    if ".." in key or "/" in key or "\\" in key:
-        raise HTTPException(400, "잘못된 키 값입니다.")
-    return key
-
-def _load_registry() -> dict:
-    with _registry_lock:
-        if _REGISTRY_FILE.exists():
-            try:
-                return json.loads(_REGISTRY_FILE.read_text(encoding="utf-8"))
-            except Exception:
-                pass
-        return {}
-
-def _save_registry(reg: dict) -> None:
-    with _registry_lock:
-        _REGISTRY_FILE.write_text(json.dumps(reg, ensure_ascii=False, indent=2), encoding="utf-8")
-
-
-def _figq_key_dir(key: str) -> Path:
-    """검증된 key에 대한 큐 디렉토리. _validate_safe_key 통과 후에만 호출."""
-    return _FIGQ_DIR / key
-
-def _figq_load(key: str) -> dict:
-    """{key}/items.json 로드. 없으면 빈 dict."""
-    f = _figq_key_dir(key) / "items.json"
-    if not f.exists():
-        return {"items": {}}
-    try:
-        with _figq_lock:
-            return json.loads(f.read_text(encoding="utf-8"))
-    except Exception:
-        return {"items": {}}
-
-def _figq_save(key: str, data: dict) -> None:
-    d = _figq_key_dir(key)
-    d.mkdir(parents=True, exist_ok=True)
-    with _figq_lock:
-        (d / "items.json").write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
-
-def _figq_clamp_bbox_pct(bbox: list) -> tuple[float, float, float, float]:
-    """[x0,y0,x1,y1] % 값을 0~100으로 클램프 + 정렬."""
-    if not isinstance(bbox, list) or len(bbox) != 4:
-        raise HTTPException(400, "bbox는 [x0,y0,x1,y1] %  배열이어야 합니다.")
-    try:
-        vals = [float(v) for v in bbox]
-    except (TypeError, ValueError):
-        raise HTTPException(400, "bbox 값이 숫자가 아닙니다.")
-    x0 = max(0.0, min(100.0, vals[0]));  y0 = max(0.0, min(100.0, vals[1]))
-    x1 = max(0.0, min(100.0, vals[2]));  y1 = max(0.0, min(100.0, vals[3]))
-    if x1 < x0: x0, x1 = x1, x0
-    if y1 < y0: y0, y1 = y1, y0
-    if (x1 - x0) < 1.0 or (y1 - y0) < 1.0:
-        raise HTTPException(400, "bbox 영역이 너무 작습니다.")
-    return (x0, y0, x1, y1)
-
+_HERE = Path(__file__).resolve().parent
+_ROOT = _HERE.parent.parent
 sys.path.insert(0, str(_ROOT))
 
-from src.ocr.claude_pdf_reader import read_pdf_as_markdown          # noqa: E402
-from src.ocr.cost_guard import CostGuard, CostCapError              # noqa: E402
-from src.ocr.latex_corrector import correct_latex                   # noqa: E402
-from src.text_only.text_builder import build_from_markdown           # noqa: E402
-from src.text_only.typer_builder import build_typer_hwpx             # noqa: E402
-from src.text_only.ocr_fallback import apply_fallback               # noqa: E402
-from src.text_only.problem_segmenter import parse_problems, rebuild_markdown  # noqa: E402
-from src.common.image_extractor import (                            # noqa: E402
-    extract_images, extract_figures_by_vision,
-    crop_problems_by_bbox, extract_with_confidence, FigureCandidate,
+from scripts.web.auth import current_email, require_admin, require_login   # noqa: E402
+from scripts.web.engine_api import cleanup_old_jobs, router as engine_router  # noqa: E402
+from scripts.web.gdrive_uploader import (                                  # noqa: E402
+    TOKEN_FILE, is_configured, save_refresh_token,
 )
-from src.common.hwpx_image_inserter import (                        # noqa: E402
-    insert_figure_placeholder, apply_figure_decisions,
+from scripts.web.store import (                                            # noqa: E402
+    DATA_DIR, UPLOADS_DIR, WORK_DIR,
+    load_mconfig, load_registry, save_mconfig, save_registry,
+    validate_safe_key,
 )
-from src.common.hwpx_table_inserter import (                        # noqa: E402
-    replace_condition_tables, replace_boilerplate_tables, restyle_data_tables_to_gold,
-)
-from src.common.hwpx_namespace_fixer import fix_hwpx_namespaces    # noqa: E402
-from src.common.hwpx_validator import validate_hwpx                 # noqa: E402
-from src.common.pdf_utils import normalize_pdf_rotation             # noqa: E402
-from scripts.web.usage_log import (                                 # noqa: E402
-    append_entry, read_entries, today_summary, DAILY_CAP_USD,
-)
-from scripts.web.corrections_log import (                           # noqa: E402
-    append_correction, read_corrections, revert_correction,
-    corrections_summary, dedupe_corrections, analyze_corrections,
-    approve_as_pattern, get_active_patterns,
-    list_patterns, toggle_pattern, delete_pattern,
-    seed_default_patterns,
-)
-from scripts.web.users import (                                     # noqa: E402
-    add_user, get_user, is_admin, is_allowed, list_users,
-    remove_user, update_user,
-    get_role, get_allowed_stages, ROLE_DISPLAY, SELECTABLE_ROLES,
-    user_today_cost, ADMIN_EMAIL,
-)
-from scripts.web.gdrive_uploader import (                           # noqa: E402
-    save_refresh_token, upload_hwpx, upload_pdf, delete_file as drive_delete_file,
-    is_configured, TOKEN_FILE,
+from scripts.web.usage_log import read_entries, today_summary              # noqa: E402
+from scripts.web.users import (                                            # noqa: E402
+    ROLE_DISPLAY, SELECTABLE_ROLES,
+    add_user, get_allowed_stages, get_role, is_admin, is_allowed,
+    list_users, remove_user, update_user,
 )
 
-# ── 템플릿 HWPX ───────────────────────────────────────────────────────
-_SAMPLES = _ROOT / "samples"
-_TEMPLATE = next(
-    (f for f in _SAMPLES.glob("*.hwpx") if "워드초벌" in f.name and "]1." not in f.name),
-    next(_SAMPLES.glob("*.hwpx"), None),
-)
+_MANUAL_STAGES = {"hangeul", "typer", "solution"}
 
-# ── Job 저장소 ────────────────────────────────────────────────────────
-_jobs: dict[str, dict] = {}
+# 영속 경로 확인용 — 재배포 후 railway logs 에서 볼륨 경로가 맞는지 한눈에.
+print(f"  [경로] DATA_DIR={DATA_DIR}  WORK_DIR={WORK_DIR}"
+      f"  (볼륨마운트={os.environ.get('RAILWAY_VOLUME_MOUNT_PATH', '') or '없음'})")
 
 # ── Google OAuth 설정 ─────────────────────────────────────────────────
 GOOGLE_CLIENT_ID     = os.environ.get("GOOGLE_CLIENT_ID", "")
@@ -256,28 +86,9 @@ app.add_middleware(SessionMiddleware, secret_key=SECRET_KEY)
 app.mount("/static", StaticFiles(directory=str(_HERE / "static")), name="static")
 
 
-# ══════════════════════════════════════════════════════════════════════
-# 인증 헬퍼
-# ══════════════════════════════════════════════════════════════════════
-
-def _current_email(request: Request) -> str | None:
-    return request.session.get("email")
-
-
-def _require_login(request: Request) -> str:
-    email = _current_email(request)
-    if not email:
-        raise HTTPException(status_code=307, headers={"Location": "/login"})
-    if not is_allowed(email):
-        raise HTTPException(status_code=403, detail="접근 권한이 없습니다. 관리자에게 문의하세요.")
-    return email
-
-
-def _require_admin(request: Request) -> str:
-    email = _require_login(request)
-    if not is_admin(email):
-        raise HTTPException(status_code=403, detail="관리자만 접근 가능합니다.")
-    return email
+@app.on_event("startup")
+async def _startup():
+    cleanup_old_jobs()   # 3일 지난 변환 작업 폴더 정리
 
 
 # ══════════════════════════════════════════════════════════════════════
@@ -354,25 +165,31 @@ async def auth_logout(request: Request):
 
 @app.get("/login", response_class=HTMLResponse)
 async def login_page(request: Request):
-    if _current_email(request):
+    if current_email(request):
         return RedirectResponse("/")
     return HTMLResponse((_HERE / "static" / "login.html").read_text(encoding="utf-8"))
 
 
 @app.get("/", response_class=HTMLResponse)
 async def root(request: Request):
-    email = _current_email(request)
+    email = current_email(request)
     if not email or not is_allowed(email):
         return RedirectResponse("/login")
     return HTMLResponse((_HERE / "static" / "matrix.html").read_text(encoding="utf-8"))
 
 
-@app.get("/upload", response_class=HTMLResponse)
-async def upload_page(request: Request):
-    email = _current_email(request)
+@app.get("/matrix", response_class=HTMLResponse)
+async def matrix_page(request: Request):
+    email = current_email(request)
     if not email or not is_allowed(email):
         return RedirectResponse("/login")
-    return HTMLResponse((_HERE / "static" / "index.html").read_text(encoding="utf-8"))
+    return HTMLResponse((_HERE / "static" / "matrix.html").read_text(encoding="utf-8"))
+
+
+@app.get("/guide", response_class=HTMLResponse)
+async def guide_page():
+    """직원용 사용설명서 (로그인 없이도 열람 가능)."""
+    return HTMLResponse((_HERE / "static" / "guide.html").read_text(encoding="utf-8"))
 
 
 @app.get("/api/usage")
@@ -380,35 +197,9 @@ async def api_usage(request: Request):
     return JSONResponse({"summary": today_summary(), "recent": read_entries(days=7)[:10]})
 
 
-@app.post("/api/pdf/preview")
-async def api_pdf_preview(request: Request, file: UploadFile = File(...)):
-    """PDF 첫 페이지 미리보기 + 회전 감지. 업로드 확인 전 호출용."""
-    _require_login(request)
-    data = await file.read()
-    try:
-        import base64
-        doc = fitz.open(stream=data, filetype="pdf")
-        n   = doc.page_count
-        page = doc[0]
-        rotation = page.rotation
-        # 첫 페이지를 400px 폭으로 축소 렌더링
-        scale = min(400 / page.rect.width, 1.5)
-        pix   = page.get_pixmap(matrix=fitz.Matrix(scale, scale))
-        b64   = base64.b64encode(pix.tobytes("png")).decode()
-        doc.close()
-        return JSONResponse({
-            "pages":    n,
-            "rotation": rotation,
-            "needs_fix": rotation != 0,
-            "preview":  f"data:image/png;base64,{b64}",
-        })
-    except Exception as e:
-        raise HTTPException(400, f"PDF 읽기 실패: {e}")
-
-
 @app.get("/api/drive/status")
 async def api_drive_status(request: Request):
-    _require_login(request)
+    require_login(request)
     return JSONResponse({
         "configured": is_configured(),
         "token_path": str(TOKEN_FILE),
@@ -418,14 +209,14 @@ async def api_drive_status(request: Request):
 @app.get("/auth/gdrive")
 async def auth_gdrive(request: Request):
     """Drive refresh_token 강제 재취득 — /auth/login?gdrive=1 으로 위임."""
-    _require_login(request)
+    require_login(request)
     request.session["gdrive_reauth"] = "1"
     return RedirectResponse("/auth/login?gdrive=1")
 
 
 @app.get("/api/me")
 async def api_me(request: Request):
-    email = _current_email(request)
+    email = current_email(request)
     if not email:
         return JSONResponse({"authenticated": False})
     role = get_role(email)
@@ -440,256 +231,8 @@ async def api_me(request: Request):
     })
 
 
-@app.post("/convert")
-async def convert(
-    request: Request,
-    file: UploadFile = File(...),
-    full_content: str = Form("false"),
-    custom_filename: str = Form(""),
-):
-    email = _require_login(request)
-
-    if not file.filename.lower().endswith(".pdf"):
-        raise HTTPException(400, "PDF 파일만 업로드 가능합니다.")
-
-    # 사용자별 한도 체크 (관리자는 무제한)
-    if not is_admin(email):
-        user = get_user(email)
-        cap  = user.get("cap_usd", DAILY_CAP_USD) if user else DAILY_CAP_USD
-        if cap > 0:
-            today_cost = user_today_cost(email)
-            if today_cost >= cap:
-                raise HTTPException(
-                    429,
-                    f"오늘 사용 한도 ${cap:.2f}에 도달했습니다 (현재 ${today_cost:.2f}). "
-                    "관리자에게 문의하세요.",
-                )
-
-    job_id  = uuid.uuid4().hex[:12]
-    pdf_dst = _TMP_DIR / f"{job_id}.pdf"
-    pdf_dst.write_bytes(await file.read())
-
-    q: queue.Queue[str | None] = queue.Queue()
-    _jobs[job_id] = {"queue": q, "hwpx": None, "meta": {}}
-
-    full = full_content.lower() in ("true", "1", "yes")
-    threading.Thread(
-        target=_run_conversion,
-        args=(job_id, pdf_dst, file.filename, full, email, custom_filename.strip()),
-        daemon=True,
-    ).start()
-    return JSONResponse({"job_id": job_id})
-
-
-@app.get("/stream/{job_id}")
-async def stream(job_id: str):
-    if job_id not in _jobs:
-        raise HTTPException(404)
-
-    async def event_gen():
-        q = _jobs[job_id]["queue"]
-        while True:
-            try:
-                msg = q.get(timeout=0.3)
-            except queue.Empty:
-                await asyncio.sleep(0.1)
-                continue
-            if msg is None:
-                break
-            yield msg
-        meta = _jobs[job_id].get("meta", {})
-        if meta.get("error"):
-            yield f"event: error\ndata: {meta['error']}\n\n"
-        else:
-            hwpx  = _jobs[job_id].get("hwpx")
-            fname = hwpx.name if hwpx else ""
-            yield (
-                f"event: done\n"
-                f"data: {json.dumps({'file': fname, 'cost': meta.get('cost_usd', 0)})}\n\n"
-            )
-
-    return StreamingResponse(
-        event_gen(),
-        media_type="text/event-stream",
-        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
-    )
-
-
-@app.get("/download/{job_id}")
-async def download(job_id: str, request: Request):
-    _require_login(request)
-    _validate_safe_key(job_id)
-    # 메모리에 있으면 바로 사용
-    job = _jobs.get(job_id)
-    if job and job.get("hwpx") and job["hwpx"].exists():
-        hwpx = job["hwpx"]
-    else:
-        # 서버 재시작 후에도 파일시스템에서 복원
-        base_id = job_id.removesuffix("_reviewed")
-        for candidate in [
-            _TMP_DIR / f"{job_id}_reviewed.hwpx",
-            _TMP_DIR / f"{job_id}.hwpx",
-            _TMP_DIR / f"{base_id}_reviewed.hwpx",
-            _TMP_DIR / f"{base_id}.hwpx",
-        ]:
-            if candidate.exists():
-                hwpx = candidate
-                break
-        else:
-            raise HTTPException(404)
-
-    # 파일명 결정: custom_filename 우선, 없으면 PDF 이름
-    base_id = job_id.removesuffix("_reviewed")
-    review_file = _TMP_DIR / f"{base_id}_review.json"
-    dl_name = hwpx.name  # 기본값
-    if review_file.exists():
-        try:
-            meta = json.loads(review_file.read_text(encoding="utf-8"))
-            custom = meta.get("custom_filename", "")
-            pdf_name = meta.get("pdf_name", "")
-            is_reviewed = "_reviewed" in hwpx.name
-            if custom:
-                stem   = Path(custom).stem
-                suffix = "_검수" if is_reviewed else ""
-                dl_name = f"{stem}{suffix}.hwpx"
-            elif pdf_name:
-                stem   = Path(pdf_name).stem
-                suffix = "_검수" if is_reviewed else ""
-                dl_name = f"{stem}{suffix}.hwpx"
-        except Exception:
-            pass
-
-    return FileResponse(str(hwpx), media_type="application/octet-stream", filename=dl_name)
-
-
-def _attachment_disposition(filename: str, ascii_fallback: str) -> str:
-    """latin-1 안전한 Content-Disposition 값.
-
-    HTTP 헤더는 latin-1만 허용 — 한글 파일명을 raw로 박으면 uvicorn이 헤더를
-    인코딩하다 UnicodeEncodeError → 500. RFC 5987(`filename*`)로 UTF-8 인코딩하고
-    구형 클라이언트용 ASCII 폴백(`filename=`)을 함께 준다.
-    """
-    from urllib.parse import quote
-    fb = filename.encode("ascii", "ignore").decode("ascii").strip("._ ") or ascii_fallback
-    return f'attachment; filename="{fb}"; ' + f"filename*=UTF-8''{quote(filename)}"
-
-
-@app.get("/download/{job_id}/md")
-async def download_md(job_id: str, request: Request):
-    """OCR 인식 기록(최종 마크다운) 다운로드.
-
-    build_from_markdown 이 그대로 소비하는 문자열이라, 이 .md 만 있으면
-    Mathpix/Claude 재호출(재과금) 없이 수정→재빌드가 가능하다.
-    """
-    _require_login(request)
-    _validate_safe_key(job_id)
-    base_id = job_id.removesuffix("_reviewed")
-    review_file = _TMP_DIR / f"{base_id}_review.json"
-    if not review_file.exists():
-        raise HTTPException(404, "변환 기록이 서버에 없습니다. PDF를 다시 변환해 주세요.")
-
-    rv = json.loads(review_file.read_text(encoding="utf-8"))
-    md = rv.get("markdown", "")
-    if not md:
-        # 구버전 review.json 호환: 문제 구조에서 재조립
-        problems = rv.get("problems", [])
-        md = rv.get("header", "") + "\n\n" + "\n\n".join(
-            p.get("full_text", "") for p in problems
-        )
-    if not md.strip():
-        raise HTTPException(404, "마크다운 기록이 비어 있습니다.")
-
-    custom = rv.get("custom_filename", "")
-    pdf_name = rv.get("pdf_name", "")
-    stem = Path(custom).stem if custom else (Path(pdf_name).stem if pdf_name else base_id)
-    return Response(
-        content=md.encode("utf-8"),
-        media_type="text/markdown; charset=utf-8",
-        headers={"Content-Disposition": _attachment_disposition(f"{stem}.md", f"{base_id}.md")},
-    )
-
-
-@app.get("/api/jobs/{job_id}")
-async def api_job_info(job_id: str, request: Request):
-    """저장된 job의 상태 확인 — 페이지 복귀 시 사용."""
-    _require_login(request)
-    has_hwpx   = (_TMP_DIR / f"{job_id}.hwpx").exists() or \
-                 (_TMP_DIR / f"{job_id}_reviewed.hwpx").exists()
-    has_review = (_TMP_DIR / f"{job_id}_review.json").exists()
-    if not has_hwpx and not has_review:
-        raise HTTPException(404)
-    pdf_name = ""
-    if has_review:
-        try:
-            pdf_name = json.loads(
-                (_TMP_DIR / f"{job_id}_review.json").read_text(encoding="utf-8")
-            ).get("pdf_name", "")
-        except Exception:
-            pass
-    return JSONResponse({
-        "job_id":     job_id,
-        "pdf_name":   pdf_name,
-        "has_hwpx":   has_hwpx,
-        "has_review": has_review,
-        "download_url": f"/download/{job_id}_reviewed" if (_TMP_DIR / f"{job_id}_reviewed.hwpx").exists()
-                        else f"/download/{job_id}",
-        "review_url": f"/review/{job_id}" if has_review else None,
-    })
-
-
-@app.delete("/api/jobs/{job_id}")
-async def api_delete_job(job_id: str, request: Request):
-    """잡 삭제 — 로컬 임시파일 + Drive 파일 + 레지스트리 항목 제거."""
-    _require_login(request)
-    base_id = job_id.removesuffix("_reviewed")
-
-    # Drive 파일 삭제
-    review_file = _TMP_DIR / f"{base_id}_review.json"
-    if review_file.exists():
-        try:
-            meta = json.loads(review_file.read_text(encoding="utf-8"))
-            fid  = meta.get("drive_file_id", "")
-            if fid:
-                ok = drive_delete_file(fid)
-                if not ok:
-                    print(f"  [Drive] {fid} 삭제 실패 (계속 진행)")
-        except Exception:
-            pass
-
-    # 로컬 임시 파일 전체 삭제
-    patterns = [
-        f"{base_id}.pdf", f"{base_id}.hwpx", f"{base_id}_reviewed.hwpx",
-        f"{base_id}_review.json", f"{base_id}_rotfix.pdf",
-    ]
-    for name in patterns:
-        (_TMP_DIR / name).unlink(missing_ok=True)
-    for p in _TMP_DIR.glob(f"{base_id}_page*.png"):
-        p.unlink(missing_ok=True)
-    for p in _TMP_DIR.glob(f"{base_id}_figs"):
-        import shutil
-        shutil.rmtree(p, ignore_errors=True)
-
-    # 메모리 잡 제거
-    _jobs.pop(base_id, None)
-    _jobs.pop(f"{base_id}_reviewed", None)
-
-    # 레지스트리에서 제거
-    reg = _load_registry()
-    keys_to_del = [k for k, v in reg.items() if v.get("job_id") == base_id]
-    for k in keys_to_del:
-        del reg[k]
-    if keys_to_del:
-        _save_registry(reg)
-
-    # 그림 검수 큐 제거 (dangling crop 경로 방지)
-    for k in keys_to_del:
-        shutil.rmtree(_figq_key_dir(k), ignore_errors=True)
-
-    return JSONResponse({"ok": True, "deleted_keys": keys_to_del})
-
-
 # ══════════════════════════════════════════════════════════════════════
-# 파이프라인 수동 단계 (한글완성본·타이퍼·해설)
+# 파이프라인 수동 단계 (한글완성본·타이퍼·해설 파일 업로드 슬롯)
 # ══════════════════════════════════════════════════════════════════════
 
 @app.post("/api/pipeline/{key}/stages/{stage}")
@@ -697,12 +240,12 @@ async def pipeline_stage_upload(
     key: str, stage: str, request: Request,
     file: UploadFile = File(...),
 ):
-    _require_login(request)
-    _validate_safe_key(key)
+    require_login(request)
+    validate_safe_key(key)
     if stage not in _MANUAL_STAGES:
         raise HTTPException(400, f"지원하지 않는 단계: {stage}")
 
-    stage_dir = _UPLOADS_DIR / key / stage
+    stage_dir = UPLOADS_DIR / key / stage
     stage_dir.mkdir(parents=True, exist_ok=True)
     for old in stage_dir.iterdir():
         old.unlink(missing_ok=True)
@@ -710,24 +253,24 @@ async def pipeline_stage_upload(
     dest = stage_dir / (file.filename or f"{stage}.hwpx")
     dest.write_bytes(await file.read())
 
-    reg   = _load_registry()
+    reg   = load_registry()
     entry = reg.get(key, {})
     entry.setdefault("stages", {})[stage] = {
         "filename":    dest.name,
         "uploaded_at": datetime.now().isoformat(timespec="seconds"),
     }
     reg[key] = entry
-    _save_registry(reg)
+    save_registry(reg)
     return JSONResponse({"ok": True, "filename": dest.name})
 
 
 @app.get("/api/pipeline/{key}/stages/{stage}/download")
 async def pipeline_stage_download(key: str, stage: str, request: Request):
-    _require_login(request)
-    _validate_safe_key(key)
+    require_login(request)
+    validate_safe_key(key)
     if stage not in _MANUAL_STAGES:
         raise HTTPException(400)
-    stage_dir = _UPLOADS_DIR / key / stage
+    stage_dir = UPLOADS_DIR / key / stage
     files = list(stage_dir.iterdir()) if stage_dir.exists() else []
     if not files:
         raise HTTPException(404, "파일 없음")
@@ -737,575 +280,40 @@ async def pipeline_stage_download(key: str, stage: str, request: Request):
 
 @app.delete("/api/pipeline/{key}/stages/{stage}")
 async def pipeline_stage_delete(key: str, stage: str, request: Request):
-    _require_login(request)
-    _validate_safe_key(key)
+    require_login(request)
+    validate_safe_key(key)
     if stage not in _MANUAL_STAGES:
         raise HTTPException(400)
-    stage_dir = _UPLOADS_DIR / key / stage
+    stage_dir = UPLOADS_DIR / key / stage
     if stage_dir.exists():
-        import shutil
         shutil.rmtree(stage_dir)
-    reg   = _load_registry()
+    reg   = load_registry()
     entry = reg.get(key, {})
     entry.get("stages", {}).pop(stage, None)
     reg[key] = entry
-    _save_registry(reg)
+    save_registry(reg)
     return JSONResponse({"ok": True})
 
 
-def _typer_loss_reason(src_path: Path, cand_path: Path) -> str | None:
-    """2단 타이퍼 결과(cand)가 1단(src) 대비 내용을 보존했는지 검사.
-
-    보존되면 None, 유실/빈 결과면 한국어 사유를 반환한다(=등록 거부 신호).
-    `_finalize_2dan` 가드와 동일 기준 + 본문 텍스트 길이 가드를 추가해
-    수식·그림이 0개인 순수 텍스트 시험지의 '본문 통째 유실'도 잡는다.
-    """
-    import zipfile as _zf
-
-    def _stats(p: Path) -> tuple[int, int, int]:
-        eq = pic = text_len = 0
-        with _zf.ZipFile(p) as z:
-            for s in sorted(n for n in z.namelist()
-                            if re.match(r"Contents/section\d+\.xml", n)):
-                x = z.read(s).decode("utf-8")
-                eq  += x.count("<hp:equation")
-                pic += x.count("<hp:pic")
-                for m in re.finditer(r"<hp:t[^>]*>([^<]*)</hp:t>", x):
-                    text_len += len(m.group(1))
-        return eq, pic, text_len
-
-    eq1, pic1, len1 = _stats(src_path)
-    eq2, pic2, len2 = _stats(cand_path)
-    if eq2 < eq1 or pic2 < pic1:
-        return f"내용 손실(수식 {eq1}→{eq2}, 그림 {pic1}→{pic2})"
-    if len1 > 0 and len2 < len1 * 0.5:
-        return f"본문 유실({len1}→{len2}자)"
-    errs = validate_hwpx(str(cand_path))
-    if errs:
-        return f"HWPX 검증 실패: {errs[0]}"
-    return None
-
-
-@app.post("/api/pipeline/{key}/typer/generate")
-async def pipeline_typer_generate(key: str, request: Request):
-    """
-    1단 HWPX(검수완 > 검수전)를 2단 타이퍼 양식으로 자동 변환.
-    변환 결과는 _UPLOADS_DIR/key/typer/ 에 저장하고 registry에 반영.
-    """
-    _require_login(request)
-    _validate_safe_key(key)
-    reg   = _load_registry()
-    entry = reg.get(key)
-    if not entry:
-        raise HTTPException(404, "등록된 키가 없습니다.")
-    job_id = entry.get("job_id", "")
-    if not job_id:
-        raise HTTPException(400, "job_id가 없습니다. 먼저 PDF 변환을 완료하세요.")
-
-    # 1단 HWPX 파일 결정: 검수완 우선, 없으면 검수전
-    reviewed = _TMP_DIR / f"{job_id}_reviewed.hwpx"
-    original = _TMP_DIR / f"{job_id}.hwpx"
-    one_dan = reviewed if reviewed.exists() else original if original.exists() else None
-    if not one_dan:
-        raise HTTPException(404, "1단 HWPX 파일을 찾을 수 없습니다.")
-
-    stage_dir = _UPLOADS_DIR / key / "typer"
-    stage_dir.mkdir(parents=True, exist_ok=True)
-
-    out_name = f"{key.strip('[]')}_타이퍼양식.hwpx"
-    out_path = stage_dir / out_name
-    tmp_path = stage_dir / "_typer_build.tmp.hwpx"   # 가드 통과 전까지 임시
-
-    try:
-        loop = asyncio.get_event_loop()
-        await loop.run_in_executor(
-            None,
-            lambda: build_typer_hwpx(
-                one_dan_path=one_dan,
-                registry_key=key,
-                out_path=tmp_path,
-            ),
-        )
-    except Exception as e:
-        tmp_path.unlink(missing_ok=True)
-        raise HTTPException(500, f"타이퍼 양식 생성 실패: {e}")
-
-    # 빈/퇴화 결과 가드: 1단 대비 내용 유실이면 등록하지 않고 거부.
-    # 별도 파일이라 비파괴지만, 형식 미인식 시 빈 타이퍼를 성공으로 등록하던
-    # 문제를 차단한다(수피아여고류). 실패 시 기존 산출물·등록은 그대로 보존.
-    reason = _typer_loss_reason(one_dan, tmp_path)
-    if reason:
-        tmp_path.unlink(missing_ok=True)
-        raise HTTPException(
-            422,
-            f"타이퍼 변환 거부({reason}) — 형식 미인식으로 빈 양식이 생성되어 "
-            f"등록하지 않았습니다. 1단 검수본 형식을 확인하세요.",
-        )
-
-    # 가드 통과 → 이전 산출물 정리 후 확정 교체
-    for old in stage_dir.iterdir():
-        if old != tmp_path:
-            old.unlink(missing_ok=True)
-    tmp_path.replace(out_path)
-
-    entry.setdefault("stages", {})["typer"] = {
-        "filename":    out_path.name,
-        "uploaded_at": datetime.now().isoformat(timespec="seconds"),
-        "auto":        True,
-    }
-    reg[key] = entry
-    _save_registry(reg)
-    return JSONResponse({"ok": True, "filename": out_path.name})
-
-
 # ══════════════════════════════════════════════════════════════════════
-# 그림 수동 검수 큐 (P1+P2: extract_with_confidence 미달 → 수동 드래그)
-# ══════════════════════════════════════════════════════════════════════
-
-def _register_figure_queue(
-    reg_key: str,
-    job_id: str,
-    figure_items: set[str],
-    figure_map: dict[str, Path],
-    prob_crop_map: dict[str, Path] | None = None,
-    conf_map: dict[str, "FigureCandidate"] | None = None,
-    threshold: float = 0.7,
-) -> None:
-    """변환 완료 직후 그림 검수 큐 자동 등록.
-
-    figure_items:  Claude OCR이 마킹한 그림 문제 번호 집합
-    figure_map:    HWPX 삽입에 쓴 {prob_no: fig_png_path} (extract_images/vision)
-    prob_crop_map: BBoxDetector로 자른 {prob_no: 문제별_crop_png} — 검수 화면 원본
-    conf_map:      {prob_no: FigureCandidate} — extract_with_confidence 실측 결과
-    threshold:     이 값 이상이면 auto_selected, 미만이면 pending(검수 권장)
-
-    crop_path는 문제별 crop을 우선 사용하고, 없으면 첫 페이지 전체로 폴백한다.
-    """
-    from PIL import Image as PILImage
-    try:
-        from src.pipeline.crop_ocr_builder import CROP_DPI as _CROP_DPI
-    except Exception:
-        _CROP_DPI = 300  # crop_problems_by_bbox 렌더 DPI
-
-    prob_crop_map = prob_crop_map or {}
-    conf_map = conf_map or {}
-
-    page_pngs_sorted: list[Path] = sorted(
-        _TMP_DIR.glob(f"{job_id}_page*.png"),
-        key=lambda p: int(re.search(r"page(\d+)", p.stem).group(1)),
-    )
-    fallback_crop = str(page_pngs_sorted[0]) if page_pngs_sorted else None
-
-    qdata = _figq_load(reg_key)
-    # 같은 키로 재변환 시 이전 큐는 옛 job의 crop 경로를 가리킴 — 초기화
-    # (job_id 필드가 없는 레거시 큐도 이전 잡 소속이므로 동일하게 리셋)
-    job_changed = qdata.get("job_id") != job_id
-    if job_changed and qdata.get("items"):
-        print(f"  [그림큐] 재변환 감지 — 이전 큐 초기화 "
-              f"({qdata.get('job_id') or '레거시'} → {job_id})")
-        qdata = {"items": {}}
-    qdata["job_id"] = job_id
-    items: dict = qdata.get("items", {})
-    added = 0
-
-    for prob_no in sorted(figure_items, key=lambda x: int(x) if x.isdigit() else 999):
-        if prob_no in items:
-            continue  # 이미 등록된 항목은 건드리지 않음
-
-        crop = prob_crop_map.get(prob_no)
-        crop_path = str(crop) if crop else fallback_crop
-
-        # crop_path DPI: 문제 크롭(prob_crop)은 300, 폴백 페이지 PNG는 150
-        crop_dpi = _CROP_DPI if crop else 150
-
-        cand = conf_map.get(prob_no)
-        if cand is not None and crop is not None:
-            # ── 실측 신뢰도 (Tesseract×Density IoU) ──────────────────────
-            confidence = cand.confidence
-            strategy   = cand.strategy
-            auto_path  = str(cand.image_path)
-            auto_dpi   = _CROP_DPI  # 문제 크롭에서 잘라낸 결과
-            auto_bbox_pct = None
-            try:
-                with PILImage.open(crop) as im:
-                    W, H = im.size
-                x0, y0, x1, y1 = cand.bbox
-                if W and H:
-                    auto_bbox_pct = [
-                        round(x0 / W * 100, 1), round(y0 / H * 100, 1),
-                        round(x1 / W * 100, 1), round(y1 / H * 100, 1),
-                    ]
-            except Exception:
-                pass
-            status = "auto_selected" if confidence >= threshold else "pending"
-        else:
-            # ── 신뢰도 측정 불가 → figure_map 파일명 추정 폴백 ────────────
-            auto_img = figure_map.get(prob_no)
-            if auto_img and auto_img.exists():
-                strategy   = "vision" if "vision" in auto_img.name else "pymupdf"
-                confidence = 0.6 if strategy == "vision" else 0.7
-                auto_path  = str(auto_img)
-                auto_dpi   = 150  # extract_images/vision 모두 150 DPI 렌더
-                status     = "auto_selected" if confidence > threshold else "pending"
-            else:
-                strategy   = "none"
-                confidence = 0.0
-                auto_path  = None
-                auto_dpi   = 150
-                status     = "pending"
-            auto_bbox_pct = None
-
-        _now = datetime.now().isoformat(timespec="seconds")
-        items[prob_no] = {
-            "prob_no":       prob_no,
-            "page_no":       None,
-            "status":        status,
-            "strategy":      strategy,
-            "confidence":    confidence,
-            "crop_path":     crop_path,
-            "crop_dpi":      crop_dpi,
-            "auto_path":     auto_path,
-            "auto_dpi":      auto_dpi,
-            "auto_bbox_pct": auto_bbox_pct,
-            "manual_path":   None,
-            "created_at":    _now,
-        }
-        # 첫 빌드에서 자동 이미지가 실제 삽입된 항목은 이미 반영된 상태 —
-        # applied_at 스탬프로 '반영대기' 오표시 방지 (figure_map 기준)
-        _ins = figure_map.get(prob_no)
-        if _ins and Path(_ins).exists():
-            items[prob_no]["applied_at"] = _now
-        added += 1
-
-    if added == 0:
-        if job_changed:
-            # 항목 변화가 없어도 job_id는 영속화 (재변환 리셋 판단 기준)
-            qdata["items"] = items
-            _figq_save(reg_key, qdata)
-        return
-
-    qdata["items"] = items
-    _figq_save(reg_key, qdata)
-
-    pending_cnt = sum(1 for v in items.values() if v["status"] == "pending")
-    auto_cnt    = sum(1 for v in items.values() if v["status"] == "auto_selected")
-    print(f"  [그림큐] +{added}건 등록 (자동={auto_cnt}, 검수필요={pending_cnt}) → /figure/{reg_key}")
-
-@app.get("/figure/{key}", response_class=HTMLResponse)
-async def figure_crop_page(key: str, request: Request):
-    _require_login(request)
-    _validate_safe_key(key)
-    html = (_HERE / "static" / "figure_crop.html").read_text(encoding="utf-8")
-    return HTMLResponse(html)
-
-
-@app.get("/api/figure/{key}/queue")
-async def api_figure_queue(key: str, request: Request):
-    """수동 검수 대기 그림 목록."""
-    _require_login(request)
-    _validate_safe_key(key)
-    data = _figq_load(key)
-    items = data.get("items", {})
-    queue = []
-    for prob_no, e in sorted(items.items(), key=lambda x: int(x[0]) if x[0].isdigit() else 999):
-        queue.append({
-            "prob_no":        prob_no,
-            "page_no":        e.get("page_no"),
-            "status":         e.get("status", "pending"),
-            "strategy":       e.get("strategy"),
-            "confidence":     e.get("confidence"),
-            "auto_bbox_pct":  e.get("auto_bbox_pct"),
-        })
-    return JSONResponse({"items": queue})
-
-
-@app.get("/api/figure/{key}/{prob_no}/image")
-async def api_figure_image(
-    key: str, prob_no: str, request: Request,
-    which: str = "crop", overlay: bool = False,
-):
-    """그림 검수용 이미지 응답.
-
-    which: "crop"=문제 크롭, "auto"=자동 결과, "manual"=수동 결과
-    overlay: True+which=crop이면 auto_bbox_pct를 빨간 박스로 오버레이
-    """
-    _require_login(request)
-    _validate_safe_key(key)
-    if which not in ("crop", "auto", "manual"):
-        raise HTTPException(400, "which는 crop|auto|manual")
-
-    data = _figq_load(key)
-    entry = data.get("items", {}).get(prob_no)
-    if not entry:
-        raise HTTPException(404, f"{prob_no}번 그림 큐 없음")
-
-    path_key = {"crop": "crop_path", "auto": "auto_path", "manual": "manual_path"}[which]
-    raw_path = entry.get(path_key)
-    if not raw_path:
-        raise HTTPException(404, f"{which} 이미지 없음")
-
-    src = Path(raw_path)
-    if not src.exists():
-        raise HTTPException(404, f"파일 없음: {src.name}")
-
-    if not overlay or which != "crop":
-        return FileResponse(str(src), media_type="image/png")
-
-    bbox_pct = entry.get("auto_bbox_pct")
-    if not bbox_pct:
-        return FileResponse(str(src), media_type="image/png")
-
-    from PIL import Image as PILImage, ImageDraw
-    img = PILImage.open(src).convert("RGB")
-    W, H = img.size
-    x0 = int(W * bbox_pct[0] / 100);  y0 = int(H * bbox_pct[1] / 100)
-    x1 = int(W * bbox_pct[2] / 100);  y1 = int(H * bbox_pct[3] / 100)
-    draw = ImageDraw.Draw(img)
-    draw.rectangle((x0, y0, x1, y1), outline="red", width=4)
-    buf = io.BytesIO()
-    img.save(buf, format="PNG")
-    buf.seek(0)
-    return StreamingResponse(buf, media_type="image/png")
-
-
-@app.post("/api/figure/{key}/{prob_no}/decision")
-async def api_figure_decision(key: str, prob_no: str, request: Request):
-    """검수 결정. body: {action: "auto"|"manual"|"skip", bbox_pct?: [x0,y0,x1,y1]}
-
-    - auto:  자동 결과 채택 (auto_path가 최종 path)
-    - manual: bbox_pct 필수, 큐 디렉토리에 manual_path 생성
-    - skip:  건너뜀 (그림 없음으로 처리)
-    """
-    _require_login(request)
-    _validate_safe_key(key)
-
-    with _figq_apply_busy_lock:
-        if key in _figq_apply_busy:
-            raise HTTPException(409, "HWPX 반영 작업이 진행 중입니다 — 잠시 후 다시 시도해 주세요.")
-
-    try:
-        body = await request.json()
-    except Exception:
-        raise HTTPException(400, "JSON 본문 필요")
-    action = body.get("action")
-    if action not in ("auto", "manual", "skip"):
-        raise HTTPException(400, "action은 auto|manual|skip")
-
-    data = _figq_load(key)
-    entry = data.get("items", {}).get(prob_no)
-    if not entry:
-        raise HTTPException(404, f"{prob_no}번 그림 큐 없음")
-
-    if action == "manual":
-        bbox_pct = _figq_clamp_bbox_pct(body.get("bbox_pct") or [])
-        crop_path = entry.get("crop_path")
-        if not crop_path or not Path(crop_path).exists():
-            raise HTTPException(404, "원본 크롭 파일 없음")
-
-        from PIL import Image as PILImage
-        img = PILImage.open(crop_path)
-        W, H = img.size
-        x0 = int(W * bbox_pct[0] / 100);  y0 = int(H * bbox_pct[1] / 100)
-        x1 = int(W * bbox_pct[2] / 100);  y1 = int(H * bbox_pct[3] / 100)
-        if (x1 - x0) < 4 or (y1 - y0) < 4:
-            raise HTTPException(400, "픽셀 영역이 너무 작습니다.")
-
-        out_dir = _figq_key_dir(key)
-        out_dir.mkdir(parents=True, exist_ok=True)
-        manual_path = out_dir / f"{prob_no}_manual.png"
-        img.crop((x0, y0, x1, y1)).save(str(manual_path))
-
-        # last-wins: 동시 요청 시 마지막 호출이 덮어쓴다 (로그만 남김)
-        prev_status = entry.get("status")
-        if prev_status and prev_status != "pending":
-            print(f"  [figq] {key}/{prob_no} 상태 덮어쓰기: {prev_status} → manual_selected")
-
-        entry["manual_bbox_pct"] = list(bbox_pct)
-        entry["manual_path"] = str(manual_path)
-        entry["status"] = "manual_selected"
-    else:
-        # auto / skip 모두 last-wins 단순 갱신
-        entry["status"] = "auto_selected" if action == "auto" else "skipped"
-
-    entry["updated_at"] = datetime.now().isoformat(timespec="seconds")
-    data.setdefault("items", {})[prob_no] = entry
-    _figq_save(key, data)
-    return JSONResponse({"ok": True, "status": entry["status"]})
-
-
-_figq_apply_busy: set[str] = set()
-_figq_apply_busy_lock = threading.Lock()
-
-
-def _figq_summary(key: str) -> dict | None:
-    """그림 큐 요약 — matrix 배지용. 큐 없으면 None."""
-    items = _figq_load(key).get("items", {})
-    if not items:
-        return None
-    pending = sum(1 for e in items.values() if e.get("status") == "pending")
-    # 결정된 항목 중 아직 HWPX에 반영되지 않은 건
-    # (한 번도 반영 안 됨 or 반영 이후 결정이 변경됨)
-    needs_apply = sum(
-        1 for e in items.values()
-        if e.get("status") != "pending"
-        and (not e.get("applied_at")
-             or (e.get("updated_at") or "") > e["applied_at"])
-    )
-    return {"total": len(items), "pending": pending, "needs_apply": needs_apply}
-
-
-def _figq_mark_applied(key: str, snapshot_items: dict, result: dict, target_name: str) -> None:
-    """반영 성공 항목에 applied_at 기록.
-
-    디스크를 fresh 재로드해 병합 — 반영 도중 들어온 결정은 보존하고
-    (status/updated_at이 스냅샷과 다르면 마킹 생략 → needs_apply로 유지),
-    실제 반영된 항목(applied_nos/skipped_nos)만 마킹한다.
-    """
-    now = datetime.now().isoformat(timespec="seconds")
-    fresh = _figq_load(key)
-    fitems = fresh.get("items", {})
-    for no in result.get("applied_nos", []) + result.get("skipped_nos", []):
-        snap = snapshot_items.get(no)
-        cur = fitems.get(no)
-        if not snap or not cur:
-            continue
-        if (cur.get("status") == snap.get("status")
-                and cur.get("updated_at") == snap.get("updated_at")):
-            cur["applied_at"] = now
-    fresh["last_applied"] = {"at": now, "target": target_name}
-    _figq_save(key, fresh)
-
-
-@app.post("/api/figure/{key}/apply")
-def api_figure_apply(key: str, request: Request):
-    """그림 검수 결정을 HWPX에 반영.
-
-    저장된 review.json 마크다운으로 로컬 재조립(build_from_markdown —
-    LLM 호출·과금 0) 후 큐 결정대로 그림을 삽입한다.
-    텍스트 검수 완료본(_reviewed)이 있으면 그 쪽을 갱신한다.
-    """
-    _require_login(request)
-    _validate_safe_key(key)
-
-    qdata = _figq_load(key)
-    items = qdata.get("items", {})
-    if not items:
-        raise HTTPException(404, "그림 검수 큐가 비어 있습니다.")
-
-    reg = _load_registry()
-    entry = reg.get(key)
-    if not entry or not entry.get("job_id"):
-        raise HTTPException(404, "등록된 변환 잡이 없습니다.")
-    job_id = entry["job_id"]
-
-    # 큐가 다른(이전) 변환의 것이면 반영 거부 — 엉뚱한 그림·헛반영 방지
-    if qdata.get("job_id") and qdata["job_id"] != job_id:
-        raise HTTPException(409, "그림 큐가 이전 변환 기준입니다. PDF를 다시 변환해 주세요.")
-
-    review_file = _TMP_DIR / f"{job_id}_review.json"
-    if not review_file.exists():
-        raise HTTPException(404, "변환 데이터가 서버에 없습니다. PDF를 다시 변환해 주세요.")
-
-    with _figq_apply_busy_lock:
-        if key in _figq_apply_busy:
-            raise HTTPException(409, "이미 반영 작업이 진행 중입니다.")
-        _figq_apply_busy.add(key)
-
-    tmp_out = _TMP_DIR / f"{job_id}_figapply.hwpx"
-    try:
-        rv = json.loads(review_file.read_text(encoding="utf-8"))
-        problems = rv.get("problems", [])
-        if not problems:
-            raise HTTPException(400, "변환 데이터에 문제 텍스트가 없습니다.")
-        md = rv.get("header", "") + "\n\n" + "\n\n".join(
-            p["full_text"] for p in problems
-        )
-
-        reviewed_path = _TMP_DIR / f"{job_id}_reviewed.hwpx"
-        is_reviewed = reviewed_path.exists()
-        target = reviewed_path if is_reviewed else (_TMP_DIR / f"{job_id}.hwpx")
-
-        if not _TEMPLATE:
-            raise HTTPException(500, "samples/ 폴더에 템플릿 HWPX가 없습니다.")
-        build_from_markdown(md, tmp_out, _TEMPLATE)
-        restyle_data_tables_to_gold(tmp_out)
-        replace_condition_tables(tmp_out)
-        replace_boilerplate_tables(tmp_out)
-        fix_hwpx_namespaces(str(tmp_out))
-        errs = validate_hwpx(str(tmp_out))
-        if errs:
-            raise HTTPException(500, f"HWPX 검증 실패: {errs[0]}")
-
-        counts = apply_figure_decisions(tmp_out, items)
-
-        # 그림 반영본도 2단 타이퍼 양식으로 (최종 출력 = 2단)
-        _finalize_2dan(tmp_out, key)
-
-        shutil.move(str(tmp_out), str(target))
-        jid = f"{job_id}_reviewed" if is_reviewed else job_id
-        if jid in _jobs:
-            _jobs[jid]["hwpx"] = target
-
-        # ── Drive 사본 교체 (기존 파일 삭제 → 읽기 좋은 이름으로 업로드) ──
-        drive_ok = None
-        custom = rv.get("custom_filename", "") or f"{key}.hwpx"
-        parts = Path(custom).stem.split("_")
-        if len(parts) >= 5 and is_configured():
-            try:
-                old_fid = rv.get("drive_file_id", "")
-                up_name = f"{Path(custom).stem}{'_검수' if is_reviewed else ''}.hwpx"
-                up_path = target.with_name(up_name)
-                shutil.copyfile(target, up_path)
-                new_fid = upload_hwpx(up_path, parts[0], parts[4])
-                up_path.unlink(missing_ok=True)
-                if new_fid:
-                    if old_fid:
-                        drive_delete_file(old_fid)
-                    rv["drive_file_id"] = new_fid
-                    review_file.write_text(
-                        json.dumps(rv, ensure_ascii=False, indent=2), encoding="utf-8"
-                    )
-                    drive_ok = True
-                    print(f"  [Drive] AKP/{parts[0]}/{parts[4]}/{up_name} 교체 완료")
-                else:
-                    drive_ok = False
-            except Exception as _de:
-                drive_ok = False
-                print(f"  [Drive] 그림 반영본 업로드 오류 (무시): {_de}")
-
-        # ── 큐에 반영 시각 기록 (fresh 병합 — 도중 결정 보존) ──────────
-        _figq_mark_applied(key, items, counts, target.name)
-
-        return JSONResponse({
-            "ok": True, "target": "reviewed" if is_reviewed else "draft",
-            "counts": counts, "drive": drive_ok,
-            "download_url": f"/download/{jid}",
-        })
-    finally:
-        tmp_out.unlink(missing_ok=True)
-        with _figq_apply_busy_lock:
-            _figq_apply_busy.discard(key)
-
-
-# ══════════════════════════════════════════════════════════════════════
-# 관리자 라우트
+# 관리자 (사용자 관리)
 # ══════════════════════════════════════════════════════════════════════
 
 @app.get("/admin", response_class=HTMLResponse)
 async def admin_page(request: Request):
-    _require_admin(request)
+    require_admin(request)
     return HTMLResponse((_HERE / "static" / "admin.html").read_text(encoding="utf-8"))
 
 
 @app.get("/api/admin/users")
 async def api_admin_users(request: Request):
-    _require_admin(request)
+    require_admin(request)
     return JSONResponse(list_users())
 
 
 @app.post("/api/admin/users")
 async def api_add_user(request: Request):
-    _require_admin(request)
+    require_admin(request)
     body = await request.json()
     email   = body.get("email", "").strip().lower()
     name    = body.get("name", "").strip()
@@ -1319,7 +327,7 @@ async def api_add_user(request: Request):
 
 @app.patch("/api/admin/users/{email:path}")
 async def api_update_user(email: str, request: Request):
-    _require_admin(request)
+    require_admin(request)
     body   = await request.json()
     action = body.get("action", "")
     if action == "deactivate":
@@ -1340,251 +348,39 @@ async def api_update_user(email: str, request: Request):
     return JSONResponse({"ok": True})
 
 
-@app.get("/api/admin/corrections")
-async def api_corrections(request: Request, days: int = 30):
-    _require_admin(request)
-    return JSONResponse({
-        "corrections": read_corrections(days=days),
-        "summary":     corrections_summary(days=7),
-    })
-
-
-@app.post("/api/admin/corrections/dedupe")
-async def api_dedupe_corrections(request: Request):
-    """검수 로그의 중복 항목 정리 (같은 잡·문제·메모·교정 = 중복)."""
-    _require_admin(request)
-    removed = dedupe_corrections()
-    return JSONResponse({"ok": True, "removed": removed})
-
-
-@app.get("/api/admin/corrections/analysis")
-async def api_corrections_analysis(request: Request, days: int = 90):
-    """반복 교정 분석 — 비슷한 오류를 묶어 패턴화 우선순위 제시."""
-    _require_admin(request)
-    return JSONResponse(analyze_corrections(days=days))
-
-
-def _ai_suggest_patterns(api_key: str, items: list[dict]) -> list[dict]:
-    """검수 반복 교정을 Claude가 분석해 교정 패턴 제안 (temperature=0, 제안만).
-
-    정책: LLM=패턴 발견기, 자동 적용 금지 → 여기선 '제안'만 반환하고
-    실제 등록(approve)은 관리자가 한 번 눌러야 한다.
-    """
-    import anthropic  # 지연 import (OCR과 동일 의존성)
-
-    system = (
-        "너는 한국 수학 시험지 OCR 교정 패턴 분석가다. 검수자가 반복적으로 고친 교정 "
-        "목록을 보고, OCR이 '체계적으로(반복적으로)' 틀리는 것만 골라 교정 패턴으로 제안한다.\n"
-        "규칙:\n"
-        "- 단발성·우연한 교정·일회성 오타는 제외. 같은 유형이 반복되는 것만 제안.\n"
-        "- original_text = OCR이 내는 잘못된 형태(특정 문제에 한정 말고 일반화), "
-        "corrected_text = 올바른 형태.\n"
-        "- scope: 전역적 OCR 습관이면 'global', 특정 학교/과목 한정이면 'school' 또는 "
-        "'subject'(그 경우 scope_value 채움).\n"
-        "- note: 왜 이 패턴인지 한 줄.\n"
-        "- confidence: 0~1. 확실치 않으면 제안하지 마라(거짓 패턴은 OCR을 망친다).\n"
-        "출력은 JSON 배열만(설명 금지). 각 원소: "
-        '{"original_text":"","corrected_text":"","scope":"global","scope_value":"",'
-        '"note":"","confidence":0.0}'
-    )
-    user = ("다음은 검수에서 반복된 교정 목록(JSON)이다. 패턴 제안 JSON 배열만 출력하라:\n"
-            + json.dumps(items, ensure_ascii=False))
-
-    client = anthropic.Anthropic(api_key=api_key)
-    resp = client.messages.create(
-        model="claude-sonnet-4-6", max_tokens=2000, temperature=0,
-        system=system, messages=[{"role": "user", "content": user}],
-    )
-    text = "".join(getattr(b, "text", "") for b in resp.content).strip()
-    text = re.sub(r'^```(?:json)?|```$', '', text, flags=re.MULTILINE).strip()
-    m = re.search(r'\[.*\]', text, re.DOTALL)
-    if not m:
-        return []
-    try:
-        arr = json.loads(m.group(0))
-    except Exception:
-        return []
-    out: list[dict] = []
-    for s in arr if isinstance(arr, list) else []:
-        if not isinstance(s, dict):
-            continue
-        sc = s.get("scope", "global")
-        try:
-            conf = float(s.get("confidence", 0))
-        except Exception:
-            conf = 0.0
-        out.append({
-            "original_text":  str(s.get("original_text", ""))[:500],
-            "corrected_text": str(s.get("corrected_text", ""))[:500],
-            "scope":          sc if sc in ("global", "school", "subject") else "global",
-            "scope_value":    str(s.get("scope_value", ""))[:50],
-            "note":           str(s.get("note", ""))[:200],
-            "confidence":     round(max(0.0, min(1.0, conf)), 2),
-        })
-    return out
-
-
-# AI 패턴 자동 등록 확신도 임계값 — 이상이면 바로 등록·적용, 미만은 관리자 검토.
-_AI_AUTO_THRESHOLD = 0.8
-
-
-@app.post("/api/admin/corrections/ai-suggest")
-async def api_corrections_ai_suggest(request: Request, days: int = 180):
-    """반복 교정을 Claude가 분석 → 고확신 패턴은 자동 등록, 저확신은 제안.
-
-    정책: AI 고확신 패턴(확신 ≥ _AI_AUTO_THRESHOLD)은 자동 등록·적용한다.
-    저확신은 관리자가 원클릭 승인. 등록된 패턴은 패턴 목록에서 끄거나 삭제 가능.
-    """
-    _require_admin(request)
-    api_key = os.environ.get("ANTHROPIC_API_KEY")
-    if not api_key:
-        raise HTTPException(503, "ANTHROPIC_API_KEY 미설정 — AI 분석 불가")
-
-    analysis = analyze_corrections(days=days)
-    groups = [g for g in analysis.get("groups", []) if g.get("count", 0) >= 2]
-    if not groups:
-        return JSONResponse({"suggestions": [], "auto_registered": [],
-                             "note": "반복(2회 이상) 교정이 아직 없습니다. 검수가 더 쌓이면 분석할 수 있어요."})
-
-    items = []
-    for g in groups[:40]:
-        occ = g.get("occurrences", [])
-        items.append({
-            "note":     g.get("note", ""),
-            "count":    g.get("count", 0),
-            "job_span": g.get("job_span", 0),
-            "examples": [{"before": (o.get("problem_text") or "")[:300],
-                          "after":  (o.get("corrected_text") or "")[:300]}
-                         for o in occ[:3]],
-        })
-    try:
-        suggestions = await run_in_threadpool(_ai_suggest_patterns, api_key, items)
-    except Exception as e:
-        raise HTTPException(502, f"AI 분석 실패: {e}")
-
-    # 고확신은 자동 등록, 저확신은 제안으로 분리
-    auto, manual = [], []
-    for s in suggestions:
-        has_body = bool((s.get("original_text") or "").strip() or (s.get("corrected_text") or "").strip())
-        if s.get("confidence", 0) >= _AI_AUTO_THRESHOLD and has_body:
-            approve_as_pattern("ai-auto", s["scope"], s["scope_value"],
-                               s["original_text"], s["corrected_text"],
-                               "AI 자동등록: " + s.get("note", ""))
-            auto.append(s)
-        else:
-            manual.append(s)
-    return JSONResponse({"auto_registered": auto, "suggestions": manual})
-
-
-@app.patch("/api/admin/corrections/{cid}/revert")
-async def api_revert_correction(cid: str, request: Request):
-    _require_admin(request)
-    if not revert_correction(cid):
-        raise HTTPException(404)
-    return JSONResponse({"ok": True})
-
-
-@app.post("/api/admin/corrections/{cid}/approve-pattern")
-async def api_approve_pattern(cid: str, request: Request):
-    _require_admin(request)
-    body          = await request.json()
-    scope         = body.get("scope", "global")
-    scope_value   = body.get("scope_value", "").strip()
-    original_text = body.get("original_text", "").strip()
-    corrected_text= body.get("corrected_text", "").strip()
-    note          = body.get("note", "").strip()
-    if not original_text and not corrected_text:
-        raise HTTPException(400, "original_text 또는 corrected_text를 입력하세요.")
-    pid = approve_as_pattern(cid, scope, scope_value, original_text, corrected_text, note)
-    return JSONResponse({"ok": True, "pid": pid})
-
-
-@app.get("/api/admin/patterns")
-async def api_list_patterns(request: Request):
-    _require_admin(request)
-    return JSONResponse(list_patterns())
-
-
-@app.post("/api/admin/patterns/seed-defaults")
-async def api_seed_default_patterns(request: Request):
-    """큐레이션된 기본 교정 패턴을 global로 등록 (멱등). 초기 품질 부트스트랩."""
-    _require_admin(request)
-    added = seed_default_patterns()
-    return JSONResponse({"ok": True, "added": added})
-
-
-@app.patch("/api/admin/patterns/{pid}")
-async def api_toggle_pattern(pid: str, request: Request):
-    _require_admin(request)
-    body = await request.json()
-    active = bool(body.get("active", True))
-    if not toggle_pattern(pid, active):
-        raise HTTPException(404)
-    return JSONResponse({"ok": True})
-
-
-@app.delete("/api/admin/patterns/{pid}")
-async def api_delete_pattern(pid: str, request: Request):
-    _require_admin(request)
-    if not delete_pattern(pid):
-        raise HTTPException(404)
-    return JSONResponse({"ok": True})
-
-
 # ══════════════════════════════════════════════════════════════════════
+# 매트릭스 설정 (학교·과목) + 레지스트리
 # ══════════════════════════════════════════════════════════════════════
-# Matrix 라우트
-# ══════════════════════════════════════════════════════════════════════
-
-@app.get("/matrix", response_class=HTMLResponse)
-async def matrix_page(request: Request):
-    email = _current_email(request)
-    if not email or not is_allowed(email):
-        return RedirectResponse("/login")
-    return HTMLResponse((_HERE / "static" / "matrix.html").read_text(encoding="utf-8"))
-
-
-@app.get("/guide", response_class=HTMLResponse)
-async def guide_page():
-    """직원용 사용설명서 (로그인 없이도 열람 가능)."""
-    return HTMLResponse((_HERE / "static" / "guide.html").read_text(encoding="utf-8"))
-
-
-@app.get("/guide/admin", response_class=HTMLResponse)
-async def guide_admin_page():
-    """관리자·운영자용 운영 설명서 (개선 루프·패턴·관리자 화면)."""
-    return HTMLResponse((_HERE / "static" / "guide_admin.html").read_text(encoding="utf-8"))
-
 
 @app.get("/api/config")
 async def api_get_config(request: Request):
-    _require_login(request)
-    return JSONResponse(_load_mconfig())
+    require_login(request)
+    return JSONResponse(load_mconfig())
 
 
 @app.post("/api/config/schools")
 async def api_add_school(request: Request):
-    _require_login(request)
+    require_login(request)
     body = await request.json()
     name = body.get("name", "").strip()
     if not name:
         raise HTTPException(400, "학교명을 입력하세요.")
-    cfg = _load_mconfig()
+    cfg = load_mconfig()
     if name in cfg["schools"]:
         raise HTTPException(409, f'"{name}"은 이미 등록된 학교입니다.')
     cfg["schools"].append(name)
-    _save_mconfig(cfg)
+    save_mconfig(cfg)
     return JSONResponse({"ok": True, "name": name})
 
 
 @app.post("/api/config/schools/bulk")
 async def api_bulk_add_schools(request: Request):
-    _require_login(request)
+    require_login(request)
     body  = await request.json()
     names = [n.strip() for n in body.get("names", []) if n.strip()]
     if not names:
         raise HTTPException(400, "학교명을 입력하세요.")
-    cfg   = _load_mconfig()
+    cfg   = load_mconfig()
     added, skipped = [], []
     for name in names:
         if name not in cfg["schools"]:
@@ -1592,124 +388,117 @@ async def api_bulk_add_schools(request: Request):
             added.append(name)
         else:
             skipped.append(name)
-    _save_mconfig(cfg)
+    save_mconfig(cfg)
     return JSONResponse({"ok": True, "added": added, "skipped": skipped})
 
 
 @app.delete("/api/config/schools/{school:path}")
 async def api_delete_school(school: str, request: Request):
-    _require_login(request)
-    cfg = _load_mconfig()
+    require_login(request)
+    cfg = load_mconfig()
     if school not in cfg["schools"]:
         raise HTTPException(404)
     cfg["schools"].remove(school)
-    _save_mconfig(cfg)
+    save_mconfig(cfg)
     return JSONResponse({"ok": True})
 
 
 @app.post("/api/config/subjects")
 async def api_add_subject(request: Request):
-    _require_login(request)
+    require_login(request)
     body = await request.json()
     sid  = body.get("id", "").strip()
     name = body.get("name", "").strip()
     if not sid or not name:
         raise HTTPException(400, "id와 name을 입력하세요.")
-    cfg = _load_mconfig()
+    cfg = load_mconfig()
     if any(s["id"] == sid for s in cfg["subjects"]):
         raise HTTPException(409, f'"{sid}"는 이미 등록된 과목입니다.')
     cfg["subjects"].append({"id": sid, "name": name, "grade": "", "sem": "", "exam_type": ""})
-    _save_mconfig(cfg)
+    save_mconfig(cfg)
     return JSONResponse({"ok": True, "id": sid, "name": name})
 
 
 @app.patch("/api/config/subjects/{subj_id}")
 async def api_update_subject(subj_id: str, request: Request):
-    _require_login(request)
+    require_login(request)
     body = await request.json()
-    cfg  = _load_mconfig()
+    cfg  = load_mconfig()
     subj = next((s for s in cfg["subjects"] if s["id"] == subj_id), None)
     if not subj:
         raise HTTPException(404)
     if "grade"     in body: subj["grade"]     = body["grade"]
     if "sem"       in body: subj["sem"]       = body["sem"]
     if "exam_type" in body: subj["exam_type"] = body["exam_type"]
-    _save_mconfig(cfg)
+    save_mconfig(cfg)
     return JSONResponse(subj)
 
 
 @app.get("/api/registry")
 async def api_get_registry(request: Request):
-    _require_login(request)
-    reg = _load_registry()
-    # 그림 큐 요약을 비영속 필드로 첨부 — matrix 배지용
-    for rkey, ent in reg.items():
-        try:
-            fs = _figq_summary(rkey)
-            if fs:
-                ent["figure_summary"] = fs
-        except Exception:
-            pass
-    return JSONResponse(reg)
+    require_login(request)
+    return JSONResponse(load_registry())
 
 
 @app.post("/api/registry/register")
 async def api_registry_register(request: Request):
-    _require_login(request)
+    """수동 등록/상태 갱신 (변환 완료 등록은 엔진이 서버 측에서 자동 수행)."""
+    require_login(request)
     body         = await request.json()
     registry_key = body.get("registry_key", "").strip()
     job_id       = body.get("job_id", "").strip()
-    subject      = body.get("subject", "")
-    school       = body.get("school", "")
-    pdf_name     = body.get("pdf_name", "")
-    status       = body.get("status", "converting")
     if not registry_key or not job_id:
         raise HTTPException(400, "registry_key와 job_id는 필수입니다.")
-    reg      = _load_registry()
+    validate_safe_key(registry_key)
+    reg      = load_registry()
     existing = reg.get(registry_key, {})
-    review_status = existing.get("review_status")
-    reviewer_name = existing.get("reviewer_name")
-    reviewed_at   = existing.get("reviewed_at")
-    if status == "done":
-        rf = _TMP_DIR / f"{job_id}_review.json"
-        if rf.exists():
-            try:
-                rv = json.loads(rf.read_text(encoding="utf-8"))
-                if rv.get("review_status") == "completed":
-                    review_status = "completed"
-                    reviewer_name = rv.get("reviewer_name", reviewer_name)
-                    reviewed_at   = rv.get("reviewed_at", reviewed_at)
-            except Exception:
-                pass
     entry = {
-        "job_id": job_id, "status": status,
-        "review_status": review_status,
-        "reviewer_name": reviewer_name, "reviewed_at": reviewed_at,
-        "subject": subject, "school": school,
-        "pdf_name": pdf_name or existing.get("pdf_name", ""),
+        **existing,
+        "job_id": job_id,
+        "status": body.get("status", "converting"),
+        "subject": body.get("subject", existing.get("subject", "")),
+        "school": body.get("school", existing.get("school", "")),
+        "pdf_name": body.get("pdf_name") or existing.get("pdf_name", ""),
         "created_at": existing.get("created_at", datetime.now().isoformat(timespec="seconds")),
         "updated_at": datetime.now().isoformat(timespec="seconds"),
     }
     reg[registry_key] = entry
-    _save_registry(reg)
+    save_registry(reg)
+    return JSONResponse(entry)
+
+
+@app.patch("/api/registry/{key}/review")
+async def api_registry_mark_reviewed(key: str, request: Request):
+    """🔴 확인 필요 해제 — 직원이 한글에서 【확인필요】 자리를 채운 뒤 누른다."""
+    email = require_login(request)
+    validate_safe_key(key)
+    reg = load_registry()
+    if key not in reg:
+        raise HTTPException(404, "레지스트리에 없는 키입니다.")
+    entry = reg[key]
+    entry["needs_review"] = False
+    entry["reviewed_by"] = request.session.get("name", email)
+    entry["reviewed_at"] = datetime.now().isoformat(timespec="seconds")
+    entry["updated_at"] = datetime.now().isoformat(timespec="seconds")
+    save_registry(reg)
     return JSONResponse(entry)
 
 
 @app.post("/api/registry/move")
 async def api_registry_move(request: Request):
-    """잡(PDF + 변환결과)을 다른 레지스트리 키로 이동."""
-    _require_login(request)
+    """잡(변환 결과 + 수동 업로드)을 다른 레지스트리 키로 이동."""
+    require_login(request)
     body     = await request.json()
     from_key = body.get("from_key", "").strip()
     to_key   = body.get("to_key", "").strip()
     if not from_key or not to_key:
         raise HTTPException(400, "from_key와 to_key는 필수입니다.")
-    _validate_safe_key(from_key)
-    _validate_safe_key(to_key)
+    validate_safe_key(from_key)
+    validate_safe_key(to_key)
     if from_key == to_key:
         raise HTTPException(400, "같은 위치입니다.")
 
-    reg = _load_registry()
+    reg = load_registry()
     if from_key not in reg:
         raise HTTPException(404, f"원본 키에 잡이 없습니다: {from_key}")
     if to_key in reg and reg[to_key].get("job_id"):
@@ -1718,586 +507,46 @@ async def api_registry_move(request: Request):
     entry = reg.pop(from_key)
     entry["updated_at"] = datetime.now().isoformat(timespec="seconds")
     reg[to_key] = entry
-    _save_registry(reg)
+    save_registry(reg)
 
-    # custom_filename 갱신 (_review.json 파일명 업데이트)
+    # 잡 상태의 registry_key 도 갱신 (재빌드 시 Drive 파일명·업로드 경로 일치)
     job_id = entry.get("job_id", "")
     if job_id:
-        review_file = _TMP_DIR / f"{job_id}_review.json"
-        if review_file.exists():
-            try:
-                rv = json.loads(review_file.read_text(encoding="utf-8"))
-                rv["custom_filename"] = to_key + ".hwpx"
-                review_file.write_text(
-                    json.dumps(rv, ensure_ascii=False, indent=2), encoding="utf-8"
-                )
-            except Exception:
-                pass
+        from scripts.web.engine_api import _job, _save_state
+        j = _job(job_id)
+        if j:
+            j["registry_key"] = to_key
+            _save_state(job_id)
 
     # stages 디렉토리 이동 (업로드된 한글완성본·타이퍼·해설)
-    from_stage_dir = _UPLOADS_DIR / from_key
-    to_stage_dir   = _UPLOADS_DIR / to_key
+    from_stage_dir = UPLOADS_DIR / from_key
+    to_stage_dir   = UPLOADS_DIR / to_key
     if from_stage_dir.exists():
         if to_stage_dir.exists():
             shutil.rmtree(to_stage_dir)
         shutil.move(str(from_stage_dir), str(to_stage_dir))
 
-    # 그림 검수 큐 디렉토리 이동 (검수 결정·수동 크롭 보존)
-    from_fq = _figq_key_dir(from_key)
-    to_fq   = _figq_key_dir(to_key)
-    if from_fq.exists():
-        with _figq_lock:
-            if to_fq.exists():
-                shutil.rmtree(to_fq)
-            shutil.move(str(from_fq), str(to_fq))
-
     return JSONResponse({"ok": True, "from": from_key, "to": to_key, "entry": entry})
 
 
-# 검수 라우트
+# ══════════════════════════════════════════════════════════════════════
+# 변환 엔진 (examconv) — /api/analyze, /api/jobs/*, /api/figure/*
 # ══════════════════════════════════════════════════════════════════════
 
-@app.get("/review/{job_id}", response_class=HTMLResponse)
-async def review_page(job_id: str, request: Request):
-    _require_login(request)
-    if not (_TMP_DIR / f"{job_id}_review.json").exists():
-        raise HTTPException(404, "검수 데이터가 없습니다.")
-    return HTMLResponse((_HERE / "static" / "review.html").read_text(encoding="utf-8"))
-
-
-@app.get("/api/review/{job_id}")
-async def api_review(job_id: str, request: Request):
-    _require_login(request)
-    f = _TMP_DIR / f"{job_id}_review.json"
-    if not f.exists():
-        raise HTTPException(404)
-    return JSONResponse(json.loads(f.read_text(encoding="utf-8")))
-
-
-@app.get("/page/{job_id}/{page_num}")
-async def page_image(job_id: str, page_num: int, request: Request):
-    _require_login(request)
-    img = _TMP_DIR / f"{job_id}_page{page_num}.png"
-    if not img.exists():
-        raise HTTPException(404)
-    return FileResponse(str(img), media_type="image/png")
-
-
-@app.post("/api/review/{job_id}/corrections")
-async def save_corrections(job_id: str, request: Request):
-    email = _require_login(request)
-    body  = await request.json()
-
-    review_file = _TMP_DIR / f"{job_id}_review.json"
-    pdf_name = ""
-    if review_file.exists():
-        try:
-            pdf_name = json.loads(review_file.read_text(encoding="utf-8")).get("pdf_name", "")
-        except Exception:
-            pass
-
-    saved = []
-    for c in body.get("corrections", []):
-        cid = append_correction({
-            "employee":        request.session.get("name", email),
-            "token":           email,
-            "job_id":          job_id,
-            "pdf_name":        pdf_name,
-            "problem_number":  c.get("problem_number"),
-            "problem_text":    c.get("problem_text", ""),
-            "correction_note": c.get("correction_note", ""),
-            "corrected_text":  c.get("corrected_text", ""),
-        })
-        saved.append(cid)
-    return JSONResponse({"saved": len(saved)})
-
-
-@app.post("/api/review/{job_id}/submit")
-async def review_submit(job_id: str, request: Request):
-    email = _require_login(request)
-    review_file = _TMP_DIR / f"{job_id}_review.json"
-    if not review_file.exists():
-        raise HTTPException(404)
-
-    body         = await request.json()
-    problems     = body.get("problems", [])
-    overall_note = body.get("overall_note", "").strip()
-    if not problems:
-        raise HTTPException(400, "문제 데이터가 없습니다.")
-
-    review_data = json.loads(review_file.read_text(encoding="utf-8"))
-    header      = review_data.get("header", "")
-    new_md      = header + "\n\n" + "\n\n".join(p["full_text"] for p in problems)
-    pdf_name    = review_data.get("pdf_name", "")
-    reviewer    = request.session.get("name", email)
-
-    reviewed_id = f"{job_id}_reviewed"
-    out_hwpx    = _TMP_DIR / f"{reviewed_id}.hwpx"
-
-    # 같은 잡의 그림 반영(apply)과 동일 파일 동시 기록 방지
-    _fig_key = next(
-        (rk for rk, ent in _load_registry().items()
-         if ent.get("job_id") == job_id), "")
-    if _fig_key:
-        with _figq_apply_busy_lock:
-            if _fig_key in _figq_apply_busy:
-                raise HTTPException(409, "그림 반영 작업이 진행 중입니다 — 잠시 후 다시 제출해 주세요.")
-            _figq_apply_busy.add(_fig_key)
-
-    try:
-        try:
-            if not _TEMPLATE:
-                raise RuntimeError("템플릿 없음")
-            build_from_markdown(new_md, out_hwpx, _TEMPLATE)
-            restyle_data_tables_to_gold(out_hwpx)
-            replace_condition_tables(out_hwpx)
-            replace_boilerplate_tables(out_hwpx)
-            fix_hwpx_namespaces(str(out_hwpx))
-            errs = validate_hwpx(str(out_hwpx))
-            if errs:
-                raise RuntimeError(f"검증 실패: {errs[0]}")
-        except HTTPException:
-            raise
-        except Exception as e:
-            raise HTTPException(500, str(e))
-
-        # ── 그림 복원 + 검수 결정 반영 ──────────────────────────────────
-        # 재빌드된 HWPX에는 【★ 그림:N번】 마커만 남아 있으므로, 그림 큐의
-        # 결정(수동크롭/자동/스킵)대로 다시 삽입한다. 실패해도 제출은 계속.
-        try:
-            if _fig_key:
-                _fig_qd = _figq_load(_fig_key)
-                _fig_items = _fig_qd.get("items", {})
-                # 큐가 다른(이전) 변환의 것이면 적용하지 않음
-                if _fig_items and _fig_qd.get("job_id") in (None, job_id):
-                    _fc = apply_figure_decisions(out_hwpx, _fig_items)
-                    print(f"  [그림] 검수본 반영: {_fc}")
-                    _figq_mark_applied(_fig_key, _fig_items, _fc, out_hwpx.name)
-        except Exception as _fe:
-            print(f"  [그림] 검수본 그림 반영 실패 (계속 진행): {_fe}")
-
-        # 검수완 HWPX도 2단 타이퍼 양식으로 (최종 출력 = 2단)
-        _finalize_2dan(out_hwpx, _fig_key or job_id)
-    finally:
-        if _fig_key:
-            with _figq_apply_busy_lock:
-                _figq_apply_busy.discard(_fig_key)
-
-    _jobs[reviewed_id] = {"queue": queue.Queue(), "hwpx": out_hwpx, "meta": {}}
-    edited   = sum(1 for p in problems if p.get("status") == "edited")
-
-    # review.json 갱신 — 검수 전→후 자동 기록 + 원본 보존 + 검수 완료 정보
-    edit_map = {p["number"]: p["full_text"] for p in problems}
-    for p in review_data.get("problems", []):
-        num = p["number"]
-        if num not in edit_map:
-            continue
-        before = p.get("full_text", "")
-        after  = edit_map[num]
-        if "original_text" not in p:           # 최초 OCR 원본 1회 보존(덮어쓰기 방지)
-            p["original_text"] = before
-        # 내용이 실제로 바뀐 문제는 검수 전→후를 자동으로 교정 로그에 남긴다.
-        # 직원 메모가 없어도 기록 — 반복-오류 내용 분석의 원천 데이터.
-        if after.strip() != before.strip():
-            append_correction({
-                "employee":        reviewer,
-                "token":           email,
-                "job_id":          job_id,
-                "pdf_name":        pdf_name,
-                "problem_number":  num,
-                "problem_text":    before,      # 검수 전 (원본/직전 OCR)
-                "correction_note": "",          # 자동 기록 — 메모 불요
-                "corrected_text":  after,       # 수정 후
-                "source":          "review-edit",
-            })
-        p["full_text"] = after
-        p["status"]    = "pending"
-    # 저장된 markdown 키도 교정본으로 동기화 — .md 다운로드(재과금 0 재빌드용)가
-    # 검수 전 원본이 아니라 교정 후 내용을 반환하도록.
-    review_data["markdown"]        = header + "\n\n" + "\n\n".join(
-        p["full_text"] for p in review_data.get("problems", [])
-    )
-    review_data["review_status"]   = "completed"
-    review_data["reviewer_name"]   = request.session.get("name", email)
-    review_data["reviewer_email"]  = email
-    review_data["reviewed_at"]     = datetime.now().strftime("%Y-%m-%d %H:%M")
-    review_file.write_text(
-        json.dumps(review_data, ensure_ascii=False, indent=2), encoding="utf-8"
-    )
-
-    append_entry({
-        "ts": datetime.now().isoformat(timespec="seconds"),
-        "pdf": pdf_name, "mode": "review",
-        "in_tok": 0, "out_tok": 0, "cost_usd": 0, "duration_s": 0,
-        "status": "ok", "edited": edited, "token": email,
-    })
-
-    # 전체 메모 저장
-    if overall_note:
-        append_correction({
-            "employee":        request.session.get("name", email),
-            "token":           email,
-            "job_id":          job_id,
-            "pdf_name":        pdf_name,
-            "problem_number":  "전체",
-            "problem_text":    "",
-            "correction_note": overall_note,
-            "corrected_text":  "",
-        })
-
-    # registry 검수완료 반영
-    reg = _load_registry()
-    for rk, ent in reg.items():
-        if ent.get("job_id") == job_id:
-            ent["review_status"] = "completed"
-            ent["reviewer_name"] = request.session.get("name", email)
-            ent["reviewed_at"]   = datetime.now().strftime("%Y-%m-%d %H:%M")
-            ent["updated_at"]    = datetime.now().isoformat(timespec="seconds")
-    _save_registry(reg)
-
-    return JSONResponse({"download_url": f"/download/{reviewed_id}", "edited": edited})
-
-
-# ══════════════════════════════════════════════════════════════════════
-# 변환 워커
-# ══════════════════════════════════════════════════════════════════════
-
-class _QueueWriter(io.TextIOBase):
-    def __init__(self, q):
-        self._q = q
-    def write(self, s):
-        for line in s.splitlines():
-            line = line.strip()
-            if line:
-                self._q.put(f"data: {line}\n\n")
-        return len(s)
-    def flush(self):
-        pass
-
-
-def _render_pdf_pages(pdf_path: Path, job_id: str) -> int:
-    doc = fitz.open(str(pdf_path))
-    for i, page in enumerate(doc):
-        pix = page.get_pixmap(dpi=150)
-        pix.save(str(_TMP_DIR / f"{job_id}_page{i}.png"))
-    n = doc.page_count
-    doc.close()
-    return n
-
-
-def _highlight_markers(path: Path) -> None:
-    """출력 HWPX의 【★ 확인 필요】·손상 마커를 빨강으로 강조 (실패 무시)."""
-    try:
-        from src.common.hwpx_marker_highlighter import highlight_markers
-        n = highlight_markers(path)
-        if n:
-            print(f"  [마커] 확인필요·손상 마커 {n}개 빨강 강조")
-    except Exception as e:
-        print(f"  [마커] 강조 실패 (무시): {e}")
-
-
-def _finalize_2dan(one_dan_path: Path, reg_key: str) -> bool:
-    """1단 HWPX를 2단 타이퍼 양식으로 제자리 변환 (학원장 요청: 최종이 2단).
-
-    변환 후 검수 마커를 빨강 강조한다. 내용 손실(수식·그림 수 감소)·검증
-    실패·예외 시 1단을 그대로 유지(폴백)하되 마커 강조는 그대로 적용.
-    제자리 교체 성공 시 True.
-    """
-    import zipfile as _zf
-    ok = False
-    try:
-        from src.text_only.typer_builder import build_typer_hwpx
-
-        def _counts(p: Path) -> tuple[int, int]:
-            x = _zf.ZipFile(p).read("Contents/section0.xml").decode("utf-8")
-            return x.count("<hp:equation"), x.count("<hp:pic")
-
-        eq1, pic1 = _counts(one_dan_path)
-        tmp2 = one_dan_path.with_name(one_dan_path.stem + "_2dan.hwpx")
-        build_typer_hwpx(one_dan_path, reg_key or one_dan_path.stem, tmp2)
-        eq2, pic2 = _counts(tmp2)
-        if eq2 < eq1 or pic2 < pic1:
-            tmp2.unlink(missing_ok=True)
-            print(f"  [2단] 내용 손실 감지(수식 {eq1}→{eq2}, 그림 {pic1}→{pic2}) — 1단 유지")
-        else:
-            errs = validate_hwpx(str(tmp2))
-            if errs:
-                tmp2.unlink(missing_ok=True)
-                print(f"  [2단] 검증 실패 — 1단 유지: {errs[0]}")
-            else:
-                shutil.move(str(tmp2), str(one_dan_path))
-                print("  [2단] 타이퍼 양식 변환 완료")
-                ok = True
-    except Exception as e:
-        print(f"  [2단] 변환 실패 — 1단 유지: {e}")
-
-    # 2단 여부와 무관하게 최종 파일에 마커 빨강 강조
-    _highlight_markers(one_dan_path)
-    return ok
-
-
-def _save_review_data(
-    job_id: str, original_name: str, md: str, n_pages: int,
-    custom_filename: str = "",
-    drive_file_id: str = "",
-) -> None:
-    header, segments = parse_problems(md)
-    data = {
-        "job_id":          job_id,
-        "pdf_name":        original_name,
-        "custom_filename": custom_filename,
-        "drive_file_id":   drive_file_id,
-        "header":          header,
-        "pages":           n_pages,
-        # OCR 인식 기록(최종 마크다운) — 재과금 0으로 재빌드/수정하기 위한 원본.
-        # build_from_markdown 이 그대로 소비하는 바로 그 문자열.
-        "markdown":        md,
-        "problems": [
-            {"number": seg.number, "full_text": seg.raw_block,
-             "is_subjective": seg.is_subjective, "status": "pending"}
-            for seg in segments
-        ],
-    }
-    (_TMP_DIR / f"{job_id}_review.json").write_text(
-        json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8"
-    )
-
-
-def _run_conversion(
-    job_id: str,
-    pdf_path: Path,
-    original_name: str,
-    full_content: bool,
-    email: str = "",
-    custom_filename: str = "",
-) -> None:
-    q    = _jobs[job_id]["queue"]
-    meta = _jobs[job_id]["meta"]
-
-    orig_stdout = sys.stdout
-    sys.stdout  = _QueueWriter(q)
-    ts_start    = datetime.now().isoformat(timespec="seconds")
-    t0          = time.time()
-
-    try:
-        # ★ 0순위: PDF 방향 보정 (메타 회전 + 내용 기반 OSD) — 모든 OCR의 전제
-        _orig_pdf_path = pdf_path
-        pdf_path = normalize_pdf_rotation(pdf_path)
-        _pdf_rotated = (pdf_path != _orig_pdf_path)
-
-        guard = CostGuard(cap_usd=DAILY_CAP_USD)
-        guard.check_or_raise("web")
-
-        print("  [검수] PDF 페이지 렌더링 중...")
-        n_pages     = _render_pdf_pages(pdf_path, job_id)
-        cost_before = guard.total_today()
-
-        # custom_filename에서 학교/과목 파싱 (2026_2_1_a_공수1_경신여고.hwpx)
-        _school, _subject = "", ""
-        if custom_filename:
-            parts = Path(custom_filename).stem.split("_")
-            if len(parts) >= 6:
-                _subject = parts[4]
-                _school  = "_".join(parts[5:])
-        patterns = get_active_patterns(school=_school, subject=_subject)
-        if patterns:
-            print(f"  [패턴] {len(patterns)}건 프롬프트 주입 (학교:{_school} 과목:{_subject})")
-
-        md = read_pdf_as_markdown(
-            pdf_path,
-            full_content=full_content,
-            correction_patterns=patterns,
-            subject=_subject,
-        )
-        md = correct_latex(md, subject=_subject)
-        md = apply_fallback(md, pdf_path)
-
-        header, segments = parse_problems(md)
-        fig_dir = _TMP_DIR / f"{job_id}_figs"
-        fig_dir.mkdir(exist_ok=True)
-
-        # Claude OCR이 이미 【★ 그림:N번】 마커를 출력 → 세그먼트에서 감지
-        figure_items_from_claude: set[str] = set()
-        for seg in segments:
-            m = re.search(r'【★ 그림:(\d+)번】', seg.problem_text)
-            if m:
-                figure_items_from_claude.add(m.group(1))
-
-        # figure_map: item_no → image_path (PyMuPDF 또는 Vision)
-        figure_map: dict[str, Path] = {}
-
-        try:
-            figures = extract_images(pdf_path, fig_dir, dpi=150)
-            for f in figures:
-                if f.item_no:
-                    figure_map[f.item_no] = f.image_path
-        except Exception as e:
-            print(f"  [그림] PyMuPDF 감지 실패: {e}")
-
-        # Vision 폴백: Claude 마커가 있는데 PyMuPDF가 못 찾은 경우만 실행
-        # ★ Vision은 추출 전용 — Claude 미마킹 문제를 새로 추가하지 않음
-        unresolved = figure_items_from_claude - set(figure_map)
-        if unresolved:
-            print(f"  [그림] Vision 폴백 ({len(unresolved)}건): {sorted(unresolved)}")
-            page_pngs = sorted(
-                _TMP_DIR.glob(f"{job_id}_page*.png"),
-                key=lambda p: int(re.search(r'page(\d+)', p.stem).group(1)),
-            )
-            try:
-                api_key = os.environ.get("ANTHROPIC_API_KEY", "")
-                vision_map = extract_figures_by_vision(page_pngs, fig_dir, api_key=api_key)
-                # Claude 마킹된 문제만 수용 (false-positive 차단)
-                for no, path in vision_map.items():
-                    if no in figure_items_from_claude:
-                        figure_map[no] = path
-            except Exception as e:
-                print(f"  [그림] Vision 감지 실패: {e}")
-
-        # Claude 마커는 problem_text에 이미 있으므로 rebuild_markdown에 추가 전달 없음
-        md = rebuild_markdown(header, segments)
-
-        out_hwpx = _TMP_DIR / f"{job_id}.hwpx"
-        if not _TEMPLATE:
-            raise RuntimeError("samples/ 폴더에 .hwpx 파일이 없습니다.")
-
-        build_from_markdown(md, out_hwpx, _TEMPLATE)
-        restyle_data_tables_to_gold(out_hwpx)
-        replace_condition_tables(out_hwpx)
-        replace_boilerplate_tables(out_hwpx)
-        fix_hwpx_namespaces(str(out_hwpx))
-        errs = validate_hwpx(str(out_hwpx))
-        if errs:
-            raise RuntimeError(f"HWPX 검증 실패: {errs[0]}")
-
-        # 그림 삽입: Claude 마커 기준만 (Vision 감지 추가분 배제)
-        for item_no in sorted(figure_items_from_claude, key=lambda x: int(x)):
-            if item_no not in figure_map:
-                print(f"  [그림] {item_no}번 PNG 없음 — 플레이스홀더 유지")
-                continue
-            try:
-                insert_figure_placeholder(out_hwpx, item_no, figure_map[item_no])
-                print(f"  [그림] {item_no}번 삽입 완료")
-            except Exception as e:
-                print(f"  [그림] {item_no}번 삽입 실패: {e}")
-
-        # ── 문제별 crop + 신뢰도 측정 (그림 마커가 있을 때만 = 추가 비용 0) ──
-        # BBoxDetector.detect_all()이 Claude API를 쓰므로 그림 문제가 있을 때만 호출.
-        prob_crop_map: dict[str, Path] = {}
-        conf_map: dict[str, FigureCandidate] = {}
-        if figure_items_from_claude:
-            try:
-                prob_crop_map = crop_problems_by_bbox(
-                    pdf_path, figure_items_from_claude, fig_dir
-                )
-                for _no, _crop in prob_crop_map.items():
-                    cand = extract_with_confidence(_crop, _no, fig_dir)
-                    if cand is not None:
-                        conf_map[_no] = cand
-            except Exception as _ce:
-                print(f"  [그림] BBox crop·신뢰도 측정 실패 (큐 폴백): {_ce}")
-
-        # ── 그림 검수 큐 자동 등록 ──────────────────────────────────────
-        _reg_key = Path(custom_filename).stem if custom_filename else ""
-        if _reg_key and figure_items_from_claude:
-            try:
-                _validate_safe_key(_reg_key)
-                _register_figure_queue(
-                    _reg_key, job_id, figure_items_from_claude, figure_map,
-                    prob_crop_map=prob_crop_map, conf_map=conf_map,
-                )
-            except HTTPException:
-                print(f"  [그림큐] 유효하지 않은 키: {_reg_key!r}")
-            except Exception as _qe:
-                print(f"  [그림큐] 등록 실패 (무시): {_qe}")
-        elif _reg_key:
-            # 새 변환에 그림이 없으면 같은 키의 이전 큐는 stale — 제거
-            try:
-                _validate_safe_key(_reg_key)
-                if _figq_key_dir(_reg_key).exists():
-                    shutil.rmtree(_figq_key_dir(_reg_key), ignore_errors=True)
-                    print(f"  [그림큐] 그림 없음 — 이전 큐 제거: {_reg_key}")
-            except HTTPException:
-                pass
-            except Exception:
-                pass
-
-        # ── 2단 타이퍼 양식으로 변환 (최종 출력 = 2단) ────────────────────
-        # 그림 큐 등록(crop) 이후, Drive 업로드 전에 제자리 변환.
-        _finalize_2dan(out_hwpx, _reg_key)
-
-        # ── Google Drive 업로드 ──────────────────────────────────────────
-        _drive_file_id = ""
-        if custom_filename:
-            parts = Path(custom_filename).stem.split("_")
-            if len(parts) >= 5:
-                _year, _subj = parts[0], parts[4]
-                try:
-                    _drive_file_id = upload_hwpx(out_hwpx, _year, _subj) or ""
-                    if _drive_file_id:
-                        print(f"  [Drive] AKP/{_year}/{_subj}/{out_hwpx.name} 저장 완료")
-                    elif is_configured():
-                        print("  [Drive] 업로드 실패 (계속 진행)")
-                except Exception as _e:
-                    print(f"  [Drive] 업로드 오류 (무시): {_e}")
-
-                # ★ 회전 보정된 PDF도 Drive에 저장 (학원장 요구: 올바른 방향 PDF 보관)
-                if _pdf_rotated and pdf_path.exists():
-                    try:
-                        _pdf_drive_name = f"{Path(custom_filename).stem}_정방향.pdf"
-                        _fixed_for_drive = pdf_path.with_name(_pdf_drive_name)
-                        shutil.copyfile(pdf_path, _fixed_for_drive)
-                        if upload_pdf(_fixed_for_drive, _year, _subj):
-                            print(f"  [Drive] AKP/{_year}/{_subj}/{_pdf_drive_name} (보정 PDF) 저장 완료")
-                        elif is_configured():
-                            print("  [Drive] 보정 PDF 업로드 실패 (계속 진행)")
-                    except Exception as _pe:
-                        print(f"  [Drive] 보정 PDF 업로드 오류 (무시): {_pe}")
-
-        print("  [검수] 문제 파싱 및 검수 데이터 저장 중...")
-        _save_review_data(job_id, original_name, md, n_pages, custom_filename, _drive_file_id)
-
-        duration = round(time.time() - t0, 1)
-        cost_usd = round(guard.total_today() - cost_before, 4)
-
-        append_entry({
-            "ts": ts_start, "pdf": original_name,
-            "mode": "full" if full_content else "questions",
-            "in_tok": 0, "out_tok": 0,
-            "cost_usd": cost_usd, "duration_s": duration,
-            "status": "ok", "token": email,
-        })
-        guard.record("web", cost_usd)
-
-        _jobs[job_id]["hwpx"] = out_hwpx
-        meta["cost_usd"] = cost_usd
-
-    except CostCapError as e:
-        append_entry({
-            "ts": ts_start, "pdf": original_name,
-            "mode": "full" if full_content else "questions",
-            "in_tok": 0, "out_tok": 0, "cost_usd": 0,
-            "duration_s": round(time.time() - t0, 1),
-            "status": "cap_exceeded", "token": email,
-        })
-        meta["error"] = str(e)
-
-    except Exception as e:
-        import traceback
-        print(f"  [오류] {e}")
-        traceback.print_exc()
-        append_entry({
-            "ts": ts_start, "pdf": original_name,
-            "mode": "full" if full_content else "questions",
-            "in_tok": 0, "out_tok": 0, "cost_usd": 0,
-            "duration_s": round(time.time() - t0, 1),
-            "status": "error", "token": email,
-        })
-        meta["error"] = str(e)
-
-    finally:
-        sys.stdout = orig_stdout
-        try:
-            pdf_path.unlink(missing_ok=True)
-        except Exception:
-            pass
-        q.put(None)
+app.include_router(engine_router)
+
+
+# ── 변환 검수 UI (React, frontend/dist) — 모든 API 라우트 뒤에 마운트 ──────
+class _NoCacheStatic(StaticFiles):
+    """프론트 번들 갱신이 새로고침만으로 바로 반영되도록 캐시를 끈다."""
+    async def get_response(self, path, scope):
+        resp = await super().get_response(path, scope)
+        resp.headers["Cache-Control"] = "no-store, max-age=0"
+        return resp
+
+
+_FRONTEND = _ROOT / "frontend" / "dist"
+if _FRONTEND.exists():
+    app.mount("/converter", _NoCacheStatic(directory=str(_FRONTEND), html=True), name="converter")
+else:
+    print("  [경고] frontend/dist 없음 — 변환 UI 비활성 (frontend/ 에서 npm run build)")

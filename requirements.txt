@@ -1,19 +1,26 @@
-httpx>=0.27.0
-python-dotenv>=1.0.0
-pdf2image>=1.17.0
-Pillow>=10.4.0
-pytest>=8.0.0
-# 웹 서버
-fastapi>=0.100.0
-uvicorn>=0.23.0
+# ── 웹 서버 ──────────────────────────────────────────
+fastapi>=0.110
+uvicorn[standard]>=0.29
 python-multipart>=0.0.9
 authlib>=1.3.0
-httpx>=0.27.0
 itsdangerous>=2.1.0
-# Claude API
-anthropic>=0.20.0
-# PDF 처리
-PyMuPDF>=1.23.0
-# 회전 보정(OSD)·그림 신뢰도 측정 — Tesseract 바이너리는 nixpacks.toml(aptPkgs)
-pytesseract>=0.3.10
-numpy>=1.26.0
+httpx>=0.27.0
+python-dotenv>=1.0.0
+# ── 변환 엔진 (backend/ — examconv 이식) ─────────────
+# ⚠️ 엔진은 아래 '정확한' 버전 조합에서 실전 검증됐다(examconv 실행환경 2026-07-06 실측).
+#    임의 업그레이드 금지 — cv2 5.x 는 HoughLinesP shape 변경으로 deskew 가 실제로 깨졌다.
+#    올릴 땐 크롭·지우개·재작도·빌드 전 경로 재검증 필수.
+requests==2.32.3
+PyMuPDF==1.27.2.3               # PDF → 페이지 이미지 렌더 (fitz)
+# headless 금지: simple-lama-inpainting 이 opencv-python(일반)을 의존해 이중설치·덮어쓰기 발생.
+# test 검증환경과 동일하게 일반판 고정. (Railway 는 nixpacks.toml 의 libgl1 로 지원)
+opencv-python==4.8.1.78         # 크롭·인페인팅·기울기 보정
+numpy==1.26.4
+Pillow==9.5.0
+matplotlib==3.8.2               # 재작도 폴백 (Gemini 실패 시 구조스펙→코드 렌더)
+simple-lama-inpainting==0.1.2   # 낙서 지우개 고품질 인페인팅 (큰 마스크용, torch 필요)
+torch==2.12.1
+torchvision==0.27.1
+Pillow>=10.4
+# ── 테스트 ───────────────────────────────────────────
+pytest>=8.0.0

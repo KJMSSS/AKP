@@ -43,8 +43,10 @@ ADMIN_EMAIL: str = os.environ.get("ADMIN_EMAIL", "")
 
 
 def _data_dir() -> Path:
-    d = os.environ.get("DATA_DIR", "")
-    return Path(d) if d else Path(__file__).resolve().parent
+    # 경로 단일 출처(store.DATA_DIR) — 볼륨마운트>DATA_DIR>scripts/web/data.
+    # 종전엔 DATA_DIR env 만 봐서 Railway 볼륨 마운트 시 휘발 디스크로 샜다(2026-07-06 감사).
+    from scripts.web.store import DATA_DIR
+    return DATA_DIR
 
 
 _USERS_FILE = _data_dir() / "users.json"

@@ -22,7 +22,9 @@ _UPLOAD_URL = "https://www.googleapis.com/upload/drive/v3/files"
 # Google Drive 내 AKP 루트 폴더 ID
 _AKP_FOLDER_ID = "1WVnRJ3RzORiTc2NdStzKdAv4M-PYHByq"
 
-_DATA_DIR  = Path(os.environ.get("DATA_DIR", Path(__file__).parent / "data"))
+# 경로 단일 출처(store.DATA_DIR) — 볼륨마운트 > DATA_DIR > scripts/web/data.
+from scripts.web.store import DATA_DIR as _DATA_DIR  # noqa: E402
+
 TOKEN_FILE = _DATA_DIR / "gdrive_token.json"
 
 

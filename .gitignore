@@ -3,8 +3,6 @@
 # ════════════════════════════════════════════════════════════════
 .env
 .env.*
-.env.local
-.env.*.local
 *.env.bak
 # .env.example 은 커밋 허용 (템플릿 파일)
 !.env.example
@@ -17,63 +15,47 @@ credentials/
 *.p12
 *.pfx
 
-# ─── 웹 서버 임시/로그/데이터 ────────────────────────────────
-scripts/web/tmp/
+# ─── 웹 서버 런타임 데이터 ────────────────────────────────────
+# 변환 작업 폴더(3일 자동 정리) · 로그 · 업로드 · 토큰
+scripts/web/data/work/
+scripts/web/data/tmp/
+scripts/web/data/uploads/
+scripts/web/data/gdrive_token.json
+scripts/web/data/users.json
+scripts/web/data/usage.jsonl
+scripts/web/data/matrix_registry.json
 scripts/web/logs/
-scripts/web/tokens.json
+scripts/web/tmp/
+# matrix_config.json 은 시드로 커밋 허용
 
 # ─── Python ───────────────────────────────────────────────────
 __pycache__/
 *.py[cod]
-*$py.class
 *.pyo
 *.pyd
 .venv/
 venv/
-env/
 *.egg-info/
-dist/
-build/
-.eggs/
-*.egg
-pip-wheel-metadata/
-*.whl
 .mypy_cache/
 .ruff_cache/
-
-# ─── Mathpix pdf_id 캐시 (머신 종속, 재과금 방지용 로컬 캐시) ──────
-.mathpix_cache/
-
-# ─── 작업 임시 폴더 / 테스트 데이터 ──────────────────────────────
-_unpacked/
-_temp/
-output/
-samples/
-!samples/template.hwpx
-
-# ─── 백업·임시 파일 ────────────────────────────────────────────
-*.hwpx.bak
-*.hwp.bak
-*.bak
-*.bak[0-9]*
-output_text_temp*.md
-
-# ─── IDE ───────────────────────────────────────────────────────
-.vscode/
-.idea/
-*.suo
-*.user
-
-# ─── OS ────────────────────────────────────────────────────────
-.DS_Store
-Thumbs.db
-desktop.ini
-
-# ─── 테스트·커버리지 ────────────────────────────────────────────
 .pytest_cache/
 .coverage
 htmlcov/
-.env
 
-# 그림 검수 큐 런타임 데이터 (tmp 크롭 경로 참조 — 머신 종속)
-scripts/web/data/figure_queue/
+# ─── Frontend ─────────────────────────────────────────────────
+frontend/node_modules/
+# frontend/dist 는 배포용으로 커밋한다 (Railway 에 node 빌드 없음)
+
+# ─── 백업·임시 파일 ────────────────────────────────────────────
+*.bak
+*.bak[0-9]*
+_unpacked/
+_temp/
+output/
+
+# ─── IDE / OS ─────────────────────────────────────────────────
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini

@@ -1,76 +1,70 @@
 # CLAUDE.md
 
 Claude Code 작업 시 적용되는 **운영 정책 + 진입점**.
-프로젝트 아키텍처는 [docs/PLAN.md](docs/PLAN.md)를 단일 진실 출처로 참조한다.
+아키텍처는 [docs/PLAN.md](docs/PLAN.md), 엔진 절대규칙은 [docs/ENGINE_RULES.md](docs/ENGINE_RULES.md)가 단일 진실 출처.
 
 ## 한 줄 정의
 
 한국 수학 시험지 PDF → HWPX 자동 변환 파이프라인 (학원 운영 도구).
-
-**핵심 방향**: 중간 검수·재빌드 루프 없이 **한 번에 최고 품질**로 출력.
-OCR 파이프라인 자체의 품질이 전부 — 사람이 고쳐줄 거라는 전제로 설계하지 않는다.
+**2026-07-06 대전환**: 구엔진(src/, 텍스트 기반 v5) 전면 폐기 → examconv 엔진(`backend/`,
+템플릿 복제 + Claude 비전 구조화 + React 검수 UI) 이식. 흐름:
+**매트릭스 셀 → 업로드 → 회전 맞추기 → 분석(opus) → 검수(그림 크롭·낙서 지우개·Gemini 재작도) → 빌드 → Drive 업로드**.
 
 ## 절대 정책 (위반 금지)
 
 1. **학교 단위 순차 처리** — 여러 학교 병렬 빌드 금지
-2. **LLM은 패턴 발견기** — `temperature=0`. **AI 고확신 패턴(확신 ≥ 0.8)은 자동 등록·적용 허용**,
-   저확신은 관리자 승인. 등록된 패턴은 패턴 목록에서 언제든 끄거나 삭제 가능(되돌리기 쉬움).
-3. **학원장 PDF 원본 = 진짜 정답** — LLM/OCR 결과보다 원본 PDF 우선
-4. **크롭 OCR 표준 순서** — 전체 OCR 후 공란 발견해서 재빌드 금지.
-   반드시 `크롭 OCR → raw.md 완성 → 빌드 1회`
-5. **두 대 동기화 = main 직접** — 집 데스크톱 ↔ 노트북을 GitHub `main`으로 직접 동기화한다
+2. **학원장 PDF 원본 = 진짜 정답** — LLM/OCR 결과보다 원본 PDF 우선
+3. **두 대 동기화 = main 직접** — 집 데스크톱 ↔ 노트북을 GitHub `main`으로 직접 동기화
    (학원장 결정 2026-06-24). 양쪽 `git pull`(시작) → 작업 → `git push`(끝).
    `main` push = Railway 라이브 배포이므로 **push 전 반드시 `pytest` 통과 확인**.
    push는 학원장 "끝내자"/"배포해" 신호 때 실행(깨진 코드 자동 배포 방지).
-6. **HWPX 수식 직접 편집 금지** — XML 조립으로 `hp:equation` 만들지 않는다.
-   항상 `build_from_markdown()` 파이프라인 경유. 상세: [docs/PLAN.md](docs/PLAN.md) 7-1절
-7. **단순 replace 금지** — 한국어 조사(을/를 등) 단순 치환은 안전 정책 위반
+4. **HWPX 조립은 `build_exam()` 경유만** — XML 수작업으로 `hp:equation`/배치 만들지 않는다.
+   페이지 배치·수식·그림 규칙은 [docs/ENGINE_RULES.md](docs/ENGINE_RULES.md) 필수 숙지
+   (높이 추정 패킹 금지, columnBreak 고정 규칙, x^{2} 중괄호 등 실사고 이력 규칙).
+5. **변환 결과물은 디스크에 쌓지 않는다** — 작업 폴더(`DATA_DIR/work/{job}`)는 3일 후 자동
+   삭제(2026-07-06 학원장 결정). 영속 보관처는 Google Drive(빌드 시 자동 업로드).
+6. **구조화·검증 모델 = opus** (`claude-opus-4-8`, 충실도>비용). 그림 재작도 = Gemini.
 
 ## 진입점
 
-```powershell
-# 테스트
-pytest tests/
-pytest tests/test_builder.py::TestLatexToHwp::test_frac_simple -v
+```bash
+# 서버 (로컬 맥)
+.venv/bin/python -m uvicorn scripts.web.app:app --host 0.0.0.0 --port 8080
+# ⚠️ --reload 운영 금지 (인메모리 JOBS 소실 → 검수 중 작업 날아감)
 
-# PDF → HWPX (Mathpix, 문제만)
-py scripts/text/pdf_to_text.py "samples/시험지.pdf"
+# 테스트 (main push 전 필수)
+.venv/bin/python -m pytest tests/
 
-# PDF → HWPX (Claude, 정답·해설 포함)
-py scripts/text/pdf_to_text.py "samples/시험지.pdf" --ocr-engine claude --full-content
+# 프론트(검수 UI) 수정 후 재빌드 — dist 는 커밋 대상(배포에 node 없음)
+cd frontend && npm run build
 
-# 재실행 (같은 PDF는 자동 캐시로 불필요한 재과금만 회피 — 품질·효율상 필요하면 --force-ocr로 재과금)
-py scripts/text/pdf_to_text.py "samples/시험지.pdf"
-# 캐시 무시하고 강제로 새 OCR (의도적 재과금)
-py scripts/text/pdf_to_text.py "samples/시험지.pdf" --force-ocr
-
-# 웹 서버
-py -m uvicorn scripts.web.app:app --host 0.0.0.0 --port 8080
+# 접속
+# http://localhost:8080/           ← 매트릭스 (로그인 필요)
+# http://localhost:8080/converter/ ← 변환·검수 UI (매트릭스 셀에서 진입)
+# http://localhost:8080/admin      ← 사용자 관리
 ```
 
-> Windows에서 `py` / `python` 별칭이 Microsoft Store 스텁으로 연결되어 exit 49로 실패하면,
-> 전체 경로 `C:\Users\사용자\AppData\Local\Programs\Python\Python314\python.exe` 사용.
-
-## 프로젝트 상세 → [docs/PLAN.md](docs/PLAN.md)
-
-다음은 모두 PLAN.md에 있다 — 이 파일에서 중복 작성하지 않는다.
-
-- 아키텍처 (변환 흐름, HWPX 구조, 텍스트 기반 v5 vs 템플릿 기반)
-- OCR 엔진 비교 (Mathpix / Claude / OCR A+B+C 개선)
-- LaTeX → HWP Script 변환 규칙
-- 문제 파서 (`problem_segmenter.py`)
-- 비용 관리 (`cost_guard.py`)
-- 로드맵 (STEP 1~4)
-- 알려진 버그 / 미결 이슈
-- HWPX 수식 직접 편집 시 실전 교훈 (7-1절)
-- 핵심 파일 구조
-
-## 파일 네이밍
+## 구조 요약
 
 ```
-[연도_학년_학기_a(중간)/b(기말)_과목약어_학교명]
-예: [2025_1_1_b_공수1_경신여고]
+backend/            변환 엔진 (examconv 이식 — 무수정 유지 원칙)
+  pipeline/         ingest·vision_claude·build_exam·assemble_hwpx·figure·redraw_gemini…
+  mathconv/         LaTeX → 한글 수식
+  templates/base.hwpx   빌드 골격 (A3 2단 신문형 — 구조 의존, 교체 금지)
+frontend/           React 검수 UI (Vite) → dist 커밋
+scripts/web/        웹 셸: app.py(라우트) · engine_api.py(엔진 라우터+Drive/레지스트리)
+                    · auth.py · store.py · users.py · usage_log.py · gdrive_uploader.py
+scripts/web/static/ matrix.html(메인) · admin.html · login.html · guide.html
 ```
 
-- 임시 마크다운: `output_text_temp.md` (루트, git 무시)
-- 프로덕션 HWPX: `samples/11b_production/` 또는 `samples/2026/`
+## 환경변수 (.env)
+
+`ANTHROPIC_API_KEY`(필수) · `GEMINI_API_KEY`(재작도) · `GOOGLE_CLIENT_ID/SECRET`(로그인+Drive)
+· `SECRET_KEY` · `ADMIN_EMAIL` · `DAILY_COST_CAP`(기본 5.0) · `DATA_DIR`(Railway 볼륨)
+
+## 파일 네이밍 (레지스트리 키)
+
+```
+연도_학년_학기_a(중간)/b(기말)_과목약어_학교명
+예: 2025_1_1_b_공수1_경신여고  →  Drive 파일명 [2025_1_1_b_공수1_경신여고].hwpx
+```
