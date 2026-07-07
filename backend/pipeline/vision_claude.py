@@ -342,7 +342,8 @@ def structure_problems_vision(image_path: str, *, model: str | None = None) -> l
     Claude 비전이 한글+수식을 직접 읽어 Mathpix 한글 깨짐(한자화)을 해결한다.
     손글씨는 무시하고 인쇄 원본만 구조화한다.
     """
-    content = [_encode_image(image_path), {"type": "text", "text": _STRUCT_VISION_PROMPT}]
+    # 이미지를 캐시 브레이크포인트로 — 같은 페이지의 그림/표 감지 호출이 뒤이어 재사용.
+    content = [_encode_image(image_path, cache=True), {"type": "text", "text": _STRUCT_VISION_PROMPT}]
     out = _call(content, max_tokens=8000, model=model)
     data = _extract_json(out)
     problems = data.get("problems", []) if isinstance(data, dict) else data
@@ -380,7 +381,13 @@ JSON 으로만 출력: {"marks":[{"label":"설명","bbox":[x0,y0,x1,y1]}]}
 - bbox 는 픽셀 정수 좌표. 없으면 {"marks":[]}. JSON 외 출력 금지."""
 
 
-def _encode_image(image_path: str) -> dict:
+def _encode_image(image_path: str, *, cache: bool = False) -> dict:
+    """이미지 블록. cache=True 면 prompt caching 브레이크포인트를 붙인다.
+
+    같은 페이지 이미지를 연속 호출(구조화→그림감지→표감지)에서 재전송할 때만
+    쓴다 — 1번째가 캐시에 쓰고(1.25×) 이후 호출은 0.1×로 읽어 입력비를 줄인다.
+    Opus 4.8 은 프리픽스 <4096 tok 이면 조용히 무시하므로(크롭 등) 붙여도 무해.
+    """
     with open(image_path, "rb") as f:
         raw = f.read()
     # media type 은 확장자가 아니라 매직바이트로 판별 — Gemini 재작도가 JPEG 데이터를
@@ -397,7 +404,10 @@ def _encode_image(image_path: str) -> dict:
         ext = os.path.splitext(image_path)[1].lstrip(".").lower()
         media = "image/jpeg" if ext in ("jpg", "jpeg") else f"image/{ext or 'png'}"
     b64 = base64.b64encode(raw).decode()
-    return {"type": "image", "source": {"type": "base64", "media_type": media, "data": b64}}
+    block = {"type": "image", "source": {"type": "base64", "media_type": media, "data": b64}}
+    if cache:
+        block["cache_control"] = {"type": "ephemeral"}
+    return block
 
 
 def _image_wh(image_path: str) -> tuple[int, int]:
@@ -430,7 +440,8 @@ class Region:
 def _detect(image_path: str, prompt: str, key: str, model: str | None) -> list[Region]:
     w, h = _image_wh(image_path)
     text = prompt.replace("{W}", str(w)).replace("{H}", str(h))
-    content = [_encode_image(image_path), {"type": "text", "text": text}]
+    # 구조화 호출이 캐시에 써둔 같은 페이지 이미지를 여기서 읽는다(그림·표 감지 공용).
+    content = [_encode_image(image_path, cache=True), {"type": "text", "text": text}]
     out = _call(content, max_tokens=2000, model=model)
     data = _extract_json(out)
     items = data.get(key, []) if isinstance(data, dict) else data
