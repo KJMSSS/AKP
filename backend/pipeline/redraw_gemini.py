@@ -8,7 +8,7 @@ Pro Image)는 다이어그램의 라벨/텍스트 정확도가 업계 최고 수
 도형 재작도에 가장 적합하다(사용자 실측 검증: 캡처→재작도 거의 동일).
 
 키(env): GEMINI_API_KEY 또는 GOOGLE_API_KEY  (Google AI Studio 발급)
-모델(env): GEMINI_IMAGE_MODEL (기본 gemini-3-pro-image-preview = Nano Banana Pro)
+모델(env): GEMINI_IMAGE_MODEL (기본 gemini-3.1-flash-image) · GEMINI_PRO_IMAGE_MODEL ('다시 생성'용 Pro)
 
 * REST API 직접 호출(requests). google-genai SDK 의존 없음(vision_claude 와 동일 스타일).
 
@@ -36,6 +36,10 @@ _REDRAW_INSTRUCTION = (
     "1-1) 특히 F와 F′, A와 A′, P와 P′ 처럼 프라임(′) 유무로만 다른 라벨을 절대 혼동하지 마세요. "
     "각 점의 라벨을 원본에 적힌 그대로(프라임 유무까지) 정확히 쓰고, 같은 라벨을 두 곳에 중복하지 마세요. "
     "예: 왼쪽 초점이 F′ 이고 오른쪽 초점이 F 이면 그대로 F′·F 로 구분해서 표기.\n"
+    "1-2) 문제 조건 표시 라벨 — (가)/(나), (A)/(B), ㉠/㉡, ①/②, Ⓐ/Ⓑ 등 — 도 글자·형태 하나 "
+    "바꾸지 마세요. 괄호 문자를 원문자로, 알파벳을 숫자로 바꾸는 것 금지 "
+    "(예: (A) 를 ⑦ 로, (B) 를 (A) 로 바꾸면 시험 문제가 망가집니다). "
+    "원본에 보이는 라벨을 괄호/원문자 모양 그대로 옮겨 적으세요.\n"
     "2) 사람이 손으로 쓰거나 그린 것은 전부 지우세요 — 연필·볼펜 필기, 손글씨 숫자·메모·풀이, "
     "손으로 친 밑줄·동그라미·체크·화살표·별표, 형광펜/색연필 표시 등. "
     "인쇄되어 있던 '원래 도형'만 남기고, 손글씨 흔적은 깨끗이 제거하세요.\n"
@@ -130,6 +134,8 @@ def redraw_with_gemini(image_path: str, out_path: str, *, model: str | None = No
         except requests.exceptions.RequestException as e:
             last = e
             if attempt < 3:
+                print(f"[redraw_gemini] 연결 오류({e.__class__.__name__}) — {2 * (attempt + 1)}s 후 "
+                      f"재시도 {attempt + 1}/3", flush=True)
                 time.sleep(2 * (attempt + 1)); continue
             raise GeminiError(f"Gemini API 연결 실패(4회 재시도): {last}")
         if resp.status_code == 200:
@@ -137,6 +143,8 @@ def redraw_with_gemini(image_path: str, out_path: str, *, model: str | None = No
             break
         # 429/5xx 는 일시적(rate limit·서버) → 백오프 후 재시도. 그 외 4xx(키/모델/안전차단)는 즉시 보고.
         if resp.status_code in (429, 500, 502, 503, 504) and attempt < 3:
+            print(f"[redraw_gemini] HTTP {resp.status_code} — {3 * (attempt + 1)}s 후 "
+                  f"재시도 {attempt + 1}/3", flush=True)
             time.sleep(3 * (attempt + 1)); continue
         raise GeminiError(f"Gemini HTTP {resp.status_code}: {resp.text[:400]}")
     if data is None:

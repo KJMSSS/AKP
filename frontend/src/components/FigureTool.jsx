@@ -98,7 +98,8 @@ export default function FigureTool({ job, data, probs, figures, setFigures }) {
         done++; setBatch({ done, total, fail });
       }
     };
-    await Promise.all([worker(), worker(), worker()]);
+    // 동시 2개까지만 — 3개 병렬은 Gemini 이미지 모델 rate limit(429 백오프로 2분+)을 유발
+    await Promise.all([worker(), worker()]);
     setBatchVer(v => v + 1); setBatch({ done, total, fail, finished: true });
     if (fail) alert(`전체 재작도 완료 — 성공 ${total - fail}개, 실패 ${fail}개.\n실패한 그림은 개별 '🎨 이 그림 재작도'로 다시 시도하거나 '낙서 지우기'한 원본을 쓰세요.`);
     setTimeout(() => setBatch(null), 3000);

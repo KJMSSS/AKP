@@ -29,6 +29,7 @@ from datetime import datetime
 from pathlib import Path
 
 from fastapi import APIRouter, Body, File, Form, HTTPException, Request, UploadFile
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import FileResponse
 
 from scripts.web.auth import require_login
@@ -374,7 +375,9 @@ async def api_erase(request: Request, job_id: str = Form(...), figure_id: str = 
     mask_path = str(Path(j["dir"]) / f"mask_{figure_id}.png")
     Path(mask_path).write_bytes(await mask.read())
     out = str(Path(j["dir"]) / f"erased_{figure_id}.png")
-    erase_with_mask(src, mask_path, out)
+    # 인페인팅(LaMa/OpenCV)은 블로킹 CPU 작업 — async 라우트에서 직접 부르면
+    # 이벤트 루프 전체가 멈춰 다른 요청까지 지연된다(2026-07-07 속도 검토).
+    await run_in_threadpool(erase_with_mask, src, mask_path, out)
     j["figures"][figure_id] = out
     _save_state(job_id)
     return {"figure_id": figure_id, "status": "erased"}

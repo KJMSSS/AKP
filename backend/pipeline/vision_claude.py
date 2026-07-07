@@ -17,6 +17,7 @@ import base64
 import json
 import os
 import re
+from collections import Counter
 from dataclasses import dataclass
 
 API_URL = "https://api.anthropic.com/v1/messages"
@@ -67,9 +68,15 @@ def _call(content: list, *, max_tokens: int = 4096, model: str | None = None,
         "messages": [{"role": "user", "content": content}],
     }
     last = None
-    for attempt in range(3):   # 일시적 네트워크 타임아웃/연결오류 재시도(파이프라인 보호)
+    for attempt in range(3):   # 일시적 네트워크 타임아웃/연결오류/429·5xx 재시도(파이프라인 보호)
         try:
             resp = requests.post(API_URL, headers=headers, json=body, timeout=timeout)
+            # 429(rate limit)/5xx/529(과부하)는 일시적 → 백오프 후 재시도. 그 외 4xx 는 즉시 보고.
+            if resp.status_code in (429, 500, 502, 503, 504, 529) and attempt < 2:
+                print(f"[vision_claude] HTTP {resp.status_code} — {3 * (attempt + 1)}s 후 "
+                      f"재시도 {attempt + 1}/2", flush=True)
+                time.sleep(3 * (attempt + 1))
+                continue
             if resp.status_code != 200:
                 raise ClaudeError(f"Anthropic HTTP {resp.status_code}: {resp.text[:300]}")
             data = resp.json()
@@ -79,6 +86,8 @@ def _call(content: list, *, max_tokens: int = 4096, model: str | None = None,
         except requests.exceptions.RequestException as e:
             last = e
             if attempt < 2:
+                print(f"[vision_claude] 연결 오류({e.__class__.__name__}: {e}) — 3s 후 "
+                      f"재시도 {attempt + 1}/2", flush=True)
                 time.sleep(3)
     raise ClaudeError(f"Anthropic API 연결 실패(3회 재시도): {last}")
 
@@ -539,6 +548,10 @@ _VERIFY_PROMPT = """두 이미지를 비교한다.
 [이미지 A] = 원본 시험지 그림(손글씨·낙서·스캔얼룩이 섞여 있을 수 있음).
 [이미지 B] = 그 그림을 코드로 깔끔하게 재작도한 결과.
 
+먼저 각 이미지에서 '인쇄된' 식별 라벨을 전부 읽어 labels_a / labels_b 로 나열하라(손글씨 제외):
+점·꼭짓점 이름(A, B, P′ …), 조건 표시((가)/(나), (A)/(B), ㉠㉡, ①②, Ⓐ …), 도형 안 문자.
+프라임(′) 유무·괄호/원문자 형태·대소문자를 보이는 그대로 적는다. 축 눈금 숫자·수식 본문은 제외.
+
 B 가 A 의 '핵심 수학 구조'를 올바르게 재현했는지 채점하라.
 통과(ok=true): 도형의 종류·구성(정육면체/원기둥/그래프 등)이 맞고, 꼭짓점·라벨(A,B,P,Q 등)이
 정확하며, 곡선의 모양·교점·증감과 점·선의 '대략적' 배치가 원본과 일치한다.
@@ -547,13 +560,25 @@ B 가 A 의 '핵심 수학 구조'를 올바르게 재현했는지 채점하라.
 탈락(ok=false): 도형 종류가 다름, 원본의 핵심 곡선·도형·원이 누락(예: 쌍곡선 문제인데 쌍곡선이
 없고 직선만 있음, 원이 빠짐, 포물선이 직선으로 됨), 꼭짓점·라벨·점이 누락/오기, 곡선 모양·교점·
 증감이 명백히 다름, 필요한 숫자·좌표·길이 라벨이 빠짐. 핵심 요소가 빠지면 관대하게 보지 말고 탈락.
+탈락(ok=false, 라벨 변조): labels_a 와 labels_b 가 하나라도 다르면 무조건 탈락 —
+문자가 바뀜(예: (A)→⑦, (B)→(A), ㉣→㉤), 프라임 누락/추가(F′→F), 같은 라벨이 두 곳에 중복,
+라벨이 다른 요소로 옮겨감. 라벨 변조는 시험 문제의 정답을 바꾸므로 가장 엄격하게 본다.
 탈락(ok=false, 추가 생성): B 에 A 에 없는 내용이 '추가'된 경우도 반드시 탈락 —
 특히 원본에 없는 글자 줄/문자 나열(예: 한글 자모 나열 "ㄱㄴㄷㄹ…", 알파벳 나열 "ABCD…"),
 범례·캡션·제목·설명 문장·워터마크, 없는 도형·눈금·수치. 읽을 수 없는 자국을 임의의 글자로
 '복원'해 넣은 것도 추가 생성이다. 추가된 내용은 issues 에 그대로 옮겨 적어라.
-JSON 으로만 출력: {"score": 0~100, "ok": true/false, "issues": ["구체적 차이점", ...]}
+JSON 으로만 출력: {"labels_a": ["…"], "labels_b": ["…"], "score": 0~100, "ok": true/false,
+"issues": ["구체적 차이점", ...]}
 - 핵심 구조·라벨이 맞고 추가 생성이 없으면 score>=80, ok=true. 구조/라벨 오류나 추가 생성이
   있으면 ok=false. JSON 외 금지."""
+
+
+def _norm_label(s) -> str:
+    """라벨 표기 정규화 — 공백 제거 + 프라임 이형(', ’, `) 을 ′ 로 통일."""
+    t = str(s).strip().replace(" ", "")
+    for p in ("'", "’", "`"):
+        t = t.replace(p, "′")
+    return t
 
 
 def verify_redraw(original_path: str, redrawn_path: str, *, model: str | None = None) -> dict:
@@ -565,11 +590,27 @@ def verify_redraw(original_path: str, redrawn_path: str, *, model: str | None = 
         _encode_image(redrawn_path),
         {"type": "text", "text": _VERIFY_PROMPT},
     ]
-    out = _call(content, max_tokens=1500, model=model)
+    out = _call(content, max_tokens=1500, model=model, timeout=60)
     data = _extract_json(out)
-    return {"score": int(data.get("score", 0) or 0),
-            "ok": bool(data.get("ok", False)),
-            "issues": list(data.get("issues", []) or [])}
+    verdict = {"score": int(data.get("score", 0) or 0),
+               "ok": bool(data.get("ok", False)),
+               "issues": list(data.get("issues", []) or [])}
+    # 라벨 목록 기계 대조 — 2026-07-07 실사고: (A)/(B) 가 ⑦/(A) 로 변조된 재작도를
+    # 채점(ok=true)이 통과시킴. 모델이 직접 나열한 두 라벨 목록이 다르면 점수와
+    # 무관하게 반려한다(라벨 변조 = 문제 정답이 바뀜, 충실도 최우선).
+    la = Counter(_norm_label(x) for x in (data.get("labels_a") or []) if str(x).strip())
+    lb = Counter(_norm_label(x) for x in (data.get("labels_b") or []) if str(x).strip())
+    if la and lb and la != lb:
+        miss = sorted((la - lb).elements())
+        extra = sorted((lb - la).elements())
+        detail = []
+        if miss:
+            detail.append(f"재작도에서 누락/변조된 라벨: {', '.join(miss)}")
+        if extra:
+            detail.append(f"원본에 없는 라벨: {', '.join(extra)}")
+        verdict["ok"] = False
+        verdict["issues"] = [f"라벨 불일치 — {' / '.join(detail)}"] + verdict["issues"]
+    return verdict
 
 
 _TABLE_VERIFY_PROMPT = """[이미지] = 원본 시험지의 표.
