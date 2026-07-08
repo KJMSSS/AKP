@@ -4,6 +4,38 @@
 
 ---
 
+## ⭐ 2026-07-09 — AKP 포크(autohwpx) 분리 + 외주 대표 관리자 등록 (최신·최우선)
+
+[프로젝트] 한국 수학 시험지 PDF→HWPX 자동 변환 (학원 운영 도구)
+GitHub: KJMSSS/AKP — Railway 라이브(akp-production.up.railway.app)는 **외주(쏠버드대표) 운영**
+작업 폴더: D:\f1\AKP (워크트리 confident-ellis-23cd67) + **신규 D:\f1\autohwpx**
+
+[누적 완성]
+- 텍스트기반 v5 파이프라인(회전보정→OCR→파싱→HWPX), 수학비서/타이퍼 2양식, 표 6유형, 웹 검수 시스템
+- 수학비서 양식 시스템 15커밋(FormatProfile·suhbiseo_template·gold_data_table_bf, 지수 중괄호 정규화까지)
+
+[방금 완성한 것 — 이 세션]
+- **미결 이슈 68건 전수조사** + **재작성 vs 개선 3전략 심사**(전면재작성 3 / 점진 8 / 하이브리드 8) → 하이브리드(선별 재구축) 채택
+- **Railway 유지 결정**: 외주가 서비스 사용 → 우리 작업은 분리. 구 AKP/Railway = 외주 영역(건드리지 않음)
+- **autohwpx 독립 포크 생성** (D:\f1\autohwpx): git archive로 코어 이관, 죽은코드 55개+덤프 제거,
+  samples 12GB 복사, base 템플릿 5종 강제추적, git init(커밋 2개). **검증 pytest 332 passed/1 skip**
+- **Railway 앱 관리자에 외주 대표 추가**: imsif42@gmail.com(쏠버드대표) role=admin — 학원장이 브라우저
+  콘솔에서 POST /api/admin/users 직접 실행 완료(세션쿠키 인증, 볼륨/SSH 불필요). ADMIN_EMAIL(학원장)도 유지 → 두 명 관리자
+
+[지금 상태]
+AKP 개선 작업은 이제 **D:\f1\autohwpx**(Railway 무연결·새 키)에서 진행. 이 워크트리 브랜치는 미푸시 15커밋 보유.
+
+[검증 포인트]
+1. Railway /admin에서 imsif42@gmail.com이 역할 "관리자"로 보이는지(대표 로그인 시 관리자 진입 확인)
+2. autohwpx: .env에 새 API 키(Mathpix/Anthropic/Google) 발급·배선 대기
+3. autohwpx GitHub 새 프라이빗 레포 push(오프머신 백업) — gh 미설치라 레포 생성 필요
+
+[다음 가능한 단계]
+- autohwpx에서 개선 로드맵 P1(골드 회귀 게이트: HWPX 구조 지문+렌더 diff)부터 착수
+- Railway 볼륨 데이터(corrections.jsonl·prompt_patterns.json) 읽기전용 백업(외주 데이터 유실 대비)
+
+---
+
 ## 2026-05-14 업데이트 — OCR fallback 정책 전환
 
 ### 배경
