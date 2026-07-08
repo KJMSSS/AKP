@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { API } from '../lib/api';
 
-export default function FigureCard({ job, fig, probs, onAssign, onRemove, onSetKind, batchVer }) {
+export default function FigureCard({ job, fig, probs, onAssign, onRemove, batchVer, batchDone }) {
   const baseRef = useRef(null), maskRef = useRef(null), drawing = useRef(false), dirty = useRef(false);
   const [ver, setVer] = useState(0);
   const [size, setSize] = useState(16);
@@ -10,7 +10,6 @@ export default function FigureCard({ job, fig, probs, onAssign, onRemove, onSetK
   const [hasPaint, setHasPaint] = useState(false);
   const [redrawn, setRedrawn] = useState(false);
   const [lastPro, setLastPro] = useState(false);
-  const [lastKind, setLastKind] = useState('figure');
   const DPR = window.devicePixelRatio || 1;
 
   function fitMask() {
@@ -28,14 +27,16 @@ export default function FigureCard({ job, fig, probs, onAssign, onRemove, onSetK
     if (img) { img.onload = fitMask; if (img.complete) fitMask(); }
   }, [ver, batchVer]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // 마운트 시점의 batchVer 를 기억해 '그 이후의' 배치 완료에만 반응한다.
-  // useEffect 는 마운트에도 실행되므로, 배치 재작도를 한 번 돌린 뒤 '새로 크롭한' 카드가
-  // 재작도된 적 없는데 비교 패널을 열어 원본 404(깨진 이미지)가 났었다(2026-07-03).
+  // 배치 재작도 완료 신호. batchDone(이번 배치에서 실제 재작도된 figure_id→pro Map)에
+  // 내 그림이 있을 때만 '재작도됨'으로 전환한다. 이게 없으면, 배치가 도는 도중 새로
+  // 크롭한 카드가 batchVer 0→1 전이를 관찰해 '재작도된 적 없는데' 비교 패널을 열어
+  // 원본 그대로를 '변환 완료'로 오표시했다(2026-07-08 실사고, 이전엔 원본 404까지).
   const batchSeen = useRef(batchVer);
   useEffect(() => {
     if (batchVer === batchSeen.current) return;   // 마운트/동일값 → 무시
     batchSeen.current = batchVer;
-    setRedrawn(true); setLastPro(false); setLastKind(fig.kind || 'figure');
+    if (!batchDone || !batchDone.has(fig.figure_id)) return;  // 이번 배치에서 재작도된 그림만
+    setRedrawn(true); setLastPro(!!batchDone.get(fig.figure_id));
   }, [batchVer]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function pos(e) {
@@ -67,21 +68,27 @@ export default function FigureCard({ job, fig, probs, onAssign, onRemove, onSetK
     finally { setBusy(false); }
   }
 
-  async function redraw(pro = false, kind = 'figure') {
+  async function redraw(pro = false) {
     setBusy(true);
     try {
       const r = await fetch(`${API}/api/figure/redraw`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ job_id: job, figure_id: fig.figure_id, pro, kind }),
+        body: JSON.stringify({ job_id: job, figure_id: fig.figure_id, pro, kind: 'figure' }),
       });
-      const res = await r.json();
+      const res = await r.json().catch(() => ({}));
       if (!r.ok) {
-        alert('재작도 실패: ' + (res.detail || r.status));
+        // 이미지 제작 실패 — Flash 였으면 '이 그림만' Pro(고품질)로 재시도할지 물어본다.
+        if (!pro && confirm(`이미지 제작 실패: ${res.detail || r.status}\n\n👉 이 그림만 Pro(고품질)로 다시 시도할까요? (비용↑)`)) {
+          return await redraw(true);
+        }
+        alert(pro
+          ? `Pro 재작도도 실패했어요: ${res.detail || r.status}\n'낙서 지우기'한 원본을 그대로 쓰세요.`
+          : `이미지 제작 실패: ${res.detail || r.status}`);
       } else {
-        setVer(v => v + 1); setRedrawn(true); setLastPro(!!res.pro); setLastKind(kind);
+        setVer(v => v + 1); setRedrawn(true); setLastPro(!!res.pro);
         if (res.ok === false) {
-          alert(`재작도했지만 원본과 차이가 있을 수 있어요 (유사도 ${res.score}점).\n차이: ${(res.issues || []).slice(0, 2).join(' / ') || '-'}\n\n👉 '🎨 AI 재작도'를 한 번 더 누르면 새로 시도하고, 그래도 별로면 '낙서 지우기'한 원본을 그대로 쓰세요.`);
+          alert(`재작도했지만 원본과 차이가 있을 수 있어요 (유사도 ${res.score}점).\n차이: ${(res.issues || []).slice(0, 2).join(' / ') || '-'}\n\n👉 '🔁 Pro로 다시 생성'을 쓰거나, 그래도 별로면 '낙서 지우기'한 원본을 그대로 쓰세요.`);
         }
       }
     } finally { setBusy(false); }
@@ -131,7 +138,7 @@ export default function FigureCard({ job, fig, probs, onAssign, onRemove, onSetK
             </div>
           </div>
           <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-            <button className="ghost sel" onClick={() => redraw(true, lastKind)} disabled={busy}>
+            <button className="ghost sel" onClick={() => redraw(true)} disabled={busy}>
               {busy ? '생성 중…' : '🔁 Pro로 다시 생성'}
             </button>
             <span className="muted" style={{ fontSize: 11 }}>
@@ -153,21 +160,7 @@ export default function FigureCard({ job, fig, probs, onAssign, onRemove, onSetK
           {busy ? '처리 중…' : '🧹 낙서 지우기'}
         </button>
         <button className="ghost" onClick={clearMask}>초기화</button>
-        <span className="muted" style={{ fontSize: 12, fontWeight: 600 }}>종류</span>
-        <button
-          className={'ghost' + ((fig.kind || 'figure') === 'figure' ? ' sel' : '')}
-          onClick={() => onSetKind && onSetKind(fig.figure_id, 'figure')}
-        >
-          그림
-        </button>
-        <button
-          className={'ghost' + (fig.kind === 'table' ? ' sel' : '')}
-          onClick={() => onSetKind && onSetKind(fig.figure_id, 'table')}
-          title="표/격자를 실선 포함 깨끗하게 재현"
-        >
-          📊 표
-        </button>
-        <button onClick={() => redraw(false, fig.kind || 'figure')} disabled={busy}>
+        <button onClick={() => redraw(false)} disabled={busy}>
           {busy ? '재작도 중…' : '🎨 이 그림만 재작도'}
         </button>
       </div>

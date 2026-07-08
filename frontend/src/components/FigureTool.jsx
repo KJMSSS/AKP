@@ -73,35 +73,56 @@ export default function FigureTool({ job, data, probs, figures, setFigures }) {
   }
 
   function setAssign(fid, idx) { setFigures(fs => fs.map(f => f.figure_id === fid ? { ...f, problemIdx: idx } : f)); }
-  function setKind(fid, kind) { setFigures(fs => fs.map(f => f.figure_id === fid ? { ...f, kind } : f)); }
   function remove(fid) { setFigures(fs => fs.filter(f => f.figure_id !== fid)); }
 
   const [batchVer, setBatchVer] = useState(0);
   const [batch, setBatch] = useState(null);
+  // 이번 배치에서 실제 재작도에 성공한 그림만 기록(figure_id → pro 여부). 배치 도중
+  // 새로 추가한 그림이 '재작도됨'으로 오표시되던 버그 방지(2026-07-08).
+  const [batchDone, setBatchDone] = useState(null);
 
-  async function redrawAll() {
-    if (!figures.length || (batch && !batch.finished)) return;
-    const total = figures.length; let done = 0, fail = 0;
-    setBatch({ done: 0, total, fail: 0 });
-    const queue = [...figures];
+  // 그림 묶음을 재작도 — 동시 2개까지(3개 병렬은 Gemini rate limit 429 유발).
+  // 성공한 figure_id(→pro) 와 실패 항목을 돌려준다.
+  async function runBatch(items, pro) {
+    const total = items.length; let done = 0, fail = 0;
+    const okIds = new Map(); const failedItems = [];
+    const q = [...items];
+    setBatch({ done: 0, total, fail: 0, pro });
     const worker = async () => {
-      while (queue.length) {
-        const f = queue.shift();
+      while (q.length) {
+        const f = q.shift();
         try {
           const r = await fetch(`${API}/api/figure/redraw`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ job_id: job, figure_id: f.figure_id, pro: false, kind: f.kind || 'figure' }),
+            body: JSON.stringify({ job_id: job, figure_id: f.figure_id, pro, kind: 'figure' }),
           });
-          if (!r.ok) fail++;
-        } catch { fail++; }
-        done++; setBatch({ done, total, fail });
+          if (r.ok) okIds.set(f.figure_id, pro); else { fail++; failedItems.push(f); }
+        } catch { fail++; failedItems.push(f); }
+        done++; setBatch({ done, total, fail, pro });
       }
     };
-    // 동시 2개까지만 — 3개 병렬은 Gemini 이미지 모델 rate limit(429 백오프로 2분+)을 유발
     await Promise.all([worker(), worker()]);
-    setBatchVer(v => v + 1); setBatch({ done, total, fail, finished: true });
-    if (fail) alert(`전체 재작도 완료 — 성공 ${total - fail}개, 실패 ${fail}개.\n실패한 그림은 개별 '🎨 이 그림 재작도'로 다시 시도하거나 '낙서 지우기'한 원본을 쓰세요.`);
+    setBatch({ done, total, fail, pro, finished: true });
+    return { okIds, failedItems };
+  }
+
+  async function redrawAll() {
+    if (!figures.length || (batch && !batch.finished)) return;
+    const allOk = new Map();
+    // 1차: 추가된 그림 전부를 Flash(저비용)로. 클릭 시점 figures 만 대상(스냅샷).
+    const r1 = await runBatch(figures, false);
+    r1.okIds.forEach((pro, id) => allOk.set(id, pro));
+    setBatchDone(new Map(allOk)); setBatchVer(v => v + 1);
+    // 실패분만 Pro(고품질)로 재시도 — '안 된 것만 다시 pro'.
+    let failed = r1.failedItems;
+    if (failed.length && confirm(`이미지 제작 실패 ${failed.length}개.\n\n👉 실패한 그림만 Pro(고품질)로 다시 시도할까요? (비용↑)`)) {
+      const r2 = await runBatch(failed, true);
+      r2.okIds.forEach((pro, id) => allOk.set(id, pro));
+      setBatchDone(new Map(allOk)); setBatchVer(v => v + 1);
+      failed = r2.failedItems;
+    }
+    if (failed.length) alert(`재작도 실패 ${failed.length}개 남음 — 개별 '🎨 이 그림만 재작도'로 다시 시도하거나 '낙서 지우기'한 원본을 쓰세요.`);
     setTimeout(() => setBatch(null), 3000);
   }
 
@@ -146,7 +167,7 @@ export default function FigureTool({ job, data, probs, figures, setFigures }) {
             <h4 style={{ margin: 0 }}>추가된 그림 {figures.length}개</h4>
             <button onClick={redrawAll} disabled={!!(batch && !batch.finished)}>
               {batch && !batch.finished
-                ? `재작도 중… ${batch.done}/${batch.total}`
+                ? `${batch.pro ? 'Pro 재시도' : '재작도'} 중… ${batch.done}/${batch.total}`
                 : `🎨 전체 AI 재작도 (${figures.length}개)`}
             </button>
             {batch && (
@@ -156,8 +177,8 @@ export default function FigureTool({ job, data, probs, figures, setFigures }) {
             )}
           </div>
           <p className="muted" style={{ margin: '0 0 8px', fontSize: 12 }}>
-            각 그림의 <b>종류(그림/표)</b>를 정한 뒤 위 버튼 한 번으로 모두 변환됩니다.
-            표는 격자·실선을, 그림은 도형을 재현해요(같은 엔진, 종류만 다름).
+            위 버튼 한 번으로 추가한 그림을 <b>모두 크롭·재현</b>합니다. 실패한 그림은
+            <b> Pro(고품질)로 재시도</b>할지 물어봐요. 배치 도중 새로 추가한 그림은 다음 재작도 때 반영됩니다.
           </p>
           {figures.map(f => (
             <FigureCard
@@ -167,8 +188,8 @@ export default function FigureTool({ job, data, probs, figures, setFigures }) {
               probs={probs}
               onAssign={setAssign}
               onRemove={remove}
-              onSetKind={setKind}
               batchVer={batchVer}
+              batchDone={batchDone}
             />
           ))}
         </div>

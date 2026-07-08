@@ -249,7 +249,7 @@ def _auto_width_mm(path: str) -> float:
 
 
 def build_exam(template_path: str, problems: list[dict], out_path: str, *,
-               header: dict | None = None, gap_lines: int = 9) -> BuildReport:
+               header: dict | None = None, gap_lines: int = 20) -> BuildReport:
     builder = HwpxBuilder(template_path)
     factory = BlockFactory(template_path)
     table_builder = TableBuilder(template_path)
@@ -307,12 +307,16 @@ def build_exam(template_path: str, problems: list[dict], out_path: str, *,
             # 표는 단 폭 가득(큰 width_mm)으로 넣기 위해 dict 로 폭/높이상한을 받는다.
             if isinstance(fig, dict):
                 fpath = fig.get("path")
-                fkw = {"width_mm": fig.get("width_mm", 96.0),
-                       "max_height_mm": fig.get("max_height_mm", 108.0)}
+                width_mm = float(fig.get("width_mm", 96.0))
+                max_height_mm = float(fig.get("max_height_mm", 108.0))
             else:
-                fpath, fkw = fig, {"width_mm": _auto_width_mm(fig)}
+                fpath = fig
+                width_mm = _auto_width_mm(fig)
+                max_height_mm = 108.0            # add_figure 기본값과 동일
+            if not fpath:
+                continue                          # 경로 없는 figure 는 삽입 불가 → 스킵
             try:
-                builder.add_figure(fpath, **fkw)
+                builder.add_figure(fpath, width_mm=width_mm, max_height_mm=max_height_mm)
                 report.figures_inserted += 1
             except Exception as e:  # noqa: BLE001
                 report.fallbacks.append({"latex": f"[그림 {fpath}]", "reason": str(e)})
@@ -322,8 +326,14 @@ def build_exam(template_path: str, problems: list[dict], out_path: str, *,
         if not prob.get("choices") and _is_seosul(prob):
             for _ in range(SEOSUL_ANSWER_LINES):
                 builder.add_text("")
-        # 문제 사이 간격(마지막 문제 제외): 빈 단락 spacer. 기본 9줄 — 원본 시험지의
-        # 문제 간격 실측(단 폭 대비 ~0.5, 6줄은 ~0.34로 좁다는 사용자 피드백 2026-07-05).
+        # 문제 사이 간격(마지막 문제 제외): 빈 단락 spacer. 기본 20줄(≈120mm) —
+        # 6줄(2026-07-04)·9줄(2026-07-05)·15줄(2026-07-07)로 키워왔으나 짧은 객관식은
+        # 여전히 상단 몰림(2026-07-08 학원장 '종종 몰린다'). 15→20줄 상향으로 두 번째 문제를
+        # 단 하단 쪽으로 더 내린다(짧은 문제 ~48%→~65%). 큰 문제(~150mm)+gap(120mm)+문제2 여도
+        # 둘째가 단(370mm)을 넘치면 한글이 다음 단으로 자연 이동(쪼갬·과밀 아님). '한 단 2문제
+        # 고정 + 높이 무관 gap' 이라 여전히 높이 추정 패킹이 아니라 시험지마다 안 깨진다.
+        # ⚠ 진짜 세로 justify(남는 공간 균등분배)는 엔진 규칙(높이 추정 금지)상 불가 —
+        # 이 gap 상향이 규칙 안에서 가능한 최대 완화이고, 미세조정은 한글 실측으로만(2026-07-08).
         # 단, 다음 문제가 columnBreak(새 단 시작)면 gap 을 넣지 않는다 — 빈 단락이 단/
         # 페이지 경계를 넘치면 그 단이 통째로 비고 다음 문제가 한 단 더 밀린다(3페이지
         # 1단이 통째로 비던 원인). 새 단으로 넘어가는 문제는 어차피 시각적으로 분리된다.

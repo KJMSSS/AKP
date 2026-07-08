@@ -383,9 +383,9 @@ def api_build(job_id: str, payload: dict = Body(...)):
                     item = fig_map[fid]
                 problems[idx].setdefault("figures", []).append(item)
     out = str(Path(j["dir"]) / "result.hwpx")
-    # 문제 간 간격(빈 줄 수). 기본 9(원본 간격 실측 근사), payload 로 조절 가능(UI 슬라이더 대비).
+    # 문제 간 간격(빈 줄 수). 기본 20(2026-07-08 15→20 상향; 짧은 객관식 상단 몰림 완화), payload 로 조절 가능(UI 슬라이더 대비).
     gap = payload.get("gap_lines")
-    gap = int(gap) if isinstance(gap, (int, float, str)) and str(gap).isdigit() else 9
+    gap = int(gap) if isinstance(gap, (int, float, str)) and str(gap).isdigit() else 20
     # 1페이지 상단 헤더 표(과목/범위/지역/학교/학기): 업로드 때 받은 값으로 채운다.
     # 빈 값은 템플릿 텍스트 유지. payload.header 가 오면 그 값이 우선(향후 UI 수정 대비).
     header = {"school": j.get("school", ""), "region": j.get("region", ""),
