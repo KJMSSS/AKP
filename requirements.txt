@@ -20,7 +20,6 @@ Pillow==9.5.0
 matplotlib==3.8.2               # 재작도 폴백 (Gemini 실패 시 구조스펙→코드 렌더)
 simple-lama-inpainting==0.1.2   # 낙서 지우개 고품질 인페인팅 (큰 마스크용, torch 필요)
 torch==2.12.1
-torchvision==0.27.1
-Pillow>=10.4
+torchvision==0.27.1                # Pillow>=5.3.0 만 요구 → 위 9.5.0 로 충족 (중복 Pillow 제약 제거: Railway pip ResolutionImpossible 유발)
 # ── 테스트 ───────────────────────────────────────────
 pytest>=8.0.0
