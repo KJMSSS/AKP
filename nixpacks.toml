@@ -8,4 +8,8 @@ aptPkgs = ["libgl1", "libglib2.0-0"]
 #   `import cv2` 가 "libGL.so.1: cannot open shared object file" 로 실패해
 #   낙서 지우개가 500 을 냈다(2026-07-11 실사고). nixLibs 는 해당 nix 패키지의
 #   lib 경로를 LD_LIBRARY_PATH 에 등록해 이를 해소한다.
-nixLibs = ["glib", "libGL"]
+#   - glib/libGL: cv2 가 dlopen (libgthread-2.0.so.0, libGL.so.1)
+#   - zlib: numpy C 확장이 요구 (libz.so.1) — 없으면 cv2 가 "requires numpy" 로 위장 실패
+#   - stdenv.cc.cc.lib: cv2 가 요구 (libstdc++.so.6)
+#   4개 조합으로 cv2·numpy·PIL·torch(LaMa) 전부 로드됨을 컨테이너에서 실측(2026-07-11).
+nixLibs = ["glib", "libGL", "zlib", "stdenv.cc.cc.lib"]
