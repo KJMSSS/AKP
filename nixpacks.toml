@@ -3,3 +3,9 @@
 # simple-lama-inpainting 이 일반판을 의존해 이중설치가 되기 때문(requirements.txt 참조).
 [phases.setup]
 aptPkgs = ["libgl1", "libglib2.0-0"]
+# ⚠ apt 만으로는 부족 — 파이썬 자체가 nix(python310)라서 nix 동적 링커가
+#   /usr/lib/x86_64-linux-gnu(apt 설치 경로)를 검색하지 않는다. 그 결과 런타임
+#   `import cv2` 가 "libGL.so.1: cannot open shared object file" 로 실패해
+#   낙서 지우개가 500 을 냈다(2026-07-11 실사고). nixLibs 는 해당 nix 패키지의
+#   lib 경로를 LD_LIBRARY_PATH 에 등록해 이를 해소한다.
+nixLibs = ["glib", "libGL"]

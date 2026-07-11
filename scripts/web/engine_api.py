@@ -400,7 +400,10 @@ async def api_erase(request: Request, job_id: str = Form(...), figure_id: str = 
     out = str(Path(j["dir"]) / f"erased_{figure_id}.png")
     # 인페인팅(LaMa/OpenCV)은 블로킹 CPU 작업 — async 라우트에서 직접 부르면
     # 이벤트 루프 전체가 멈춰 다른 요청까지 지연된다(2026-07-07 속도 검토).
-    await run_in_threadpool(erase_with_mask, src, mask_path, out)
+    try:
+        await run_in_threadpool(erase_with_mask, src, mask_path, out)
+    except Exception as e:   # cv2 미로드(libGL) 등 — 원인을 UI 까지 전달(무증상 실패 방지)
+        raise HTTPException(500, f"낙서 지우개 처리 실패: {e}")
     j["figures"][figure_id] = out
     _save_state(job_id)
     return {"figure_id": figure_id, "status": "erased"}
@@ -708,10 +711,30 @@ def api_delete_job(job_id: str, request: Request):
     return {"ok": True, "deleted_keys": keys_to_del}
 
 
+_CV2_OK = None   # 첫 헬스 호출 때 1회 판정 후 캐시 (import cv2 는 ~1초 걸림)
+
+
+def _opencv_ok() -> bool:
+    """낙서 지우개·기울기 보정의 전제인 cv2 가 실제로 '로드'되는지 확인.
+
+    설치돼 있어도 네이티브 lib(libGL 등)이 없으면 import 가 런타임에 실패한다
+    (2026-07-11 Railway 실사고) — 배포 후 로그인 없이 확인할 수 있게 헬스에 노출.
+    """
+    global _CV2_OK
+    if _CV2_OK is None:
+        try:
+            import cv2                      # noqa: F401
+            _CV2_OK = True
+        except Exception:
+            _CV2_OK = False
+    return _CV2_OK
+
+
 @router.get("/api/health")
 def health():
     import os
     return {"ok": True,
             "claude": bool(os.environ.get("ANTHROPIC_API_KEY")),
             "gemini": bool(os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")),
-            "mathpix": bool(os.environ.get("MATHPIX_APP_ID"))}
+            "mathpix": bool(os.environ.get("MATHPIX_APP_ID")),
+            "opencv": _opencv_ok()}

@@ -1,6 +1,6 @@
 // 개별 그림 카드 — 낙서 마스크 드래그, 지우기, 재작도, 원본↔재작도 비교
 import { useState, useEffect, useRef } from 'react';
-import { API } from '../lib/api';
+import { API, redirectToLogin } from '../lib/api';
 
 export default function FigureCard({ job, fig, probs, onAssign, onRemove, batchVer, batchDone }) {
   const baseRef = useRef(null), maskRef = useRef(null), drawing = useRef(false), dirty = useRef(false);
@@ -64,8 +64,17 @@ export default function FigureCard({ job, fig, probs, onAssign, onRemove, batchV
     const fd = new FormData();
     fd.append('job_id', job); fd.append('figure_id', fig.figure_id); fd.append('mask', blob, 'm.png');
     setBusy(true);
-    try { await fetch(`${API}/api/figure/erase`, { method: 'POST', body: fd }); setVer(v => v + 1); }
-    finally { setBusy(false); }
+    // 응답 미확인 금지 — 500 을 삼키면 '눌러도 아무 일 없음'으로 보인다(2026-07-11 실사고)
+    try {
+      const r = await fetch(`${API}/api/figure/erase`, { method: 'POST', body: fd });
+      if (r.status === 401) { redirectToLogin(); return; }
+      if (!r.ok) {
+        const res = await r.json().catch(() => ({}));
+        alert(`낙서 지우기 실패: ${res.detail || `HTTP ${r.status}`}`);
+        return;
+      }
+      setVer(v => v + 1);
+    } finally { setBusy(false); }
   }
 
   async function redraw(pro = false) {
@@ -77,6 +86,7 @@ export default function FigureCard({ job, fig, probs, onAssign, onRemove, batchV
         body: JSON.stringify({ job_id: job, figure_id: fig.figure_id, pro, kind: 'figure' }),
       });
       const res = await r.json().catch(() => ({}));
+      if (r.status === 401) { redirectToLogin(); return; }
       if (!r.ok) {
         // 이미지 제작 실패 — Flash 였으면 '이 그림만' Pro(고품질)로 재시도할지 물어본다.
         if (!pro && confirm(`이미지 제작 실패: ${res.detail || r.status}\n\n👉 이 그림만 Pro(고품질)로 다시 시도할까요? (비용↑)`)) {

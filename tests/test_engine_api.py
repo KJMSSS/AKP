@@ -18,7 +18,8 @@ def test_health_open():
     assert r.status_code == 200
     body = r.json()
     assert body["ok"] is True
-    assert set(body) >= {"claude", "gemini", "mathpix"}
+    assert set(body) >= {"claude", "gemini", "mathpix", "opencv"}
+    assert body["opencv"] is True   # cv2 네이티브 로드 실패(libGL 등) 감지
 
 
 def test_engine_routes_registered():
