@@ -21,7 +21,9 @@ from collections import Counter
 from dataclasses import dataclass
 
 API_URL = "https://api.anthropic.com/v1/messages"
-DEFAULT_MODEL = os.environ.get("CLAUDE_MODEL", "claude-sonnet-4-5-20250929")
+# 구조화·검증 기본 모델 = opus (CLAUDE.md 절대 정책 #6, 충실도>비용).
+# 웹 경로는 model 을 명시하지만, CLI/convert() 등 미지정 경로도 정책과 일치시킨다.
+DEFAULT_MODEL = os.environ.get("CLAUDE_MODEL", "claude-opus-4-8")
 
 
 class ClaudeError(RuntimeError):

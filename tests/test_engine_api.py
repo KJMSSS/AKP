@@ -31,15 +31,22 @@ def test_engine_routes_registered():
 
 
 def test_jobs_requires_login():
+    # /api/* 는 401 JSON — 307 이면 fetch 가 로그인 HTML 을 추종해 프론트가 조용히 죽는다
     r = _client().get("/api/jobs/whatever", follow_redirects=False)
-    assert r.status_code == 307
-    assert r.headers["location"] == "/login"
+    assert r.status_code == 401
 
 
 def test_analyze_requires_login():
     r = _client().post("/api/analyze", files={"file": ("a.pdf", b"%PDF-")},
                        follow_redirects=False)
+    assert r.status_code == 401
+
+
+def test_page_still_redirects_to_login():
+    # 페이지 내비게이션(/admin 등 비 /api/ 경로)은 기존대로 로그인 리다이렉트
+    r = _client().get("/admin", follow_redirects=False)
     assert r.status_code == 307
+    assert r.headers["location"] == "/login"
 
 
 def test_usage_cost_opus_pricing():

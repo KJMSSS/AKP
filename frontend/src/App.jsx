@@ -4,7 +4,7 @@ import Upload from './components/Upload';
 import PreviewRotate from './components/PreviewRotate';
 import Review from './components/Review';
 import Done from './components/Done';
-import { fetchHealth, postAnalyze, getJob, postRun, postBuild } from './lib/api';
+import { fetchHealth, postAnalyze, getJob, postRun, postBuild, isAuthError, redirectToLogin } from './lib/api';
 
 // 매트릭스(학교×과목)에서 넘어온 URL 파라미터 — 셀 컨텍스트 프리필
 function readMatrixParams() {
@@ -62,15 +62,14 @@ export default function App() {
     fd.append('subject', meta.subject);
     fd.append('exam_range', meta.examRange);
     fd.append('registry_key', meta.registryKey || '');
-    const j = await postAnalyze(fd);
-    if (!j || !j.job_id) {
-      // 세션 만료(로그인 페이지로 리다이렉트됨) 또는 비용 한도 초과
-      alert(j && j.detail ? j.detail : '업로드 실패 — 로그인이 만료됐을 수 있습니다.');
-      if (!j || !j.detail) window.location.href = '/login';
-      return;
+    try {
+      const j = await postAnalyze(fd);
+      setJob(j.job_id);
+      setStep('processing');
+    } catch (e) {
+      if (isAuthError(e)) return redirectToLogin();
+      alert(e.message);   // 비용 한도 초과 등 — 업로드 화면에 머문다
     }
-    setJob(j.job_id);
-    setStep('processing');
   }
 
   async function runAnalyze(rotations) {
@@ -78,14 +77,28 @@ export default function App() {
       await postRun(job, rotations);
       setStep('processing');
     } catch (e) {
+      if (isAuthError(e)) return redirectToLogin();
       alert(e.message);   // 비용 한도 초과 등 — 회전 화면에 그대로 머문다
     }
   }
 
   useEffect(() => {
     if (step !== 'processing' || !job) return;
+    let fails = 0;   // 일시적 네트워크 오류는 견디되, 지속 실패는 무한 스피너 대신 알린다
     const t = setInterval(async () => {
-      const j = await getJob(job);
+      let j;
+      try {
+        j = await getJob(job);
+        fails = 0;
+      } catch (e) {
+        if (isAuthError(e)) { clearInterval(t); return redirectToLogin(); }
+        if (++fails >= 8) {
+          clearInterval(t);
+          alert('서버와 통신할 수 없습니다: ' + e.message);
+          setStep('upload');
+        }
+        return;
+      }
       if (j.status === 'preview') { clearInterval(t); setData(j); setStep('preview'); }
       else if (j.status === 'done') { clearInterval(t); setData(j); setStep('review'); }
       else if (j.status === 'error') { clearInterval(t); alert('오류: ' + j.error); setStep('upload'); }
@@ -94,9 +107,14 @@ export default function App() {
   }, [step, job]);
 
   async function doBuild(figures) {
-    const r = await postBuild(job, data.problems, figures);
-    setBuildRes(r);
-    setStep('done');
+    try {
+      const r = await postBuild(job, data.problems, figures);
+      setBuildRes(r);
+      setStep('done');
+    } catch (e) {
+      if (isAuthError(e)) return redirectToLogin();
+      alert(e.message);   // 빌드 실패 — 검수 화면 유지, 수정 후 재시도 가능
+    }
   }
 
   const cur = stepIndex(step, data);

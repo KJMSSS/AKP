@@ -701,9 +701,13 @@
       .replace(/"/g, '&quot;');
   }
 
-  // onclick 속성 내 작은따옴표 이스케이프
+  // onclick 속성 내 이스케이프 — JS 문자열(\ ')과 HTML 속성(" < > &) 모두 처리.
+  // "만 안 막으면 이메일에 "를 넣어 onclick="..." 속성을 조기 종료시키는 XSS 가 된다.
   function escAttr(s) {
-    return String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    return String(s)
+      .replace(/\\/g, '\\\\').replace(/'/g, "\\'")
+      .replace(/&/g, '&amp;').replace(/"/g, '&quot;')
+      .replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
 
   // CSS id 에 사용할 안전한 문자열

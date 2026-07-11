@@ -157,7 +157,7 @@ async def api_analyze(file: UploadFile = File(...), school: str = Form(""), code
     job_id = uuid.uuid4().hex[:12]
     jdir = WORK / job_id
     jdir.mkdir(parents=True, exist_ok=True)
-    src = jdir / file.filename
+    src = jdir / Path(file.filename or "upload.pdf").name   # 경로 성분 제거(../ 탈출 방지)
     src.write_bytes(await file.read())
     JOBS[job_id] = {"status": "rendering", "dir": str(jdir), "src": str(src),
                     "school": school, "code": code, "region": region,

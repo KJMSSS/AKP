@@ -69,8 +69,10 @@ def _get_access_token() -> str | None:
 
 def _find_or_create_folder(token: str, name: str, parent_id: str) -> str:
     headers = {"Authorization": f"Bearer {token}"}
+    # Drive 쿼리 문법상 ' 와 \ 는 이스케이프 필요 — 폴더명(과목/연도)에 포함되면 쿼리가 깨진다
+    safe_name = name.replace("\\", "\\\\").replace("'", "\\'")
     q = (
-        f"name='{name}' and '{parent_id}' in parents "
+        f"name='{safe_name}' and '{parent_id}' in parents "
         f"and mimeType='application/vnd.google-apps.folder' and trashed=false"
     )
     r = httpx.get(

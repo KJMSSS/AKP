@@ -33,8 +33,9 @@ UPLOADS_DIR.mkdir(exist_ok=True, parents=True)
 CONFIG_FILE = DATA_DIR / "matrix_config.json"
 REGISTRY_FILE = DATA_DIR / "matrix_registry.json"
 
-_config_lock = threading.Lock()
-_registry_lock = threading.Lock()
+# RLock: update_registry_entry 가 락을 잡은 채 load/save 를 호출한다(재진입).
+_config_lock = threading.RLock()
+_registry_lock = threading.RLock()
 
 DEFAULT_SUBJECTS = [
     {"id": "공수1", "name": "공통수학1", "grade": "1", "sem": "1"},
@@ -72,6 +73,10 @@ def load_mconfig() -> dict:
         need_write = (cfg is None) or (not existed)
         if cfg is None:
             cfg = {"subjects": DEFAULT_SUBJECTS, "schools": []}
+        else:
+            # 키 누락 파일 방어 — 핸들러의 cfg["schools"] KeyError 방지
+            cfg.setdefault("subjects", DEFAULT_SUBJECTS)
+            cfg.setdefault("schools", [])
 
         # 학교 목록이 비어 있으면(신규 Railway 볼륨 등) 번들 시드로 부트스트랩
         if not cfg.get("schools"):
@@ -115,13 +120,18 @@ def save_registry(reg: dict) -> None:
 
 
 def update_registry_entry(registry_key: str, **fields) -> dict | None:
-    """레지스트리 항목 부분 갱신(없으면 생성). 갱신된 항목 반환."""
+    """레지스트리 항목 부분 갱신(없으면 생성). 갱신된 항목 반환.
+
+    빌드/분석 완료는 스레드풀·백그라운드 스레드에서 호출된다 — 읽기-수정-쓰기
+    전 구간을 락으로 묶어 동시 갱신 시 한쪽이 사라지는 것을 막는다.
+    """
     from datetime import datetime
-    reg = load_registry()
-    entry = reg.get(registry_key, {})
-    entry.update(fields)
-    entry.setdefault("created_at", datetime.now().isoformat(timespec="seconds"))
-    entry["updated_at"] = datetime.now().isoformat(timespec="seconds")
-    reg[registry_key] = entry
-    save_registry(reg)
+    with _registry_lock:
+        reg = load_registry()
+        entry = reg.get(registry_key, {})
+        entry.update(fields)
+        entry.setdefault("created_at", datetime.now().isoformat(timespec="seconds"))
+        entry["updated_at"] = datetime.now().isoformat(timespec="seconds")
+        reg[registry_key] = entry
+        save_registry(reg)
     return entry

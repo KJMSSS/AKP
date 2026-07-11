@@ -127,6 +127,9 @@ def _check_cost_cap(email: str) -> None:
 # ── 작업 폴더 자동 정리 (3일 보관 정책 — 2026-07-06 학원장 결정) ────────────
 _CLEANUP_AFTER_DAYS = 3
 
+# 분석 1건당 페이지 상한 (시험지는 통상 4~12쪽 — 비용 폭주 방어선)
+_MAX_ANALYZE_PAGES = 30
+
 
 def cleanup_old_jobs() -> int:
     """WORK_DIR 에서 마지막 수정이 3일 지난 작업 폴더 삭제. 삭제 수 반환.
@@ -161,7 +164,7 @@ def cleanup_old_jobs() -> int:
 _PERSIST_KEYS = ("status", "dir", "src", "school", "code", "region", "subject", "exam_range",
                  "page_paths", "problems", "figures", "originals", "kinds", "usage", "pages",
                  "problem_count", "error", "rotations", "registry_key", "owner", "pdf_name",
-                 "drive_file_id")
+                 "drive_file_id", "result")
 
 
 def _save_state(job_id: str) -> None:
@@ -171,7 +174,8 @@ def _save_state(job_id: str) -> None:
         return
     st = {k: j[k] for k in _PERSIST_KEYS if k in j}
     try:
-        (WORK / job_id / "state.json").write_text(json.dumps(st, ensure_ascii=False))
+        (WORK / job_id / "state.json").write_text(
+            json.dumps(st, ensure_ascii=False), encoding="utf-8")
     except Exception:  # noqa: BLE001 (지속화 실패는 치명적 아님)
         pass
 
@@ -179,13 +183,16 @@ def _save_state(job_id: str) -> None:
 def _rehydrate(job_id: str) -> dict | None:
     """JOBS 가 비었을 때 WORK/{job_id} 에서 복구. state.json 우선, 없으면 파일명으로 그림만."""
     import json
+    # job_id 는 URL/바디에서 오는 클라이언트 값 — ".." 등 경로 탈출이면 복구 대상 아님
+    if not job_id or ".." in job_id or "/" in job_id or "\\" in job_id:
+        return None
     d = WORK / job_id
     if not d.is_dir():
         return None
     sf = d / "state.json"
     if sf.is_file():
         try:
-            j = json.loads(sf.read_text())
+            j = json.loads(sf.read_text(encoding="utf-8"))
             JOBS[job_id] = j
             return j
         except Exception:  # noqa: BLE001
@@ -198,6 +205,9 @@ def _rehydrate(job_id: str) -> dict | None:
     if not figs and not pages:
         return None
     j = {"status": "done", "dir": str(d), "page_paths": pages, "figures": figs}
+    res = d / "result.hwpx"
+    if res.is_file():
+        j["result"] = str(res)   # 빌드 결과가 있으면 재시작 후에도 다운로드 가능
     JOBS[job_id] = j
     return j
 
@@ -250,6 +260,8 @@ def _run_analysis(job_id: str) -> None:
                     im.rotate(-ang, expand=True).save(pg.path)   # 시계방향 ang
                 with Image.open(pg.path) as im:
                     pg.width, pg.height = im.size
+        # 회전은 파일에 이미 반영됨 — 재실행 시 같은 각도가 또 적용(이중 회전)되지 않게 소거
+        j["rotations"] = {}
         # 그림은 '사용자가 드래그로 선택'한 것만 넣는다 → 자동 감지/삽입 끔.
         # 구조화(발문/보기/수식/자모)는 정확도가 최우선이라 opus 사용(충실도>비용 방침).
         # 선(先)드레인 금지 — 반환값을 버리면 동시 요청의 미집계 토큰이 로그에서
@@ -319,8 +331,15 @@ def api_run(job_id: str, request: Request, payload: dict = Body(default={})):
     j = _job(job_id)
     if not j:
         raise HTTPException(404, "job not found")
+    if j.get("status") == "processing":
+        raise HTTPException(409, "이미 분석이 진행 중입니다.")   # 중복 클릭 → 이중 과금 방지
     if "_pages" not in j:
         raise HTTPException(409, "아직 페이지 렌더가 끝나지 않았습니다.")
+    # 페이지 수 상한 — 캡 검사는 '시작 전 누적액'만 보므로, 초대형 PDF 1건이
+    # 페이지당 opus 호출로 일일 캡을 크게 뚫는 것을 여기서 막는다.
+    if len(j["_pages"]) > _MAX_ANALYZE_PAGES:
+        raise HTTPException(400, f"페이지가 너무 많습니다({len(j['_pages'])}쪽). "
+                                 f"시험지 분석은 {_MAX_ANALYZE_PAGES}쪽 이하만 지원합니다.")
     j["rotations"] = (payload or {}).get("rotations", {}) or {}
     j["status"] = "processing"
     threading.Thread(target=_run_analysis, args=(job_id,), daemon=True).start()
@@ -345,7 +364,7 @@ def api_job(job_id: str, request: Request):
 def api_page(job_id: str, idx: int, request: Request):
     require_login(request)
     j = _job(job_id)
-    if not j or "page_paths" not in j or idx >= len(j["page_paths"]):
+    if not j or "page_paths" not in j or not (0 <= idx < len(j["page_paths"])):
         raise HTTPException(404, "page not found")
     return FileResponse(j["page_paths"][idx], media_type="image/png")
 
@@ -356,6 +375,10 @@ def api_crop(request: Request, job_id: str = Body(...), page: int = Body(...), b
     j = _job(job_id)
     if not j or "page_paths" not in j:
         raise HTTPException(404, "job not found")
+    if not (0 <= page < len(j["page_paths"])):
+        raise HTTPException(400, "잘못된 페이지 번호입니다.")
+    if not (isinstance(bbox, list) and len(bbox) == 4):
+        raise HTTPException(400, "bbox는 [x0, y0, x1, y1] 형식이어야 합니다.")
     fid = uuid.uuid4().hex[:8]
     out = str(Path(j["dir"]) / f"crop_{fid}.png")
     r = crop_region(j["page_paths"][page], bbox, out, pad=0.01)
@@ -451,7 +474,8 @@ def api_redraw(request: Request, job_id: str = Body(...), figure_id: str = Body(
         _log_redraw()
         return {"figure_id": figure_id, "status": "redrawn", "method": "gemini",
                 "model": model, "pro": pro, "kind": kind,
-                "verified": bool(verdict), "score": (verdict or {}).get("score"),
+                "verified": bool(verdict), "ok": (verdict or {}).get("ok", True),
+                "score": (verdict or {}).get("score"),
                 "issues": (verdict or {}).get("issues", [])}
     except GeminiError as e:        # 키 미설정/안전차단 등 → 폴백
         gem_err = str(e)
@@ -468,7 +492,9 @@ def api_redraw(request: Request, job_id: str = Body(...), figure_id: str = Body(
         j["figures"][figure_id] = path
         _save_state(job_id)
         _log_redraw()
-        return {"figure_id": figure_id, "status": "redrawn", "method": "spec", "gemini_error": gem_err}
+        # 응답 필드는 gemini 경로와 동일 구성으로 — 프론트(FigureCard)가 pro/ok 를 읽는다
+        return {"figure_id": figure_id, "status": "redrawn", "method": "spec",
+                "pro": pro, "kind": kind, "verified": False, "gemini_error": gem_err}
     except Exception:  # noqa: BLE001
         pass
     try:
@@ -480,6 +506,7 @@ def api_redraw(request: Request, job_id: str = Body(...), figure_id: str = Body(
     _save_state(job_id)
     _log_redraw()
     return {"figure_id": figure_id, "status": "redrawn", "method": "code",
+            "pro": pro, "kind": kind,
             "score": verdict.get("score"), "ok": verdict.get("ok"),
             "issues": verdict.get("issues", []), "gemini_error": gem_err}
 
@@ -524,10 +551,31 @@ def api_build(job_id: str, request: Request, payload: dict = Body(...)):
         raise HTTPException(404, "job not found")
     import copy as _copy
     problems = _copy.deepcopy(payload.get("problems") or j.get("problems", []))
+
+    # payload.problems 에 실려온 figures 경로는 작업 폴더 내부만 허용 —
+    # 임의 서버 경로(.env 등)를 넣어 HWPX 안에 담아 내려받는 것을 막는다.
+    _jdir = Path(j["dir"]).resolve()
+
+    def _fig_in_jobdir(f) -> bool:
+        p = f.get("path") if isinstance(f, dict) else f
+        try:
+            return isinstance(p, str) and Path(p).resolve().is_relative_to(_jdir)
+        except (OSError, ValueError):
+            return False
+
+    for p in problems:
+        if p.get("figures"):
+            p["figures"] = [f for f in p["figures"] if _fig_in_jobdir(f)]
+
     # UI 갤러리(자동+수동)가 그림의 단일 출처 → 분석에서 붙은 figures 는 비우고
     # payload.figures(figure_id) 만 해당 문제에 매핑(이중삽입 방지)
     fig_map = j.get("figures", {})
     payload_figs = payload.get("figures")
+    # 표 그림이 있으면 발문 중복 제거에 Claude(opus) 호출이 발생 → 비용 캡 검사
+    _kinds = j.get("kinds", {})
+    if any(_kinds.get(f.get("figure_id")) == "table" for f in (payload_figs or [])
+           if isinstance(f, dict)):
+        _check_cost_cap(email)
     if payload_figs is not None:
         for p in problems:
             p["figures"] = []

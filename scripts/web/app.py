@@ -67,7 +67,11 @@ print(f"  [경로] DATA_DIR={DATA_DIR}  WORK_DIR={WORK_DIR}"
 # ── Google OAuth 설정 ─────────────────────────────────────────────────
 GOOGLE_CLIENT_ID     = os.environ.get("GOOGLE_CLIENT_ID", "")
 GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET", "")
-SECRET_KEY           = os.environ.get("SECRET_KEY", "akp-default-secret-change-me")
+SECRET_KEY           = os.environ.get("SECRET_KEY", "")
+if not SECRET_KEY:
+    SECRET_KEY = "akp-default-secret-change-me"
+    print("  [경고] SECRET_KEY 미설정 — 공개된 기본 키로 세션을 서명합니다. "
+          "세션 쿠키 위조(로그인 우회)가 가능하니 운영 환경에서는 반드시 설정하세요.")
 
 oauth = OAuth()
 oauth.register(
@@ -114,11 +118,7 @@ async def auth_callback(request: Request):
     user_info = token.get("userinfo") or {}
     email = user_info.get("email", "")
     name  = user_info.get("name", email)
-
-    # Drive 업로드용 refresh_token 저장 (처음 consent 동의 때만 포함됨)
     refresh_token = token.get("refresh_token", "")
-    if refresh_token:
-        save_refresh_token(refresh_token)
 
     if not email:
         return RedirectResponse("/auth/login")
@@ -133,6 +133,12 @@ async def auth_callback(request: Request):
 
     request.session["email"] = email
     request.session["name"]  = name
+
+    # Drive 업로드용 refresh_token 저장 — 관리자(학원장) 계정만.
+    # 아무 계정이나 저장하면 직원 첫 로그인의 토큰이 학원 Drive 토큰을 덮어써
+    # 이후 빌드 결과물이 그 직원 개인 Drive 로 업로드된다.
+    if refresh_token and is_admin(email):
+        save_refresh_token(refresh_token)
 
     # Drive 재인증 경로: 성공/실패 결과 페이지로 이동
     if request.session.pop("gdrive_reauth", None):
@@ -194,6 +200,7 @@ async def guide_page():
 
 @app.get("/api/usage")
 async def api_usage(request: Request):
+    require_login(request)
     return JSONResponse({"summary": today_summary(), "recent": read_entries(days=7)[:10]})
 
 
@@ -208,8 +215,11 @@ async def api_drive_status(request: Request):
 
 @app.get("/auth/gdrive")
 async def auth_gdrive(request: Request):
-    """Drive refresh_token 강제 재취득 — /auth/login?gdrive=1 으로 위임."""
-    require_login(request)
+    """Drive refresh_token 강제 재취득 — /auth/login?gdrive=1 으로 위임.
+
+    토큰은 학원 공용 Drive 자격이므로 관리자(학원장)만 갱신할 수 있다.
+    """
+    require_admin(request)
     request.session["gdrive_reauth"] = "1"
     return RedirectResponse("/auth/login?gdrive=1")
 
@@ -250,18 +260,21 @@ async def pipeline_stage_upload(
     for old in stage_dir.iterdir():
         old.unlink(missing_ok=True)
 
-    dest = stage_dir / (file.filename or f"{stage}.hwpx")
+    # 경로 성분 제거 — filename 은 클라이언트 값이라 "../.." 탈출을 막는다
+    dest = stage_dir / (Path(file.filename or "").name or f"{stage}.hwpx")
     dest.write_bytes(await file.read())
 
     reg   = load_registry()
     entry = reg.get(key, {})
-    entry.setdefault("stages", {})[stage] = {
+    stage_info = {
         "filename":    dest.name,
         "uploaded_at": datetime.now().isoformat(timespec="seconds"),
     }
+    entry.setdefault("stages", {})[stage] = stage_info
     reg[key] = entry
     save_registry(reg)
-    return JSONResponse({"ok": True, "filename": dest.name})
+    # stage 필드: matrix.html 이 셀 갱신에 사용(서버 저장 파일명·시각의 단일 출처)
+    return JSONResponse({"ok": True, "filename": dest.name, "stage": stage_info})
 
 
 @app.get("/api/pipeline/{key}/stages/{stage}/download")
@@ -320,7 +333,14 @@ async def api_add_user(request: Request):
     cap_usd = float(body.get("cap_usd", 2.0))
     if not email or not name:
         raise HTTPException(400, "이메일과 이름을 입력하세요.")
+    # 이메일 형식 검증 — 따옴표·괄호 등이 섞인 값이 admin UI 의 onclick 속성으로
+    # 되돌아가 XSS 벡터가 되는 것을 서버에서도 차단한다.
+    import re
+    if not re.fullmatch(r"[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}", email):
+        raise HTTPException(400, "올바른 이메일 형식이 아닙니다.")
     role = body.get("role", "tier1")
+    if role not in SELECTABLE_ROLES:
+        raise HTTPException(400, f"유효하지 않은 역할: {role}")
     add_user(email=email, name=name, cap_usd=cap_usd, role=role)
     return JSONResponse({"ok": True, "email": email})
 
@@ -501,8 +521,13 @@ async def api_registry_move(request: Request):
     reg = load_registry()
     if from_key not in reg:
         raise HTTPException(404, f"원본 키에 잡이 없습니다: {from_key}")
-    if to_key in reg and reg[to_key].get("job_id"):
+    to_entry = reg.get(to_key) or {}
+    if to_entry.get("job_id"):
         raise HTTPException(409, "대상 위치에 이미 잡이 있습니다. 먼저 삭제하세요.")
+    to_stage_dir = UPLOADS_DIR / to_key
+    if to_entry.get("stages") or (to_stage_dir.exists() and any(to_stage_dir.iterdir())):
+        # 대상 셀의 수동 업로드(한글완성본 등)를 조용히 지우고 덮어쓰지 않는다
+        raise HTTPException(409, "대상 위치에 업로드된 파일이 있습니다. 먼저 삭제하세요.")
 
     entry = reg.pop(from_key)
     entry["updated_at"] = datetime.now().isoformat(timespec="seconds")
@@ -520,10 +545,9 @@ async def api_registry_move(request: Request):
 
     # stages 디렉토리 이동 (업로드된 한글완성본·타이퍼·해설)
     from_stage_dir = UPLOADS_DIR / from_key
-    to_stage_dir   = UPLOADS_DIR / to_key
     if from_stage_dir.exists():
         if to_stage_dir.exists():
-            shutil.rmtree(to_stage_dir)
+            shutil.rmtree(to_stage_dir)   # 위에서 내용물 있으면 409 — 빈 껍데기만 제거
         shutil.move(str(from_stage_dir), str(to_stage_dir))
 
     return JSONResponse({"ok": True, "from": from_key, "to": to_key, "entry": entry})

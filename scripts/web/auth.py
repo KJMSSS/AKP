@@ -17,6 +17,11 @@ def current_email(request: Request) -> str | None:
 def require_login(request: Request) -> str:
     email = current_email(request)
     if not email:
+        # API 호출(fetch)에 307 을 주면 fetch 가 /login 리다이렉트를 자동 추종해
+        # 로그인 HTML(200)을 받고, 프론트는 JSON 파싱 실패로 조용히 죽는다.
+        # → /api/* 는 401 JSON, 페이지 내비게이션은 기존대로 307 리다이렉트.
+        if request.url.path.startswith("/api/"):
+            raise HTTPException(status_code=401, detail="로그인이 필요합니다.")
         raise HTTPException(status_code=307, headers={"Location": "/login"})
     if not is_allowed(email):
         raise HTTPException(status_code=403, detail="접근 권한이 없습니다. 관리자에게 문의하세요.")
