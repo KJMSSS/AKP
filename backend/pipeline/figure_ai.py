@@ -27,7 +27,7 @@ _PREAMBLE = (
     "import matplotlib\n"
     "matplotlib.use('Agg')\n"
     "import matplotlib.pyplot as plt\n"
-    "plt.rcParams['font.family'] = ['AppleGothic', 'Apple SD Gothic Neo', 'DejaVu Sans']\n"
+    "plt.rcParams['font.family'] = ['AppleGothic', 'Apple SD Gothic Neo', 'NanumGothic', 'DejaVu Sans']\n"
     "plt.rcParams['axes.unicode_minus'] = False\n"   # 한글 라벨 □□ 깨짐 방지
     "import numpy as np\n"
     "import math\n"
@@ -141,7 +141,7 @@ def spec_to_matplotlib(spec: dict, out_path: str) -> str:
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
     import numpy as np
-    plt.rcParams["font.family"] = ["AppleGothic", "Apple SD Gothic Neo", "DejaVu Sans"]
+    plt.rcParams["font.family"] = ["AppleGothic", "Apple SD Gothic Neo", "NanumGothic", "DejaVu Sans"]
     plt.rcParams["axes.unicode_minus"] = False
     fig, ax = plt.subplots(figsize=(6, 7))
 
