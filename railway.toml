@@ -3,5 +3,6 @@ builder = "nixpacks"
 
 [deploy]
 startCommand = "python -m uvicorn scripts.web.app:app --host 0.0.0.0 --port 8080 --proxy-headers --forwarded-allow-ips='*'"
-healthcheckPath = "/api/usage"
+# /api/usage 는 2026-07-11 보안 점검으로 로그인 필수(401)가 됨 — 무인증 헬스체크 전용인 /api/health 사용
+healthcheckPath = "/api/health"
 restartPolicyType = "on_failure"
