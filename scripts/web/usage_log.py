@@ -23,6 +23,10 @@ _LOG_FILE = _LOG_DIR / "usage.jsonl"
 
 DAILY_CAP_USD: float = float(os.environ.get("DAILY_COST_CAP", "5.0"))
 
+# 지원 provider — usage 항목의 provider 필드·직원별 한도 필드와 일치해야 한다.
+PROVIDERS: tuple[str, ...] = ("claude", "gemini")
+PROVIDER_LABEL: dict[str, str] = {"claude": "Claude", "gemini": "Gemini"}
+
 
 def append_entry(entry: dict) -> None:
     """변환 1건을 로그 파일에 추가."""
@@ -66,6 +70,21 @@ def provider_today_cost() -> dict[str, float]:
         prov = e.get("provider", "claude")
         # 비용은 상태 무관 합산 — 재작도 '반려(rejected)'·'오류(error)'도 실제 청구가
         # 발생한 경로다(2026-07-06 QA: ok 만 합산하면 반려 연발 시 캡이 뚫린다).
+        out[prov] = out.get(prov, 0.0) + e.get("cost_usd", 0.0)
+    return {k: round(v, 4) for k, v in out.items()}
+
+
+def user_provider_today_cost(email: str) -> dict[str, float]:
+    """특정 사용자의 오늘 provider별 비용 합계(USD).
+
+    직원별 Claude/Gemini 한도 검사·표시에 쓴다. 로그의 token 필드가 사용자
+    이메일, provider 필드가 claude/gemini(옛 항목은 claude 귀속)다.
+    """
+    out: dict[str, float] = {"claude": 0.0, "gemini": 0.0}
+    for e in _today_entries():
+        if e.get("token") != email:
+            continue
+        prov = e.get("provider", "claude")
         out[prov] = out.get(prov, 0.0) + e.get("cost_usd", 0.0)
     return {k: round(v, 4) for k, v in out.items()}
 

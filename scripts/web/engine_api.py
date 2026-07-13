@@ -44,9 +44,8 @@ from scripts.web.store import (
     update_registry_entry,
     validate_safe_key,
 )
-from scripts.web.settings import PROVIDER_LABEL, get_caps
-from scripts.web.usage_log import append_entry, provider_today_cost
-from scripts.web.users import get_user, is_admin, user_today_cost
+from scripts.web.usage_log import PROVIDER_LABEL, append_entry, user_provider_today_cost
+from scripts.web.users import get_user, is_admin, user_cap
 
 # ── 엔진 임포트 (backend/ 를 sys.path 에 추가 — examconv 코드 무수정 사용) ──
 _ROOT = Path(__file__).resolve().parents[2]
@@ -167,28 +166,26 @@ def _log_gemini_usage(email: str, pdf: str, status: str = "ok") -> float:
 
 
 def _check_cost_cap(email: str, need: tuple[str, ...] = ("claude",)) -> None:
-    """일일 비용 캡 검사. 초과 시 429.
+    """직원별 provider 한도 검사. 초과 시 429.
 
-    관리자(학원장)는 전부 면제한다 — 키 한도·개인 한도 모두 검사하지 않는다
-    (2026-07-13 학원장 결정: 본인 작업이 한도에 걸리면 안 됨). 캡은 직원 계정에만 적용:
-    - API 키별 한도(caps): 이 요청이 쓸 provider(need)의 오늘 지출이 키 한도를
-      넘었으면 차단(관리자 페이지에서 조정, 0=무제한).
-    - 개인 한도(users.cap_usd): 직원 개인 몫.
+    관리자(학원장)는 전면 면제한다 — 검사 자체를 건너뛴다(2026-07-13 학원장 결정:
+    본인 작업이 한도에 걸리면 안 됨). 한도는 직원 계정에만, provider별로 적용한다
+    (2026-07-13: 글로벌 키 한도 폐기 → 직원별 Claude/Gemini 한도. 한 명이 많이
+    써도 다른 직원은 안 막힘). 이 요청이 쓸 provider(need)의 오늘 지출이 그 직원의
+    해당 provider 한도를 넘었으면 차단(관리자 페이지에서 조정, 0=무제한).
     """
     if is_admin(email):
         return
-    caps = get_caps()
-    spend = provider_today_cost()
+    user = get_user(email)
+    if not user:
+        return  # 미등록 계정은 정상 흐름상 여기 도달 안 함(require_login 이 앞단에서 차단)
+    spend = user_provider_today_cost(email)
     for prov in need:
-        cap = float(caps.get(prov, 0) or 0)
+        cap = user_cap(user, prov)
         if cap > 0 and spend.get(prov, 0.0) >= cap:
             label = PROVIDER_LABEL.get(prov, prov)
-            raise HTTPException(429, f"오늘 {label} API 키 한도(${cap:g})를 초과했습니다. "
+            raise HTTPException(429, f"오늘 {label} 한도(${cap:g})를 초과했습니다. "
                                      f"관리자에게 한도 상향을 요청하세요.")
-    user = get_user(email)
-    cap = float(user.get("cap_usd", 0) or 0) if user else 0.0
-    if cap > 0 and user_today_cost(email) >= cap:
-        raise HTTPException(429, f"오늘 개인 비용 한도(${cap:g})를 초과했습니다.")
 
 
 # ── 작업 폴더 자동 정리 (3일 보관 정책 — 2026-07-06 학원장 결정) ────────────

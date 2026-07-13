@@ -144,7 +144,7 @@
 
   #add-name  { width: 120px; }
   #add-email { width: 210px; }
-  #add-cap   { width: 80px; }
+  #add-cap-claude, #add-cap-gemini { width: 72px; }
 
   /* ── 테이블 공통 ── */
   .table-wrap {
@@ -205,24 +205,10 @@
   .cost-warn   { color: #f97316; font-weight: 600; }
   .cost-exceed { color: #ef4444; font-weight: 700; }
 
-  /* ── API 키 사용량 · 한도 카드 ── */
-  .key-usage { display: flex; flex-direction: column; gap: 12px; }
-  .key-row {
-    display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
-    padding: 12px 14px; border: 1px solid #e2e8f0; border-radius: 8px; background: #fcfcfd;
-  }
-  .key-name { font-weight: 700; font-size: 0.92rem; color: #1e293b; width: 72px; }
-  .key-bar-wrap { flex: 1 1 170px; min-width: 150px; }
-  .key-spend { font-size: 0.85rem; color: #334155; margin-bottom: 5px; }
-  .key-spend b { color: #0f172a; }
-  .key-bar { height: 8px; border-radius: 5px; background: #e2e8f0; overflow: hidden; }
-  .key-bar > span { display: block; height: 100%; width: 0; background: #22c55e; transition: width .3s; }
-  .key-bar.warn > span { background: #f97316; }
-  .key-bar.over > span { background: #ef4444; }
-  .key-meta { font-size: 0.78rem; color: #64748b; white-space: nowrap; }
-  .key-cap-form { display: flex; align-items: center; gap: 5px; }
-  .key-cap-form input { width: 76px; padding: 4px 8px; font-size: 0.82rem; }
-  .key-note { font-size: 0.76rem; color: #94a3b8; margin-top: 10px; line-height: 1.55; }
+  /* 한도 셀 — provider별(Claude/Gemini) 캡 */
+  .cap-cell { white-space: nowrap; }
+  .cap-cell .cap-today { font-size: 0.72rem; color: #94a3b8; margin-left: 4px; }
+  .cap-exempt { color: #94a3b8; font-size: 0.8rem; }
 
   /* 상태 뱃지 */
   .status-badge {
@@ -350,24 +336,6 @@
     <a class="back-link" href="/">&#8592; 변환기로</a>
   </div>
 
-  <!-- API 키 사용량 · 한도 -->
-  <div class="card">
-    <div class="card-title">API 키 사용량 · 한도 (오늘)</div>
-    <div id="key-usage" class="key-usage">
-      <div style="padding:14px 0;text-align:center;color:#94a3b8;font-size:0.85rem;">
-        <span class="spinner"></span> 불러오는 중...
-      </div>
-    </div>
-    <div class="key-note">
-      한도는 API 키별 <b>직원 하루 지출 상한</b>입니다(매일 자정<b>(한국 시간)</b> 기준 초기화, 0 = 무제한).
-      직원이 한도를 넘으면 그 키를 쓰는 작업(Claude=분석·검증, Gemini=그림 재작도)이 잠기고
-      "관리자에게 한도 상향 요청" 안내가 뜹니다.
-      <b>관리자(학원장) 본인 작업은 한도에 걸리지 않습니다.</b>
-      위 지출액은 관리자·직원 전체 합계이며, Claude 는 토큰 실사용 정산,
-      Gemini 는 이미지 <b>장당 추정</b> 단가입니다.
-    </div>
-  </div>
-
   <!-- 사용자 추가 -->
   <div class="card">
     <div class="card-title">사용자 추가</div>
@@ -381,9 +349,13 @@
         <input id="add-email" type="email" placeholder="teacher@gmail.com">
       </div>
       <div class="field">
-        <label for="add-cap">한도:</label>
-        <input id="add-cap" type="number" min="0" step="0.5" value="2.0" placeholder="USD">
-        <span style="font-size:0.82rem;color:#64748b;">USD &nbsp;(0 = 무제한)</span>
+        <label for="add-cap-claude">Claude 한도:</label>
+        <input id="add-cap-claude" type="number" min="0" step="0.5" value="5.0" placeholder="USD">
+      </div>
+      <div class="field">
+        <label for="add-cap-gemini">Gemini 한도:</label>
+        <input id="add-cap-gemini" type="number" min="0" step="0.5" value="3.0" placeholder="USD">
+        <span style="font-size:0.82rem;color:#64748b;">USD/일 &nbsp;(0 = 무제한)</span>
       </div>
       <div class="field">
         <label for="add-role">역할:</label>
@@ -408,7 +380,8 @@
           <tr>
             <th>이름</th>
             <th>이메일</th>
-            <th>한도</th>
+            <th>Claude 한도</th>
+            <th>Gemini 한도</th>
             <th>오늘</th>
             <th>누적</th>
             <th>상태</th>
@@ -417,9 +390,16 @@
           </tr>
         </thead>
         <tbody id="users-tbody">
-          <tr class="empty-row"><td colspan="8"><span class="spinner"></span> 불러오는 중...</td></tr>
+          <tr class="empty-row"><td colspan="9"><span class="spinner"></span> 불러오는 중...</td></tr>
         </tbody>
       </table>
+    </div>
+    <div style="font-size:0.76rem;color:#94a3b8;margin-top:10px;line-height:1.55;">
+      한도는 <b>직원별 하루 지출 상한</b>입니다(매일 자정<b>(한국 시간)</b> 초기화, 0 = 무제한).
+      직원이 한도를 넘으면 그 키를 쓰는 작업(Claude = 분석·검증, Gemini = 그림 재작도)이 잠기고
+      "관리자에게 한도 상향 요청" 안내가 뜹니다. 한도 숫자를 클릭하면 바로 수정됩니다.
+      Claude 는 토큰 실사용 정산, Gemini 는 이미지 <b>장당 추정</b> 단가입니다.
+      <b>관리자(학원장) 본인 작업은 한도에 걸리지 않습니다.</b>
     </div>
   </div>
 
@@ -441,9 +421,12 @@
       if (e.key === 'Enter') document.getElementById('add-email').focus();
     });
     document.getElementById('add-email').addEventListener('keydown', function (e) {
-      if (e.key === 'Enter') document.getElementById('add-cap').focus();
+      if (e.key === 'Enter') document.getElementById('add-cap-claude').focus();
     });
-    document.getElementById('add-cap').addEventListener('keydown', function (e) {
+    document.getElementById('add-cap-claude').addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') document.getElementById('add-cap-gemini').focus();
+    });
+    document.getElementById('add-cap-gemini').addEventListener('keydown', function (e) {
       if (e.key === 'Enter') doAddUser();
     });
 
@@ -472,7 +455,6 @@
         document.getElementById('loading-overlay').style.display = 'none';
         document.getElementById('main-content').style.display = 'flex';
 
-        loadKeyUsage();
         loadUsers();
       })
       .catch(function (err) {
@@ -492,16 +474,18 @@
      사용자 추가
   ══════════════════════════════════════════════ */
   window.doAddUser = function () {
-    var name  = document.getElementById('add-name').value.trim();
-    var email = document.getElementById('add-email').value.trim();
-    var cap   = parseFloat(document.getElementById('add-cap').value);
+    var name   = document.getElementById('add-name').value.trim();
+    var email  = document.getElementById('add-email').value.trim();
+    var capC   = parseFloat(document.getElementById('add-cap-claude').value);
+    var capG   = parseFloat(document.getElementById('add-cap-gemini').value);
 
     if (!name)  { showToast('이름을 입력하세요', true); return; }
     if (!email) { showToast('이메일을 입력하세요', true); return; }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       showToast('올바른 이메일 형식이 아닙니다', true); return;
     }
-    if (isNaN(cap) || cap < 0) cap = 2.0;
+    if (isNaN(capC) || capC < 0) capC = 5.0;
+    if (isNaN(capG) || capG < 0) capG = 3.0;
 
     var btn = document.getElementById('add-btn');
     btn.disabled = true;
@@ -509,13 +493,18 @@
 
     apiFetch('/api/admin/users', {
       method: 'POST',
-      body: JSON.stringify({ email: email, name: name, cap_usd: cap, role: document.getElementById('add-role').value || 'tier1' })
+      body: JSON.stringify({
+        email: email, name: name,
+        cap_claude_usd: capC, cap_gemini_usd: capG,
+        role: document.getElementById('add-role').value || 'tier1'
+      })
     })
       .then(function () {
         showToast(name + ' 님이 추가되었습니다');
         document.getElementById('add-name').value  = '';
         document.getElementById('add-email').value = '';
-        document.getElementById('add-cap').value   = '2.0';
+        document.getElementById('add-cap-claude').value = '5.0';
+        document.getElementById('add-cap-gemini').value = '3.0';
         loadUsers();
       })
       .catch(function (err) {
@@ -528,66 +517,6 @@
   };
 
   /* ══════════════════════════════════════════════
-     API 키 사용량 · 한도 로드 + 렌더
-  ══════════════════════════════════════════════ */
-  function loadKeyUsage() {
-    apiFetch('/api/admin/usage')
-      .then(function (data) { renderKeyUsage(data); })
-      .catch(function (err) {
-        document.getElementById('key-usage').innerHTML =
-          '<div style="color:#94a3b8;font-size:0.82rem;">불러오기 실패: '
-          + escHtml(err.message || String(err)) + '</div>';
-      });
-  }
-
-  function renderKeyUsage(data) {
-    var el = document.getElementById('key-usage');
-    var keys = (data && data.keys) || [];
-    if (!keys.length) {
-      el.innerHTML = '<div style="color:#94a3b8;font-size:0.82rem;">데이터 없음</div>';
-      return;
-    }
-    el.innerHTML = keys.map(function (k) {
-      var cap    = k.cap_usd   || 0;
-      var spend  = k.spend_usd || 0;
-      var pct    = cap > 0 ? Math.min(100, (spend / cap) * 100) : 0;
-      var barCls = k.over ? 'over' : (cap > 0 && pct >= 80 ? 'warn' : '');
-      var capText    = cap > 0 ? ('$' + cap.toFixed(2)) : '무제한';
-      var remainText = cap > 0 ? ('잔여 $' + (k.remaining_usd || 0).toFixed(2)) : '무제한';
-      var pid = safeId(k.provider);
-      return '<div class="key-row">'
-        + '<div class="key-name">' + escHtml(k.label || k.provider) + '</div>'
-        + '<div class="key-bar-wrap">'
-          + '<div class="key-spend"><b>$' + spend.toFixed(2) + '</b> / ' + escHtml(capText) + '</div>'
-          + '<div class="key-bar ' + barCls + '"><span style="width:' + pct + '%"></span></div>'
-        + '</div>'
-        + '<div class="key-meta">' + escHtml(remainText) + ' &middot; ' + (k.count || 0) + '건</div>'
-        + '<div class="key-cap-form">'
-          + '<input type="number" id="cap-' + pid + '" min="0" step="0.5" value="' + cap + '" '
-          + 'onkeydown="if(event.key===\'Enter\')saveKeyCap(\'' + escAttr(k.provider) + '\')">'
-          + '<button class="btn-sm btn-primary" onclick="saveKeyCap(\'' + escAttr(k.provider) + '\')">한도 저장</button>'
-        + '</div>'
-      + '</div>';
-    }).join('');
-  }
-
-  window.saveKeyCap = function (provider) {
-    var inp = document.getElementById('cap-' + safeId(provider));
-    if (!inp) return;
-    var val = parseFloat(inp.value);
-    if (isNaN(val) || val < 0) { showToast('올바른 금액을 입력하세요', true); return; }
-    apiFetch('/api/admin/caps/' + encodeURIComponent(provider), {
-      method: 'PATCH',
-      body: JSON.stringify({ cap_usd: val })
-    })
-      .then(function () {
-        showToast(provider + ' 한도 $' + val.toFixed(2) + '로 저장됨');
-        loadKeyUsage();
-      })
-      .catch(function (err) { showToast('한도 저장 실패: ' + (err.message || err), true); });
-  };
-
-  /* ══════════════════════════════════════════════
      사용자 목록 로드 + 렌더
   ══════════════════════════════════════════════ */
   function loadUsers() {
@@ -596,7 +525,7 @@
       .catch(function (err) {
         showToast('사용자 목록 로드 실패: ' + (err.message || err), true);
         document.getElementById('users-tbody').innerHTML =
-          '<tr class="empty-row"><td colspan="8">로드 실패</td></tr>';
+          '<tr class="empty-row"><td colspan="9">로드 실패</td></tr>';
       });
   }
 
@@ -605,25 +534,26 @@
   function renderUsers(list) {
     var tbody = document.getElementById('users-tbody');
     if (!list || list.length === 0) {
-      tbody.innerHTML = '<tr class="empty-row"><td colspan="8">등록된 사용자가 없습니다</td></tr>';
+      tbody.innerHTML = '<tr class="empty-row"><td colspan="9">등록된 사용자가 없습니다</td></tr>';
       return;
     }
 
     tbody.innerHTML = list.map(function (u) {
       var active     = u.active !== false;
+      var isAdmin    = (u.role === 'admin');
       var todayCost  = u.today_cost  || 0;
       var totalCost  = u.total_cost  || 0;
-      var cap        = u.cap_usd     || 0;
       var emailSafe  = escAttr(u.email || '');
       var nameSafe   = escHtml(u.name  || '');
-      var capId      = 'cap-cell-' + safeId(u.email);
 
-      // 오늘 비용 색상
+      // 오늘(합산) 비용 색상 — Claude/Gemini 중 한도에 더 근접한 쪽 기준
       var todayClass = '';
-      if (cap > 0) {
-        var ratio = todayCost / cap;
-        if (ratio >= 1)         todayClass = 'cost-exceed';
-        else if (ratio >= 0.8)  todayClass = 'cost-warn';
+      if (!isAdmin) {
+        var rC = (u.cap_claude_usd > 0) ? (u.today_claude || 0) / u.cap_claude_usd : 0;
+        var rG = (u.cap_gemini_usd > 0) ? (u.today_gemini || 0) / u.cap_gemini_usd : 0;
+        var r  = Math.max(rC, rG);
+        if (r >= 1)        todayClass = 'cost-exceed';
+        else if (r >= 0.8) todayClass = 'cost-warn';
       }
 
       // 상태 뱃지
@@ -634,7 +564,7 @@
       // 역할 셀
       var roleLabel = ROLE_LABELS[u.role] || u.role || '기본';
       var roleColor = { staff:'#dcfce7', admin:'#fef3c7', tier4:'#ede9fe', tier3:'#e0f2fe', tier2:'#f0fdf4' }[u.role] || '#f1f5f9';
-      var roleSel = (u.role === 'admin') ? escHtml(roleLabel) :
+      var roleSel = isAdmin ? escHtml(roleLabel) :
         '<select style="border:1px solid #e2e8f0;border-radius:5px;padding:2px 6px;font-size:0.78rem;background:' + roleColor + ';"'
         + ' onchange="doPatch(\'' + emailSafe + '\',{action:\'role\',role:this.value})">'
         + ['tier1','tier2','tier3','tier4','staff'].map(function(r) {
@@ -648,14 +578,11 @@
         : '<button class="btn-sm btn-success"  onclick="doPatch(\'' + emailSafe + '\',{action:\'activate\'})">활성화</button>';
       var btnDel = '<button class="btn-sm btn-danger" onclick="doDelete(\'' + emailSafe + '\',\'' + nameSafe.replace(/'/g,"&#39;") + '\')">삭제</button>';
 
-      // 한도 셀 (클릭 시 인라인 편집)
-      var capText = cap > 0 ? ('$' + cap.toFixed(2)) : '$0 (무제한)';
-      var capCell = '<span class="cap-clickable" onclick="startCapEdit(\'' + emailSafe + '\',' + cap + ')">' + escHtml(capText) + '</span>';
-
       return '<tr class="' + (active ? '' : 'inactive') + '">'
         + '<td>' + nameSafe + '</td>'
         + '<td class="email-cell" title="클릭하면 복사" onclick="copyText(\'' + emailSafe + '\')">' + escHtml(u.email || '') + '</td>'
-        + '<td id="' + capId + '">' + capCell + '</td>'
+        + capCellHtml(u, 'claude', isAdmin, emailSafe)
+        + capCellHtml(u, 'gemini', isAdmin, emailSafe)
         + '<td class="' + todayClass + '">$' + todayCost.toFixed(2) + '</td>'
         + '<td>$' + totalCost.toFixed(2) + '</td>'
         + '<td>' + badgeHtml + '</td>'
@@ -663,6 +590,21 @@
         + '<td><div class="actions">' + btnToggle + btnDel + '</div></td>'
         + '</tr>';
     }).join('');
+  }
+
+  // provider별 한도 셀 — 관리자는 '면제', 직원은 클릭 시 인라인 편집 + 오늘 지출 표시.
+  function capCellHtml(u, provider, isAdmin, emailSafe) {
+    var cellId = 'cap-cell-' + provider + '-' + safeId(u.email);
+    if (isAdmin) return '<td class="cap-cell" id="' + cellId + '"><span class="cap-exempt">면제</span></td>';
+    var cap   = (provider === 'claude' ? u.cap_claude_usd : u.cap_gemini_usd) || 0;
+    var today = (provider === 'claude' ? u.today_claude   : u.today_gemini)   || 0;
+    var capText  = cap > 0 ? ('$' + cap.toFixed(2)) : '$0 (무제한)';
+    var todayCls = '';
+    if (cap > 0) { var rr = today / cap; if (rr >= 1) todayCls = 'cost-exceed'; else if (rr >= 0.8) todayCls = 'cost-warn'; }
+    return '<td class="cap-cell" id="' + cellId + '">'
+      + '<span class="cap-clickable" onclick="startCapEdit(\'' + emailSafe + '\',\'' + provider + '\',' + cap + ')">' + escHtml(capText) + '</span>'
+      + '<span class="cap-today ' + todayCls + '">오늘 $' + today.toFixed(2) + '</span>'
+      + '</td>';
   }
 
   /* ══════════════════════════════════════════════
@@ -700,16 +642,16 @@
   /* ══════════════════════════════════════════════
      한도 인라인 편집
   ══════════════════════════════════════════════ */
-  window.startCapEdit = function (email, currentCap) {
-    var cellId = 'cap-cell-' + safeId(email);
+  window.startCapEdit = function (email, provider, currentCap) {
+    var cellId = 'cap-cell-' + provider + '-' + safeId(email);
     var cell   = document.getElementById(cellId);
     if (!cell) return;
 
-    var inputId = 'cap-input-' + safeId(email);
+    var inputId = 'cap-input-' + provider + '-' + safeId(email);
     cell.innerHTML =
       '<div class="cap-edit-wrap">'
       + '<input type="number" id="' + inputId + '" value="' + currentCap + '" min="0" step="0.5">'
-      + '<button class="btn-sm btn-primary" onclick="saveCapEdit(\'' + escAttr(email) + '\')">저장</button>'
+      + '<button class="btn-sm btn-primary" onclick="saveCapEdit(\'' + escAttr(email) + '\',\'' + provider + '\')">저장</button>'
       + '<button class="btn-sm btn-secondary" onclick="loadUsers()">취소</button>'
       + '</div>';
 
@@ -717,23 +659,24 @@
     if (inp) { inp.focus(); inp.select(); }
 
     inp && inp.addEventListener('keydown', function (e) {
-      if (e.key === 'Enter')  saveCapEdit(email);
+      if (e.key === 'Enter')  saveCapEdit(email, provider);
       if (e.key === 'Escape') loadUsers();
     });
   };
 
-  window.saveCapEdit = function (email) {
-    var inp = document.getElementById('cap-input-' + safeId(email));
+  window.saveCapEdit = function (email, provider) {
+    var inp = document.getElementById('cap-input-' + provider + '-' + safeId(email));
     if (!inp) return;
     var val = parseFloat(inp.value);
     if (isNaN(val) || val < 0) { showToast('올바른 금액을 입력하세요', true); return; }
 
     apiFetch('/api/admin/users/' + encodeURIComponent(email), {
       method: 'PATCH',
-      body: JSON.stringify({ action: 'cap', cap_usd: val })
+      body: JSON.stringify({ action: 'cap', provider: provider, cap_usd: val })
     })
       .then(function () {
-        showToast(email + ' 한도 $' + val.toFixed(2) + '로 변경됨');
+        var label = provider === 'claude' ? 'Claude' : 'Gemini';
+        showToast(email + ' ' + label + ' 한도 $' + val.toFixed(2) + '로 변경됨');
         loadUsers();
       })
       .catch(function (err) { showToast('한도 변경 실패: ' + (err.message || err), true); });

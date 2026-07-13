@@ -60,12 +60,9 @@ from scripts.web.store import (                                            # noq
     load_mconfig, load_registry, save_mconfig, save_registry,
     validate_safe_key,
 )
-from scripts.web.settings import PROVIDER_LABEL, PROVIDERS, get_caps, set_cap  # noqa: E402
-from scripts.web.usage_log import (                                        # noqa: E402
-    provider_today_cost, read_entries, today_summary,
-)
+from scripts.web.usage_log import read_entries, today_summary              # noqa: E402
 from scripts.web.users import (                                            # noqa: E402
-    ROLE_DISPLAY, SELECTABLE_ROLES,
+    CAP_FIELD, DEFAULT_CAP_CLAUDE, DEFAULT_CAP_GEMINI, ROLE_DISPLAY, SELECTABLE_ROLES,
     add_user, get_allowed_stages, get_role, is_admin, is_allowed,
     list_users, remove_user, update_user,
 )
@@ -335,67 +332,34 @@ async def admin_page(request: Request):
     return HTMLResponse((_HERE / "static" / "admin.html").read_text(encoding="utf-8"))
 
 
-def _key_usage_overview() -> dict:
-    """API 키(provider)별 오늘 지출·한도·잔여. 관리자 사용량 카드용."""
-    caps  = get_caps()
-    spend = provider_today_cost()
-    today = datetime.now().strftime("%Y-%m-%d")
-    entries = read_entries(days=1)
-    keys = []
-    for prov in PROVIDERS:
-        cap  = float(caps.get(prov, 0) or 0)
-        used = float(spend.get(prov, 0.0))
-        count = sum(1 for e in entries
-                    if e.get("ts", "").startswith(today)
-                    and e.get("provider", "claude") == prov)
-        keys.append({
-            "provider":  prov,
-            "label":     PROVIDER_LABEL.get(prov, prov),
-            "spend_usd": round(used, 4),
-            "cap_usd":   cap,
-            "remaining_usd": round(max(0.0, cap - used), 4) if cap > 0 else None,
-            "count":     count,
-            "over":      bool(cap > 0 and used >= cap),
-        })
-    return {"date": today, "keys": keys}
-
-
-@app.get("/api/admin/usage")
-async def api_admin_usage(request: Request):
-    """API 키별 사용량/한도 개요 (관리자 전용)."""
-    require_admin(request)
-    return JSONResponse(_key_usage_overview())
-
-
-@app.patch("/api/admin/caps/{provider}")
-async def api_set_cap(provider: str, request: Request):
-    """API 키(provider) 일일 한도 설정 (관리자 전용). 0 = 무제한."""
-    require_admin(request)
-    body = await request.json()
-    try:
-        cap = float(body.get("cap_usd", 0))
-    except (TypeError, ValueError):
-        raise HTTPException(400, "올바른 금액을 입력하세요.")
-    try:
-        set_cap(provider, cap)
-    except ValueError as e:
-        raise HTTPException(400, str(e))
-    return JSONResponse({"ok": True, "provider": provider, "cap_usd": cap})
-
-
 @app.get("/api/admin/users")
 async def api_admin_users(request: Request):
     require_admin(request)
     return JSONResponse(list_users())
 
 
+def _parse_cap(value, default: float) -> float:
+    """한도 금액 파싱 — 0 이상 유한값만 허용. NaN/inf 는 캡을 영구 무력화하므로 거부."""
+    import math
+    if value is None:
+        return float(default)
+    try:
+        cap = float(value)
+    except (TypeError, ValueError):
+        raise HTTPException(400, "올바른 금액을 입력하세요.")
+    if not math.isfinite(cap) or cap < 0:
+        raise HTTPException(400, "한도는 0 이상의 숫자여야 합니다.")
+    return cap
+
+
 @app.post("/api/admin/users")
 async def api_add_user(request: Request):
     require_admin(request)
     body = await request.json()
-    email   = body.get("email", "").strip().lower()
-    name    = body.get("name", "").strip()
-    cap_usd = float(body.get("cap_usd", 2.0))
+    email = body.get("email", "").strip().lower()
+    name  = body.get("name", "").strip()
+    cap_claude = _parse_cap(body.get("cap_claude_usd"), DEFAULT_CAP_CLAUDE)
+    cap_gemini = _parse_cap(body.get("cap_gemini_usd"), DEFAULT_CAP_GEMINI)
     if not email or not name:
         raise HTTPException(400, "이메일과 이름을 입력하세요.")
     # 이메일 형식 검증 — 따옴표·괄호 등이 섞인 값이 admin UI 의 onclick 속성으로
@@ -406,7 +370,8 @@ async def api_add_user(request: Request):
     role = body.get("role", "tier1")
     if role not in SELECTABLE_ROLES:
         raise HTTPException(400, f"유효하지 않은 역할: {role}")
-    add_user(email=email, name=name, cap_usd=cap_usd, role=role)
+    add_user(email=email, name=name, cap_claude_usd=cap_claude,
+             cap_gemini_usd=cap_gemini, role=role)
     return JSONResponse({"ok": True, "email": email})
 
 
@@ -422,7 +387,12 @@ async def api_update_user(email: str, request: Request):
     elif action == "delete":
         remove_user(email)
     elif action == "cap":
-        update_user(email, cap_usd=float(body.get("cap_usd", 2.0)))
+        provider = body.get("provider", "")
+        field = CAP_FIELD.get(provider)
+        if not field:
+            raise HTTPException(400, f"알 수 없는 provider: {provider}")
+        cap = _parse_cap(body.get("cap_usd"), 0.0)
+        update_user(email, **{field: cap})
     elif action == "role":
         new_role = body.get("role", "tier1")
         if new_role not in SELECTABLE_ROLES:
