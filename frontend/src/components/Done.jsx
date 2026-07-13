@@ -31,10 +31,17 @@ export default function Done({ job, res, onReset }) {
         </div>
       </div>
 
-      <span className={'notice ' + (res.drive_uploaded ? 'ok' : '')} style={{ display: 'block' }}>
+      {/* 매트릭스 밖 변환(대상 아님) vs 업로드 실패(사유 표시)를 구분 — 실패를
+          "미연동" 으로 뭉뚱그리면 원인을 못 찾는다(2026-07-11 Drive API 비활성 실사고) */}
+      <span
+        className={'notice ' + (res.drive_uploaded ? 'ok' : res.drive_error ? 'warn' : '')}
+        style={{ display: 'block' }}
+      >
         {res.drive_uploaded
           ? '☁ Google Drive 업로드 완료 — 매트릭스 칸에 등록되었습니다.'
-          : '☁ Drive 업로드 안 됨 (매트릭스 밖 변환이거나 Drive 미연동) — 아래에서 직접 다운로드하세요.'}
+          : res.drive_error
+            ? `⚠ Drive 업로드 실패 — ${res.drive_error} · 파일은 아래에서 직접 다운로드하세요. 변환 결과는 3일 뒤 서버에서 지워집니다.`
+            : '☁ 매트릭스 밖 변환 — Drive 업로드 대상이 아닙니다. 아래에서 직접 다운로드하세요.'}
       </span>
 
       {res.fallbacks && res.fallbacks.length > 0 && (

@@ -34,6 +34,7 @@ from fastapi.responses import FileResponse
 
 from scripts.web.auth import require_login
 from scripts.web.gdrive_uploader import delete_file as drive_delete_file
+from scripts.web.gdrive_uploader import last_error as drive_last_error
 from scripts.web.gdrive_uploader import upload_hwpx
 from scripts.web.store import (
     WORK_DIR,
@@ -574,20 +575,29 @@ def api_build(job_id: str, request: Request, payload: dict = Body(...)):
     # payload.figures(figure_id) 만 해당 문제에 매핑(이중삽입 방지)
     fig_map = j.get("figures", {})
     payload_figs = payload.get("figures")
-    # 표 그림이 있으면 발문 중복 제거에 Claude(opus) 호출이 발생 → 비용 캡 검사
+    # kind 는 payload(검수 UI 의 그림/표 선택)가 우선, 없으면 재작도 때 기록된 값.
+    # 종전엔 재작도 기록만 봐서, 재작도 없이 크롭만 한 표가 '그림'으로 취급돼
+    # 표 폭·발문 중복 제거가 전혀 동작하지 않았다(2026-07-11).
     _kinds = j.get("kinds", {})
-    if any(_kinds.get(f.get("figure_id")) == "table" for f in (payload_figs or [])
-           if isinstance(f, dict)):
+
+    def _fig_kind(f: dict) -> str:
+        return str(f.get("kind") or _kinds.get(f.get("figure_id")) or "figure")
+
+    # 표 그림이 있으면 발문 중복 제거에 Claude(opus) 호출이 발생 → 비용 캡 검사
+    if any(_fig_kind(f) == "table" for f in (payload_figs or []) if isinstance(f, dict)):
         _check_cost_cap(email)
     if payload_figs is not None:
         for p in problems:
             p["figures"] = []
-        kinds = j.get("kinds", {})
+        kinds = j.setdefault("kinds", {})
         for f in payload_figs:
+            if not isinstance(f, dict):
+                continue
             idx, fid = f.get("problem_index"), f.get("figure_id")
             if fid in fig_map and isinstance(idx, int) and 0 <= idx < len(problems):
-                # 표는 단 폭 가득(≈108mm), 그림은 기본 폭. (kind 는 재작도 시 기록됨)
-                if kinds.get(fid) == "table":
+                # 표는 단 폭 가득(≈108mm), 그림은 기본 폭.
+                if _fig_kind(f) == "table":
+                    kinds[fid] = "table"   # 재빌드/재작도에서도 표로 유지
                     item = {"path": fig_map[fid], "width_mm": 108.0, "max_height_mm": 200.0,
                             "kind": "table"}
                     # 표 내용이 발문에 텍스트로 중복되면 Claude 로 의미 대조 제거.
@@ -619,6 +629,7 @@ def api_build(job_id: str, request: Request, payload: dict = Body(...)):
 
     # ── Drive 업로드 + 레지스트리 갱신 (매트릭스에서 시작한 작업만) ──────────
     drive_id = None
+    drive_error = None       # 실패 사유 — UI 가 "미연동/실패" 를 구분해 안내
     key = j.get("registry_key", "")
     if key:
         parts = key.split("_")
@@ -629,8 +640,11 @@ def api_build(job_id: str, request: Request, payload: dict = Body(...)):
         try:
             shutil.copyfile(out, named)
             drive_id = upload_hwpx(named, year, subject)
-        except Exception:  # noqa: BLE001 — Drive 실패는 빌드 실패가 아님(다운로드는 가능)
+            if not drive_id:
+                drive_error = drive_last_error() or "알 수 없는 오류(서버 로그 확인)"
+        except Exception as e:  # noqa: BLE001 — Drive 실패는 빌드 실패가 아님(다운로드는 가능)
             drive_id = None
+            drive_error = f"{e.__class__.__name__}: {e}"
         finally:
             named.unlink(missing_ok=True)
         if drive_id:
@@ -661,7 +675,10 @@ def api_build(job_id: str, request: Request, payload: dict = Body(...)):
             "equations_ok": rep.equations_ok, "equations_fallback": rep.equations_fallback,
             "figures_inserted": rep.figures_inserted,
             "fallbacks": rep.fallbacks, "download": f"/api/jobs/{job_id}/download",
-            "drive_uploaded": bool(drive_id)}
+            "drive_uploaded": bool(drive_id),
+            # 매트릭스 밖 변환(no_key)과 '연동/업로드 실패'를 UI 에서 구분
+            "drive_skipped": None if key else "no_registry_key",
+            "drive_error": drive_error}
 
 
 @router.get("/api/jobs/{job_id}/download")

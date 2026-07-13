@@ -11,6 +11,17 @@ function hasBokiBox(stemText) {
   return BOKI_HDR.test(stemText) && (stemText.match(BOKI_ITEM) || []).length >= 2;
 }
 
+// 비전이 문제에 표/그림이 있다고 감지한 문항 — 플래그(has_table/has_figure)가 정식 신호,
+// 발문 속 [표]/[그림] 토큰은 폴백(구 분석 결과·플래그 누락 대비).
+const TAB_TOKEN = /\[\s*표\s*\]/;
+const FIG_TOKEN = /\[\s*그림\s*\]/;
+function probNeeds(p, stemText) {
+  return {
+    table: !!p.has_table || TAB_TOKEN.test(stemText),
+    figure: !!p.has_figure || FIG_TOKEN.test(stemText),
+  };
+}
+
 export default function Review({ job, data, setData, onBuild }) {
   const probs = data.problems || [];
   const [figures, setFigures] = useState(() =>
@@ -46,6 +57,22 @@ export default function Review({ job, data, setData, onBuild }) {
   const figWarn = data.figure_warnings || [];
   const unassigned = figures.filter(f => f.problemIdx == null).length;
 
+  // 표/그림이 감지됐는데 크롭이 배정되지 않은 문항 — 빌드 직전에 한 번 더 확인
+  function missingCrops() {
+    const out = [];
+    probs.forEach((p, i) => {
+      const need = probNeeds(p, runsToText(p.stem));
+      const assigned = figures.filter(f => f.problemIdx === i);
+      if (need.table && !assigned.some(f => f.kind === 'table')) {
+        out.push(`문항 ${p.number || i + 1} (표)`);
+      }
+      if (need.figure && assigned.length === 0) {
+        out.push(`문항 ${p.number || i + 1} (그림)`);
+      }
+    });
+    return out;
+  }
+
   return (
     <div>
       <div className="card" style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap', padding: '16px 24px' }}>
@@ -66,6 +93,12 @@ export default function Review({ job, data, setData, onBuild }) {
               alert(`문항 배정이 안 된 그림이 ${unassigned}개 있습니다.\n각 그림 카드의 '배정 문제'에서 문항을 선택하거나, 안 쓸 그림은 삭제한 뒤 다시 눌러주세요.`);
               return;
             }
+            const missing = missingCrops();
+            if (missing.length && !confirm(
+              `표/그림이 감지됐지만 크롭이 배정되지 않은 문항이 있습니다:\n\n` +
+              `${missing.join('\n')}\n\n` +
+              `이대로 생성하면 해당 표/그림 없이 만들어집니다(표 내용이 발문 텍스트로 남을 수 있음).\n계속할까요?`
+            )) return;
             onBuild(figures);
           }}
         >
@@ -91,7 +124,12 @@ export default function Review({ job, data, setData, onBuild }) {
       <div className="grid">
         <div className="card scroll-col">
           <h4>문제 목록</h4>
-          {probs.map((p, i) => (
+          {probs.map((p, i) => {
+            const stemText = runsToText(p.stem);
+            const need = probNeeds(p, stemText);
+            const assigned = figures.filter(f => f.problemIdx === i);
+            const hasTableCrop = assigned.some(f => f.kind === 'table');
+            return (
             <div className="prob" key={i}>
               <h4>
                 문항 {p.number || i + 1} <span className="muted">· {p.points || '배점?'}</span>
@@ -108,20 +146,33 @@ export default function Review({ job, data, setData, onBuild }) {
               {(p.choices || []).map((c, ci) => (
                 <input key={ci} style={{ marginBottom: 4 }} value={runsToText(c)} onChange={e => updateChoiceText(i, ci, e.target.value)} />
               ))}
-              {figures.filter(f => f.problemIdx === i).length > 0 && (
+              {assigned.length > 0 && (
                 <span className="notice ok" style={{ marginBottom: 0 }}>
-                  📎 그림 {figures.filter(f => f.problemIdx === i).length}개 배정됨
+                  📎 그림 {assigned.length}개 배정됨{hasTableCrop ? ' (표 포함)' : ''}
                 </span>
               )}
-              {hasBokiBox(runsToText(p.stem)) && (
-                <span className={'notice ' + (figures.some(f => f.problemIdx === i) ? 'info' : 'warn')} style={{ marginBottom: 0 }}>
-                  {figures.some(f => f.problemIdx === i)
+              {need.table && (
+                <span className={'notice ' + (hasTableCrop ? 'info' : 'warn')} style={{ marginBottom: 0 }}>
+                  {hasTableCrop
+                    ? <>📊 표가 배정됨 — 발문에 중복된 표 내용은 빌드 때 자동 제거됩니다.</>
+                    : <>⚠ 이 문항에 <b>표</b>가 있습니다 — 오른쪽에서 표 영역을 드래그로 크롭해 이 문항에 배정하고, 그림 카드의 종류를 <b>표</b>로 바꾸세요. 발문에 표 글자가 섞여 있으면 배정 시 자동 제거됩니다.</>}
+                </span>
+              )}
+              {need.figure && assigned.length === 0 && (
+                <span className="notice warn" style={{ marginBottom: 0 }}>
+                  ⚠ 이 문항에 <b>그림/그래프</b>가 있습니다 — 오른쪽에서 그림 영역을 크롭해 이 문항에 배정하세요.
+                </span>
+              )}
+              {hasBokiBox(stemText) && (
+                <span className={'notice ' + (assigned.length ? 'info' : 'warn')} style={{ marginBottom: 0 }}>
+                  {assigned.length
                     ? <>🧾 발문 속 {'<보기>'} 상자 텍스트는 빌드 때 자동 제거되고, 배정된 그림이 대신 들어갑니다.</>
                     : <>⚠ 발문에 {'<보기>'} 상자 텍스트가 있습니다 — 원본처럼 상자로 넣으려면 보기 영역을 크롭해 이 문항에 배정하세요(배정하면 발문 텍스트에서 자동 제거).</>}
                 </span>
               )}
             </div>
-          ))}
+            );
+          })}
         </div>
         <FigureTool job={job} data={data} probs={probs} figures={figures} setFigures={setFigures} />
       </div>

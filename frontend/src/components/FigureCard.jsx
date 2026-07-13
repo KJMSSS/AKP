@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { API, redirectToLogin } from '../lib/api';
 
-export default function FigureCard({ job, fig, probs, onAssign, onRemove, batchVer, batchDone }) {
+export default function FigureCard({ job, fig, probs, onAssign, onKind, onRemove, batchVer, batchDone }) {
   const baseRef = useRef(null), maskRef = useRef(null), drawing = useRef(false), dirty = useRef(false);
   const [ver, setVer] = useState(0);
   const [size, setSize] = useState(16);
@@ -83,7 +83,7 @@ export default function FigureCard({ job, fig, probs, onAssign, onRemove, batchV
       const r = await fetch(`${API}/api/figure/redraw`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ job_id: job, figure_id: fig.figure_id, pro, kind: 'figure' }),
+        body: JSON.stringify({ job_id: job, figure_id: fig.figure_id, pro, kind: fig.kind || 'figure' }),
       });
       const res = await r.json().catch(() => ({}));
       if (r.status === 401) { redirectToLogin(); return; }
@@ -188,6 +188,14 @@ export default function FigureCard({ job, fig, probs, onAssign, onRemove, batchV
             {probs.map((p, i) => (
               <option key={i} value={i}>문항 {p.number || i + 1}</option>
             ))}
+          </select>
+        </div>
+        <div style={{ flex: '0 0 92px' }}>
+          {/* 표로 지정하면: 빌드 때 단 폭으로 삽입 + 발문에 중복된 표 내용 자동 제거 */}
+          <label style={{ margin: '0 0 4px' }}>종류</label>
+          <select value={fig.kind || 'figure'} onChange={e => onKind(fig.figure_id, e.target.value)}>
+            <option value="figure">그림</option>
+            <option value="table">표</option>
           </select>
         </div>
         <button className="ghost" style={{ flex: '0 0 72px' }} onClick={() => onRemove(fig.figure_id)}>삭제</button>

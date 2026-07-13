@@ -669,12 +669,14 @@ let gUserRole = 'tier1';
 let gAllowedStages = ['pdf', 'hwpx_draft', 'hwpx_review', 'hangeul'];
 const gExpandedRows = new Set();
 
+// 2026-07-06 엔진 대전환 이후 실제 흐름에 맞춘 단계:
+//   셀 → 변환기(업로드→회전→분석→검수→빌드) → Drive 업로드 → (수동) 해설.
+// 구엔진 수동 단계(한글완성본·타이퍼)는 제거(2026-07-11). '해설'은 추후 제작 예정이라 유지.
+// PDF 카드의 '새 변환'·'이동' 버튼과 HWPX 카드의 다운로드/확인완료/삭제는 그대로 유지.
 const STAGES = [
-  { id: 'pdf',         name: 'PDF',        step: 1, manual: false },
-  { id: 'hwpx_draft',  name: 'HWPX 변환',   step: 2, manual: false },
-  { id: 'hangeul',     name: '한글완성본',   step: 3, manual: true  },
-  { id: 'typer',       name: '타이퍼 양식',  step: 4, manual: true  },
-  { id: 'solution',    name: '해설',         step: 5, manual: true  },
+  { id: 'pdf',        name: 'PDF 원본',       step: 1, manual: false },
+  { id: 'hwpx_draft', name: 'HWPX 변환·검수', step: 2, manual: false },
+  { id: 'solution',   name: '해설',           step: 3, manual: true  },
 ];
 
 const PERIOD_KEYS = ['sel-year'];

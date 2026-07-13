@@ -44,9 +44,9 @@ class BuildReport:
     pages: int = 1                                  # 가변 패킹이 만든 총 페이지 수(추정)
 
 
-# stem/보기 텍스트에 남는 그림 위치 표시 '[그림]' 을 제거한다. 실제 그림은 figures 로
-# 따로 삽입되므로 본문의 '[그림]' 글자는 중복이라 지운다(앞쪽 공백/개행까지 함께 정리).
-_FIG_TAG = re.compile(r'\s*\[\s*그림\s*\]\s*')
+# stem/보기 텍스트에 남는 위치 표시 토큰 '[그림]'/'[표]' 를 제거한다. 실제 그림·표는
+# figures 로 따로 삽입되므로 본문의 토큰 글자는 중복이라 지운다(앞쪽 공백/개행까지 정리).
+_FIG_TAG = re.compile(r'\s*\[\s*(?:그림|표)\s*\]\s*')
 
 
 def _strip_figure_tags(runs: list[dict]) -> list[dict]:

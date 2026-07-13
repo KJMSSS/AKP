@@ -36,6 +36,8 @@ class AnalyzedProblem:
     page: int
     figures: list = field(default_factory=list)   # 변환된 그림 이미지 경로(자동/수동)
     tables: list = field(default_factory=list)     # 표: {source:"struct",grid} 또는 {source:"image",image}
+    has_figure: bool = False   # 비전 구조화가 감지한 '문제에 그림/그래프 있음' — 검수 경고용
+    has_table: bool = False    # 비전 구조화가 감지한 '문제에 표 있음' — 검수 경고용
 
 
 @dataclass
@@ -140,6 +142,8 @@ def analyze(path: str, *, school: str = "", code: str = "", model: str | None = 
                 stem=mmd_to_runs(p.get("stem", "")),
                 choices=[mmd_to_runs(c) for c in p.get("choices", [])],
                 page=pg.index,
+                has_figure=bool(p.get("has_figure")),
+                has_table=bool(p.get("has_table")),
             ))
         if not detect_figs:
             continue
@@ -218,6 +222,7 @@ def analysis_to_problems(a: Analysis) -> list[dict]:
             "difficulty": p.difficulty, "points": p.points,
             "stem": p.stem, "choices": p.choices, "figures": list(p.figures),
             "tables": list(p.tables),
+            "has_figure": p.has_figure, "has_table": p.has_table,
         })
     return out
 

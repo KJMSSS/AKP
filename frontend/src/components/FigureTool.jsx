@@ -73,6 +73,7 @@ export default function FigureTool({ job, data, probs, figures, setFigures }) {
   }
 
   function setAssign(fid, idx) { setFigures(fs => fs.map(f => f.figure_id === fid ? { ...f, problemIdx: idx } : f)); }
+  function setKind(fid, kind) { setFigures(fs => fs.map(f => f.figure_id === fid ? { ...f, kind } : f)); }
   function remove(fid) { setFigures(fs => fs.filter(f => f.figure_id !== fid)); }
 
   const [batchVer, setBatchVer] = useState(0);
@@ -95,7 +96,7 @@ export default function FigureTool({ job, data, probs, figures, setFigures }) {
           const r = await fetch(`${API}/api/figure/redraw`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ job_id: job, figure_id: f.figure_id, pro, kind: 'figure' }),
+            body: JSON.stringify({ job_id: job, figure_id: f.figure_id, pro, kind: f.kind || 'figure' }),
           });
           if (r.ok) okIds.set(f.figure_id, pro); else { fail++; failedItems.push(f); }
         } catch { fail++; failedItems.push(f); }
@@ -187,6 +188,7 @@ export default function FigureTool({ job, data, probs, figures, setFigures }) {
               fig={f}
               probs={probs}
               onAssign={setAssign}
+              onKind={setKind}
               onRemove={remove}
               batchVer={batchVer}
               batchDone={batchDone}

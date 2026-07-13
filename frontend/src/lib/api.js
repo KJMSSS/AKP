@@ -44,7 +44,10 @@ export const postBuild = async (jobId, problems, figures) => {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       problems,
-      figures: (figures || []).map(f => ({ figure_id: f.figure_id, problem_index: f.problemIdx })),
+      // kind(그림/표): 표는 빌드에서 단 폭 삽입 + 발문 중복 제거가 달라진다
+      figures: (figures || []).map(f => ({
+        figure_id: f.figure_id, problem_index: f.problemIdx, kind: f.kind || 'figure',
+      })),
     }),
   });
   return jsonOrThrow(r, '빌드 실패');

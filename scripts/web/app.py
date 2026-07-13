@@ -44,7 +44,7 @@ sys.path.insert(0, str(_ROOT))
 from scripts.web.auth import current_email, require_admin, require_login   # noqa: E402
 from scripts.web.engine_api import cleanup_old_jobs, router as engine_router  # noqa: E402
 from scripts.web.gdrive_uploader import (                                  # noqa: E402
-    TOKEN_FILE, is_configured, save_refresh_token,
+    TOKEN_FILE, is_configured, probe as drive_probe, save_refresh_token,
 )
 from scripts.web.store import (                                            # noqa: E402
     DATA_DIR, UPLOADS_DIR, WORK_DIR,
@@ -205,12 +205,17 @@ async def api_usage(request: Request):
 
 
 @app.get("/api/drive/status")
-async def api_drive_status(request: Request):
+async def api_drive_status(request: Request, probe: int = 0):
+    """Drive 연동 상태. ?probe=1 이면 토큰 갱신→AKP 폴더 조회까지 실제 호출해
+    '지금 업로드가 되는 상태인가'를 판정한다(업로드 실패 진단용, 로컬/Railway 공용)."""
     require_login(request)
-    return JSONResponse({
+    out = {
         "configured": is_configured(),
         "token_path": str(TOKEN_FILE),
-    })
+    }
+    if probe:
+        out["probe"] = drive_probe()
+    return JSONResponse(out)
 
 
 @app.get("/auth/gdrive")
