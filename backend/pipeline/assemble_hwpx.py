@@ -86,10 +86,10 @@ class HwpxBuilder:
 
     @staticmethod
     def _strip_anchor_meta(anchor: ET.Element) -> None:
-        """앵커 단락에서 잔여 객체(colCnt6 메타표 + 잔여 그림 pic)를 정밀 제거.
+        """앵커 단락에서 잔여 객체(colCnt6 메타표 + 헤더 밖 잔여 그림 pic)를 정밀 제거.
 
-        시험 헤더(4칸표)·secPr 은 보존. 잔여 객체를 감싼 가장 가까운 <hp:container>
-        를(있으면) 제거하고, 없으면 객체를 직접 부모에서 제거한다.
+        시험 헤더(4칸표)·secPr·헤더 안 로고 그림은 보존. 잔여 객체를 감싼 가장 가까운
+        <hp:container> 를(있으면) 제거하고, 없으면 객체를 직접 부모에서 제거한다.
         """
         parent = {c: p for p in anchor.iter() for c in p}
 
@@ -108,8 +108,19 @@ class HwpxBuilder:
                         out.append((par, target))
             return out
 
+        def in_header_tbl(el):
+            """시험 헤더(4칸표) 내부 요소인지 — 헤더 셀의 'Gwang Ju Typer' 로고(pic)는
+            잔여물이 아니라 양식의 일부이므로 제거 대상에서 제외한다(2026-07-13
+            학원장: 빌드 결과 1페이지 상단 로고 사라짐 리포트)."""
+            node = parent.get(el)
+            while node is not None:
+                if node.tag == _q("hp", "tbl") and node.get("colCnt") == "4":
+                    return True
+                node = parent.get(node)
+            return False
+
         victims = collect(lambda e: e.tag == _q("hp", "tbl") and e.get("colCnt") == "6")
-        victims += collect(lambda e: e.tag == _q("hp", "pic"))
+        victims += collect(lambda e: e.tag == _q("hp", "pic") and not in_header_tbl(e))
         for par, node in victims:
             try:
                 par.remove(node)
