@@ -155,6 +155,20 @@ def test_legacy_cap_usd_still_enforced(monkeypatch):
     assert exc.value.status_code == 429
 
 
+def test_legacy_cap_is_combined_not_doubled(monkeypatch):
+    # 레거시 cap_usd 는 '총합' 한도 — provider별로 독립 적용해 예산을 2배로 완화하면 안 된다.
+    monkeypatch.setattr(ea, "is_admin", lambda e: False)
+    monkeypatch.setattr(ea, "get_user", lambda e: {"cap_usd": 2.0})
+    # 각각은 $2 미만이지만 합산 $3.0 ≥ $2 → 옛 의미대로 막혀야 한다(구 버그: 둘 다 통과)
+    monkeypatch.setattr(ea, "user_provider_today_cost", lambda e: {"claude": 1.5, "gemini": 1.5})
+    with pytest.raises(HTTPException) as exc:
+        ea._check_cost_cap("old@x.com", need=("claude", "gemini"))
+    assert exc.value.status_code == 429
+    # 합산이 한도 미만이면 통과
+    monkeypatch.setattr(ea, "user_provider_today_cost", lambda e: {"claude": 0.5, "gemini": 0.5})
+    ea._check_cost_cap("old@x.com", need=("claude", "gemini"))
+
+
 def test_unregistered_user_no_cap(monkeypatch):
     monkeypatch.setattr(ea, "is_admin", lambda e: False)
     monkeypatch.setattr(ea, "get_user", lambda e: None)

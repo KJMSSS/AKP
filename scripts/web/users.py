@@ -212,15 +212,6 @@ def list_users() -> list[dict]:
     return result
 
 
-def user_today_cost(email: str) -> float:
-    today = datetime.now().strftime("%Y-%m-%d")
-    return round(sum(
-        e.get("cost_usd", 0.0)
-        for e in read_entries(days=1)
-        if e.get("token") == email and e.get("ts", "").startswith(today)
-    ), 4)
-
-
 def get_role(email: str) -> str:
     if is_admin(email):
         return "admin"

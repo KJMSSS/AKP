@@ -180,6 +180,18 @@ def _check_cost_cap(email: str, need: tuple[str, ...] = ("claude",)) -> None:
     if not user:
         return  # 미등록 계정은 정상 흐름상 여기 도달 안 함(require_login 이 앞단에서 차단)
     spend = user_provider_today_cost(email)
+
+    # 레거시 계정(신 provider 필드 없이 단일 cap_usd 만) — 예전처럼 '합산' 한도로
+    # 검사한다. 구 cap_usd 는 총합(claude+gemini) 한도였는데, 이를 provider별로 독립
+    # 적용하면 총 예산이 최대 2배로 조용히 완화된다(비용 통제 약화). 마이그레이션 전까지는
+    # 합산으로 취급해 예전 의미를 보존한다. 관리자가 provider별 캡을 저장하면 아래 신 경로로.
+    if "cap_claude_usd" not in user and "cap_gemini_usd" not in user:
+        legacy = float(user.get("cap_usd", 0) or 0)
+        if legacy > 0 and (spend.get("claude", 0.0) + spend.get("gemini", 0.0)) >= legacy:
+            raise HTTPException(429, f"오늘 비용 한도(${legacy:g})를 초과했습니다. "
+                                     f"관리자에게 한도 상향을 요청하세요.")
+        return
+
     for prov in need:
         cap = user_cap(user, prov)
         if cap > 0 and spend.get(prov, 0.0) >= cap:
