@@ -37,6 +37,15 @@ from starlette.middleware.sessions import SessionMiddleware
 
 load_dotenv()
 
+# 앱 전체를 한국 시간(KST)으로 고정 — 모든 datetime.now()/사용량 '오늘' 경계·일일
+# 한도 리셋이 KST 자정 기준이 되게 한다. 안 하면 Railway(UTC)에서 오전 9시에
+# 리셋돼 '자정 초기화'가 어긋난다. 윈도우엔 time.tzset()이 없어 가드(그 경우
+# 시스템 로캘시각 사용 — 국내 윈도우면 이미 KST).
+import time as _time  # noqa: E402
+os.environ["TZ"] = "Asia/Seoul"
+if hasattr(_time, "tzset"):
+    _time.tzset()
+
 _HERE = Path(__file__).resolve().parent
 _ROOT = _HERE.parent.parent
 sys.path.insert(0, str(_ROOT))
@@ -51,7 +60,10 @@ from scripts.web.store import (                                            # noq
     load_mconfig, load_registry, save_mconfig, save_registry,
     validate_safe_key,
 )
-from scripts.web.usage_log import read_entries, today_summary              # noqa: E402
+from scripts.web.settings import PROVIDER_LABEL, PROVIDERS, get_caps, set_cap  # noqa: E402
+from scripts.web.usage_log import (                                        # noqa: E402
+    provider_today_cost, read_entries, today_summary,
+)
 from scripts.web.users import (                                            # noqa: E402
     ROLE_DISPLAY, SELECTABLE_ROLES,
     add_user, get_allowed_stages, get_role, is_admin, is_allowed,
@@ -321,6 +333,54 @@ async def pipeline_stage_delete(key: str, stage: str, request: Request):
 async def admin_page(request: Request):
     require_admin(request)
     return HTMLResponse((_HERE / "static" / "admin.html").read_text(encoding="utf-8"))
+
+
+def _key_usage_overview() -> dict:
+    """API 키(provider)별 오늘 지출·한도·잔여. 관리자 사용량 카드용."""
+    caps  = get_caps()
+    spend = provider_today_cost()
+    today = datetime.now().strftime("%Y-%m-%d")
+    entries = read_entries(days=1)
+    keys = []
+    for prov in PROVIDERS:
+        cap  = float(caps.get(prov, 0) or 0)
+        used = float(spend.get(prov, 0.0))
+        count = sum(1 for e in entries
+                    if e.get("ts", "").startswith(today)
+                    and e.get("provider", "claude") == prov)
+        keys.append({
+            "provider":  prov,
+            "label":     PROVIDER_LABEL.get(prov, prov),
+            "spend_usd": round(used, 4),
+            "cap_usd":   cap,
+            "remaining_usd": round(max(0.0, cap - used), 4) if cap > 0 else None,
+            "count":     count,
+            "over":      bool(cap > 0 and used >= cap),
+        })
+    return {"date": today, "keys": keys}
+
+
+@app.get("/api/admin/usage")
+async def api_admin_usage(request: Request):
+    """API 키별 사용량/한도 개요 (관리자 전용)."""
+    require_admin(request)
+    return JSONResponse(_key_usage_overview())
+
+
+@app.patch("/api/admin/caps/{provider}")
+async def api_set_cap(provider: str, request: Request):
+    """API 키(provider) 일일 한도 설정 (관리자 전용). 0 = 무제한."""
+    require_admin(request)
+    body = await request.json()
+    try:
+        cap = float(body.get("cap_usd", 0))
+    except (TypeError, ValueError):
+        raise HTTPException(400, "올바른 금액을 입력하세요.")
+    try:
+        set_cap(provider, cap)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    return JSONResponse({"ok": True, "provider": provider, "cap_usd": cap})
 
 
 @app.get("/api/admin/users")

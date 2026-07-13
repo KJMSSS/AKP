@@ -198,11 +198,12 @@ def test_needs_review_flag_and_clear(env):
 
 
 def test_cost_cap_blocks_non_admin(env, monkeypatch, tmp_path):
-    """일일 캡 초과 시 분석 시작이 429 로 막히는지 (관리자는 통과)."""
+    """일일 API 키 한도 초과 시 분석 시작이 429 로 막히는지."""
     client, *_ = env
-    import scripts.web.users as users
     monkeypatch.setattr(ea, "is_admin", lambda e: False)
-    monkeypatch.setattr(ea, "today_summary", lambda: {"cost_usd": 999.0})
+    monkeypatch.setattr(ea, "get_caps", lambda: {"claude": 5.0, "gemini": 3.0})
+    # Claude 키 지출이 한도를 넘긴 상태 → 분석(claude 사용)은 429
+    monkeypatch.setattr(ea, "provider_today_cost", lambda: {"claude": 999.0, "gemini": 0.0})
     pdf = tmp_path / "cap.pdf"
     _make_pdf(pdf)
     r = client.post("/api/analyze", files={"file": ("cap.pdf", pdf.read_bytes(), "application/pdf")})

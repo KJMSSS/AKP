@@ -19,6 +19,7 @@ AKP 통합 사항(원본과의 차이):
 """
 from __future__ import annotations
 
+import os
 import shutil
 import sys
 import threading
@@ -43,7 +44,8 @@ from scripts.web.store import (
     update_registry_entry,
     validate_safe_key,
 )
-from scripts.web.usage_log import DAILY_CAP_USD, append_entry, today_summary
+from scripts.web.settings import PROVIDER_LABEL, get_caps
+from scripts.web.usage_log import append_entry, provider_today_cost
 from scripts.web.users import get_user, is_admin, user_today_cost
 
 # ── 엔진 임포트 (backend/ 를 sys.path 에 추가 — examconv 코드 무수정 사용) ──
@@ -73,11 +75,31 @@ def _usage_cost(u: dict) -> float:
     return round(sum(int(u.get(k, 0) or 0) * p for k, p in _PRICE.items()) / 1e6, 4)
 
 
+# ── Gemini 이미지 재작도 비용 (이미지 모델은 '장당' 과금) ─────────────────
+#    Flash(Nano Banana 2)·Pro(Nano Banana Pro)의 장당 단가. 실제 청구는 토큰
+#    기반이지만 이미지→토큰 매핑이 흐릿해, 장당 추정 단가가 학원장에게 더
+#    직관적이라 이 방식을 쓴다(env 로 조정 가능). Claude 는 토큰 정산, Gemini 는
+#    장당 추정임을 관리자 UI 가 명시한다.
+def _gem_price(name: str, default: str) -> float:
+    try:
+        return float(os.environ.get(name, default))
+    except (TypeError, ValueError):
+        return float(default)
+
+
+_GEMINI_PRICE_FLASH = _gem_price("GEMINI_IMAGE_PRICE", "0.04")      # USD/이미지
+_GEMINI_PRICE_PRO = _gem_price("GEMINI_PRO_IMAGE_PRICE", "0.14")    # USD/이미지(고품질)
+
+
 # vision_claude._USAGE_LOG 는 전역 누적이다. 동시 요청(배치 재작도 등)에서
 # reset_usage() 를 쓰면 서로의 측정을 지운다 → 전역 소비 인덱스로 "내가 아직
 # 집계하지 않은 구간"만 drain 한다. 요청 간 귀속은 근사치지만 총합은 정확하다.
 _usage_ix_lock = threading.Lock()
 _usage_consumed = 0
+
+# Gemini 사용량도 동일 패턴(엔진 append → 웹셸 drain)으로 인덱스 관리한다.
+_gemini_ix_lock = threading.Lock()
+_gemini_consumed = 0
 
 
 def _drain_usage() -> dict:
@@ -98,13 +120,13 @@ def _drain_usage() -> dict:
 
 def _log_usage(email: str, pdf: str, mode: str, usage: dict,
                duration_s: float = 0.0, status: str = "ok") -> float:
-    """usage.jsonl 에 1건 기록. cost 반환."""
+    """usage.jsonl 에 Claude 사용 1건 기록. cost 반환."""
     cost = _usage_cost(usage)
     if usage.get("calls", 0) == 0 and cost == 0:
         return 0.0
     append_entry({
         "ts": datetime.now().isoformat(timespec="seconds"),
-        "token": email, "pdf": pdf, "mode": mode,
+        "token": email, "pdf": pdf, "mode": mode, "provider": "claude",
         "in_tok": usage.get("input_tokens", 0), "out_tok": usage.get("output_tokens", 0),
         "cache_read_tok": usage.get("cache_read_input_tokens", 0),
         "cost_usd": cost, "duration_s": round(duration_s, 1), "status": status,
@@ -112,17 +134,61 @@ def _log_usage(email: str, pdf: str, mode: str, usage: dict,
     return cost
 
 
-def _check_cost_cap(email: str) -> None:
-    """일일 비용 캡(전체 + 사용자별). 초과 시 429."""
+def _drain_gemini_usage() -> dict:
+    """엔진의 Gemini 이미지 생성 로그에서 미집계분만 뽑아 장수·비용으로 환산."""
+    global _gemini_consumed
+    from pipeline.redraw_gemini import _GEMINI_USAGE_LOG, PRO_IMAGE_MODEL
+    with _gemini_ix_lock:
+        new = list(_GEMINI_USAGE_LOG[_gemini_consumed:])
+        del _GEMINI_USAGE_LOG[:_gemini_consumed + len(new)]
+        _gemini_consumed = 0
+    pro = sum(int(u.get("images", 0) or 0) for u in new if u.get("model") == PRO_IMAGE_MODEL)
+    flash = sum(int(u.get("images", 0) or 0) for u in new) - pro
+    cost = round(flash * _GEMINI_PRICE_FLASH + pro * _GEMINI_PRICE_PRO, 4)
+    return {"images": flash + pro, "flash_images": flash, "pro_images": pro, "cost_usd": cost}
+
+
+def _log_gemini_usage(email: str, pdf: str, status: str = "ok") -> float:
+    """usage.jsonl 에 Gemini 재작도(이미지 생성) 1건 기록. cost 반환.
+
+    생성된 이미지가 없으면(=키 미설정·초기 실패 등 Gemini 호출 자체가 없던 경우)
+    기록하지 않는다."""
+    g = _drain_gemini_usage()
+    if g["images"] == 0:
+        return 0.0
+    append_entry({
+        "ts": datetime.now().isoformat(timespec="seconds"),
+        "token": email, "pdf": pdf, "mode": "redraw", "provider": "gemini",
+        "images": g["images"], "flash_images": g["flash_images"],
+        "pro_images": g["pro_images"],
+        "cost_usd": g["cost_usd"], "status": status,
+    })
+    return g["cost_usd"]
+
+
+def _check_cost_cap(email: str, need: tuple[str, ...] = ("claude",)) -> None:
+    """일일 비용 캡 검사. 초과 시 429.
+
+    관리자(학원장)는 전부 면제한다 — 키 한도·개인 한도 모두 검사하지 않는다
+    (2026-07-13 학원장 결정: 본인 작업이 한도에 걸리면 안 됨). 캡은 직원 계정에만 적용:
+    - API 키별 한도(caps): 이 요청이 쓸 provider(need)의 오늘 지출이 키 한도를
+      넘었으면 차단(관리자 페이지에서 조정, 0=무제한).
+    - 개인 한도(users.cap_usd): 직원 개인 몫.
+    """
     if is_admin(email):
         return
-    total = today_summary()
-    if total["cost_usd"] >= DAILY_CAP_USD:
-        raise HTTPException(429, f"오늘 전체 비용 한도(${DAILY_CAP_USD})를 초과했습니다. 내일 다시 시도하세요.")
+    caps = get_caps()
+    spend = provider_today_cost()
+    for prov in need:
+        cap = float(caps.get(prov, 0) or 0)
+        if cap > 0 and spend.get(prov, 0.0) >= cap:
+            label = PROVIDER_LABEL.get(prov, prov)
+            raise HTTPException(429, f"오늘 {label} API 키 한도(${cap:g})를 초과했습니다. "
+                                     f"관리자에게 한도 상향을 요청하세요.")
     user = get_user(email)
     cap = float(user.get("cap_usd", 0) or 0) if user else 0.0
     if cap > 0 and user_today_cost(email) >= cap:
-        raise HTTPException(429, f"오늘 개인 비용 한도(${cap})를 초과했습니다.")
+        raise HTTPException(429, f"오늘 개인 비용 한도(${cap:g})를 초과했습니다.")
 
 
 # ── 작업 폴더 자동 정리 (3일 보관 정책 — 2026-07-06 학원장 결정) ────────────
@@ -420,7 +486,7 @@ def api_redraw(request: Request, job_id: str = Body(...), figure_id: str = Body(
     폴백: 구조 스펙 → matplotlib (도형 한정, 표는 폴백 없이 에러).
     """
     email = require_login(request)
-    _check_cost_cap(email)
+    _check_cost_cap(email, need=("claude", "gemini"))   # 재작도는 Gemini 생성 + Claude 검증
     t0 = time.time()
     j = _job(job_id)
     if not j or figure_id not in j.get("figures", {}):
@@ -436,8 +502,11 @@ def api_redraw(request: Request, job_id: str = Body(...), figure_id: str = Body(
     OPUS = "claude-opus-4-8"   # 구조 추출·검증은 가장 똑똑한 모델로(정확도 우선)
 
     def _log_redraw(status: str = "ok") -> None:
+        # 한 번의 재작도 = Claude 검증(토큰) + Gemini 생성(이미지). 두 provider 를
+        # 각각 기록해 키별 사용량이 정확히 잡히게 한다(Gemini 는 로그가 비면 스킵).
         _log_usage(email, j.get("pdf_name", ""), "redraw", _drain_usage(),
                    duration_s=time.time() - t0, status=status)
+        _log_gemini_usage(email, j.get("pdf_name", ""), status=status)
 
     # 1순위: Gemini image-to-image. kind 로 도형/표 프롬프트, 기본=Flash·pro=Pro
     from pipeline.redraw_gemini import (redraw_with_gemini, GeminiError,

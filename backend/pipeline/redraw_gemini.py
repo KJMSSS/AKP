@@ -71,6 +71,11 @@ REDRAW_TABLE_INSTRUCTION = (
 
 _MIME = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp"}
 
+# 이미지 생성 사용량 누적 — 웹셸(engine_api)이 provider='gemini' 비용으로 집계한다.
+# vision_claude._USAGE_LOG 와 동일한 '엔진이 append, 웹셸이 drain' 패턴이라
+# api_redraw 가 Gemini 를 1~2회 호출해도 각 호출이 여기 한 줄씩 남는다.
+_GEMINI_USAGE_LOG: list[dict] = []
+
 
 class GeminiError(RuntimeError):
     pass
@@ -157,6 +162,13 @@ def redraw_with_gemini(image_path: str, out_path: str, *, model: str | None = No
         raise GeminiError(f"이미지 응답 없음. 모델 사유: {txt[:300] or data}")
     Path(out_path).parent.mkdir(parents=True, exist_ok=True)
     Path(out_path).write_bytes(base64.b64decode(img_b64))
+    # 이미지 1장 생성 = 청구 1건. 웹셸이 장당 단가로 비용을 매긴다(장수·모델 기록).
+    um = data.get("usageMetadata", {}) or {}
+    _GEMINI_USAGE_LOG.append({
+        "model": mdl, "images": 1,
+        "prompt_tokens": int(um.get("promptTokenCount", 0) or 0),
+        "output_tokens": int(um.get("candidatesTokenCount", 0) or 0),
+    })
     # 모델이 '흰 배경' 지시를 무시하고 스캔 회색 톤을 따라 그리는 경우 보정(실사고).
     try:
         from .figure import whiten_flat_background

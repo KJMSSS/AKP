@@ -205,6 +205,25 @@
   .cost-warn   { color: #f97316; font-weight: 600; }
   .cost-exceed { color: #ef4444; font-weight: 700; }
 
+  /* ── API 키 사용량 · 한도 카드 ── */
+  .key-usage { display: flex; flex-direction: column; gap: 12px; }
+  .key-row {
+    display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+    padding: 12px 14px; border: 1px solid #e2e8f0; border-radius: 8px; background: #fcfcfd;
+  }
+  .key-name { font-weight: 700; font-size: 0.92rem; color: #1e293b; width: 72px; }
+  .key-bar-wrap { flex: 1 1 170px; min-width: 150px; }
+  .key-spend { font-size: 0.85rem; color: #334155; margin-bottom: 5px; }
+  .key-spend b { color: #0f172a; }
+  .key-bar { height: 8px; border-radius: 5px; background: #e2e8f0; overflow: hidden; }
+  .key-bar > span { display: block; height: 100%; width: 0; background: #22c55e; transition: width .3s; }
+  .key-bar.warn > span { background: #f97316; }
+  .key-bar.over > span { background: #ef4444; }
+  .key-meta { font-size: 0.78rem; color: #64748b; white-space: nowrap; }
+  .key-cap-form { display: flex; align-items: center; gap: 5px; }
+  .key-cap-form input { width: 76px; padding: 4px 8px; font-size: 0.82rem; }
+  .key-note { font-size: 0.76rem; color: #94a3b8; margin-top: 10px; line-height: 1.55; }
+
   /* 상태 뱃지 */
   .status-badge {
     display: inline-block;
@@ -331,6 +350,24 @@
     <a class="back-link" href="/">&#8592; 변환기로</a>
   </div>
 
+  <!-- API 키 사용량 · 한도 -->
+  <div class="card">
+    <div class="card-title">API 키 사용량 · 한도 (오늘)</div>
+    <div id="key-usage" class="key-usage">
+      <div style="padding:14px 0;text-align:center;color:#94a3b8;font-size:0.85rem;">
+        <span class="spinner"></span> 불러오는 중...
+      </div>
+    </div>
+    <div class="key-note">
+      한도는 API 키별 <b>직원 하루 지출 상한</b>입니다(매일 자정<b>(한국 시간)</b> 기준 초기화, 0 = 무제한).
+      직원이 한도를 넘으면 그 키를 쓰는 작업(Claude=분석·검증, Gemini=그림 재작도)이 잠기고
+      "관리자에게 한도 상향 요청" 안내가 뜹니다.
+      <b>관리자(학원장) 본인 작업은 한도에 걸리지 않습니다.</b>
+      위 지출액은 관리자·직원 전체 합계이며, Claude 는 토큰 실사용 정산,
+      Gemini 는 이미지 <b>장당 추정</b> 단가입니다.
+    </div>
+  </div>
+
   <!-- 사용자 추가 -->
   <div class="card">
     <div class="card-title">사용자 추가</div>
@@ -435,6 +472,7 @@
         document.getElementById('loading-overlay').style.display = 'none';
         document.getElementById('main-content').style.display = 'flex';
 
+        loadKeyUsage();
         loadUsers();
       })
       .catch(function (err) {
@@ -487,6 +525,66 @@
         btn.disabled = false;
         btn.textContent = '사용자 추가';
       });
+  };
+
+  /* ══════════════════════════════════════════════
+     API 키 사용량 · 한도 로드 + 렌더
+  ══════════════════════════════════════════════ */
+  function loadKeyUsage() {
+    apiFetch('/api/admin/usage')
+      .then(function (data) { renderKeyUsage(data); })
+      .catch(function (err) {
+        document.getElementById('key-usage').innerHTML =
+          '<div style="color:#94a3b8;font-size:0.82rem;">불러오기 실패: '
+          + escHtml(err.message || String(err)) + '</div>';
+      });
+  }
+
+  function renderKeyUsage(data) {
+    var el = document.getElementById('key-usage');
+    var keys = (data && data.keys) || [];
+    if (!keys.length) {
+      el.innerHTML = '<div style="color:#94a3b8;font-size:0.82rem;">데이터 없음</div>';
+      return;
+    }
+    el.innerHTML = keys.map(function (k) {
+      var cap    = k.cap_usd   || 0;
+      var spend  = k.spend_usd || 0;
+      var pct    = cap > 0 ? Math.min(100, (spend / cap) * 100) : 0;
+      var barCls = k.over ? 'over' : (cap > 0 && pct >= 80 ? 'warn' : '');
+      var capText    = cap > 0 ? ('$' + cap.toFixed(2)) : '무제한';
+      var remainText = cap > 0 ? ('잔여 $' + (k.remaining_usd || 0).toFixed(2)) : '무제한';
+      var pid = safeId(k.provider);
+      return '<div class="key-row">'
+        + '<div class="key-name">' + escHtml(k.label || k.provider) + '</div>'
+        + '<div class="key-bar-wrap">'
+          + '<div class="key-spend"><b>$' + spend.toFixed(2) + '</b> / ' + escHtml(capText) + '</div>'
+          + '<div class="key-bar ' + barCls + '"><span style="width:' + pct + '%"></span></div>'
+        + '</div>'
+        + '<div class="key-meta">' + escHtml(remainText) + ' &middot; ' + (k.count || 0) + '건</div>'
+        + '<div class="key-cap-form">'
+          + '<input type="number" id="cap-' + pid + '" min="0" step="0.5" value="' + cap + '" '
+          + 'onkeydown="if(event.key===\'Enter\')saveKeyCap(\'' + escAttr(k.provider) + '\')">'
+          + '<button class="btn-sm btn-primary" onclick="saveKeyCap(\'' + escAttr(k.provider) + '\')">한도 저장</button>'
+        + '</div>'
+      + '</div>';
+    }).join('');
+  }
+
+  window.saveKeyCap = function (provider) {
+    var inp = document.getElementById('cap-' + safeId(provider));
+    if (!inp) return;
+    var val = parseFloat(inp.value);
+    if (isNaN(val) || val < 0) { showToast('올바른 금액을 입력하세요', true); return; }
+    apiFetch('/api/admin/caps/' + encodeURIComponent(provider), {
+      method: 'PATCH',
+      body: JSON.stringify({ cap_usd: val })
+    })
+      .then(function () {
+        showToast(provider + ' 한도 $' + val.toFixed(2) + '로 저장됨');
+        loadKeyUsage();
+      })
+      .catch(function (err) { showToast('한도 저장 실패: ' + (err.message || err), true); });
   };
 
   /* ══════════════════════════════════════════════
