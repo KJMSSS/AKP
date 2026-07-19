@@ -22,14 +22,22 @@ function probNeeds(p, stemText) {
   };
 }
 
+// 분석이 표 내용을 구조화(grid)한 문항 — 빌드 때 한글 네이티브 표로 자동 작성된다.
+// (구조화 실패/충실도 미달 표는 grid 없이 갤러리에 이미지 크롭으로 올라온다.)
+function hasAutoTable(p) {
+  return (p.tables || []).some(t => t && t.grid);
+}
+
 export default function Review({ job, data, setData, onBuild }) {
   const probs = data.problems || [];
   const [figures, setFigures] = useState(() =>
     (data.auto_figures || []).map(f => ({
       figure_id: f.figure_id,
       page: f.page,
-      problemIdx: f.problem_index,
-      kind: 'figure',
+      problemIdx: f.problem_index ?? null,
+      // 자동 감지가 표(kind='table')로 판정한 항목은 표로 시드 — 빌드 때 표 규칙
+      // (단 폭 삽입 + 발문 중복 제거)이 그대로 적용된다. 카드에서 변경 가능.
+      kind: f.kind || 'figure',
       auto: true,
     }))
   );
@@ -63,7 +71,7 @@ export default function Review({ job, data, setData, onBuild }) {
     probs.forEach((p, i) => {
       const need = probNeeds(p, runsToText(p.stem));
       const assigned = figures.filter(f => f.problemIdx === i);
-      if (need.table && !assigned.some(f => f.kind === 'table')) {
+      if (need.table && !assigned.some(f => f.kind === 'table') && !hasAutoTable(p)) {
         out.push(`문항 ${p.number || i + 1} (표)`);
       }
       if (need.figure && assigned.length === 0) {
@@ -152,10 +160,17 @@ export default function Review({ job, data, setData, onBuild }) {
                 </span>
               )}
               {need.table && (
-                <span className={'notice ' + (hasTableCrop ? 'info' : 'warn')} style={{ marginBottom: 0 }}>
+                <span className={'notice ' + (hasTableCrop || hasAutoTable(p) ? 'info' : 'warn')} style={{ marginBottom: 0 }}>
                   {hasTableCrop
                     ? <>📊 표가 배정됨 — 발문에 중복된 표 내용은 빌드 때 자동 제거됩니다.</>
-                    : <>⚠ 이 문항에 <b>표</b>가 있습니다 — 오른쪽에서 표 영역을 드래그로 크롭해 이 문항에 배정하고, 그림 카드의 종류를 <b>표</b>로 바꾸세요. 발문에 표 글자가 섞여 있으면 배정 시 자동 제거됩니다.</>}
+                    : hasAutoTable(p)
+                      ? <>📊 표 자동 인식됨 — 한글파일에 <b>실제 표</b>로 자동 작성됩니다. 결과가 이상하면 오른쪽에서 표 영역을 드래그로 크롭해 <b>표</b>로 배정하세요(자동 표를 교체).</>
+                      : <>⚠ 이 문항에 <b>표</b>가 있습니다 — 오른쪽에서 표 영역을 드래그로 크롭해 이 문항에 배정하고, 그림 카드의 종류를 <b>표</b>로 바꾸세요. 발문에 표 글자가 섞여 있으면 배정 시 자동 제거됩니다.</>}
+                </span>
+              )}
+              {!need.table && hasAutoTable(p) && (
+                <span className="notice info" style={{ marginBottom: 0 }}>
+                  📦 조건/과정 상자 자동 인식됨 — 한글파일에 실제 상자(표)로 자동 작성됩니다. 상자 안 내용은 발문에서 자동 제거되어 있습니다.
                 </span>
               )}
               {need.figure && assigned.length === 0 && (

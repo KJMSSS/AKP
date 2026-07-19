@@ -204,6 +204,92 @@ def deskewed_copy_for_embed(image_path: str) -> str:
         return image_path
 
 
+def snap_rect_bbox(image_path: str, bbox: list) -> list | None:
+    """VLM 이 준 대략적 bbox 를 근방의 '인쇄된 사각 테두리'에 정밀 스냅.
+
+    스캔본 표·상자 감지의 고질: 눈대중 bbox 가 상자를 위/아래로 통째로 빗나가거나
+    마지막 줄을 자른다(2026-07-19 용봉중 실사고 — 문항5 상자 전체 빗나감, 문항6
+    '∴' 줄 잘림). 표/조건 상자는 4변 실선 테두리가 인쇄돼 있으므로, bbox 주변을
+    넉넉히 탐색해 4변이 모두 '선'으로 이어진 직사각형을 찾아 그 좌표(정규화)를
+    돌려준다. 못 찾으면 None — 호출부는 원래 bbox 로 폴백.
+    """
+    try:
+        import cv2
+        import numpy as np
+    except ImportError:
+        return None
+    img = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
+    if img is None or not bbox or len(bbox) < 4:
+        return None
+    H, W = img.shape[:2]
+    x0, y0, x1, y1 = bbox
+    bw, bh = (x1 - x0) * W, (y1 - y0) * H
+    if bw <= 8 or bh <= 8:
+        return None
+    # 탐색 창 — 세로 오프셋 실측이 상자 높이의 1.7배까지 나오므로 넉넉히 잡는다
+    # (후보 오검출은 아래 '4변 선 커버리지' 필터가 걸러준다)
+    my = int(max(1.8 * bh, 0.07 * H))
+    mx = int(max(0.4 * bw, 0.02 * W))
+    rx0, ry0 = max(0, int(x0 * W) - mx), max(0, int(y0 * H) - my)
+    rx1, ry1 = min(W, int(x1 * W) + mx), min(H, int(y1 * H) + my)
+    roi = img[ry0:ry1, rx0:rx1]
+    if roi.size == 0:
+        return None
+    thr = cv2.adaptiveThreshold(roi, 255, cv2.ADAPTIVE_THRESH_MEAN_C,
+                                cv2.THRESH_BINARY_INV, 31, 12)
+    rh, rw = thr.shape
+
+    # '긴 직선'만 남긴다 — 글자·수식·연필 낙서(테두리에 붙어 컨투어를 늘리는 주범)를
+    # 원천 제거. 방향별 팽창은 스캔 미세 기울기(0.3~0.4° → 800px 변에서 선이 5px
+    # 흘러내림)로 끊기는 런을 이어 붙인 뒤 오프닝한다.
+    hk = max(24, int(bw * 0.35))
+    vk = max(24, int(bh * 0.35))
+    hor = cv2.dilate(thr, cv2.getStructuringElement(cv2.MORPH_RECT, (1, 5)))
+    hor = cv2.morphologyEx(hor, cv2.MORPH_OPEN,
+                           cv2.getStructuringElement(cv2.MORPH_RECT, (hk, 1)))
+    ver = cv2.dilate(thr, cv2.getStructuringElement(cv2.MORPH_RECT, (5, 1)))
+    ver = cv2.morphologyEx(ver, cv2.MORPH_OPEN,
+                           cv2.getStructuringElement(cv2.MORPH_RECT, (1, vk)))
+    frame = cv2.bitwise_or(hor, ver)
+
+    def _edge_cov(x, y, w, h) -> float:
+        """4변 각각의 띠에서 '선 픽셀' 비율의 최소값 — 4변 모두 선이어야 상자/표."""
+        bh_ = min(16, 6 + w // 150)               # 가로 변 띠 폭(기울기 여유)
+        bv_ = min(16, 6 + h // 150)
+        bands = ((frame[y:y + bh_, x:x + w], 0),
+                 (frame[max(0, y + h - bh_):y + h, x:x + w], 0),
+                 (frame[y:y + h, x:x + bv_], 1),
+                 (frame[y:y + h, max(0, x + w - bv_):x + w], 1))
+        covs = []
+        for band, axis in bands:
+            if band.size == 0:
+                return 0.0
+            covs.append(float(np.mean(band.max(axis=axis) > 0)))
+        return min(covs)
+
+    # RETR_LIST: 단 구획 큰 박스 안에 중첩된 상자도 후보로 나오게(EXTERNAL 은 누락 위험)
+    cnts, _ = cv2.findContours(frame, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+    best, best_score = None, 0.0
+    for c in cnts:
+        x, y, w, h = cv2.boundingRect(c)
+        if w < 0.5 * bw or h < 0.4 * bh:          # 조각 선(단 경계 등)은 제외
+            continue
+        if w >= rw - 4 or h >= rh - 4:            # ROI 에 잘려 들어온 거대 구획 박스
+            continue
+        cov = _edge_cov(x, y, w, h)
+        if cov < 0.7:                              # 프레임은 순수 선 — 강하게 요구
+            continue
+        score = cov * w * h
+        if score > best_score:
+            best, best_score = (x, y, w, h), score
+    if not best:
+        return None
+    x, y, w, h = best
+    p = 2                                          # 테두리 선 포함 여유(px)
+    return [max(0.0, (rx0 + x - p) / W), max(0.0, (ry0 + y - p) / H),
+            min(1.0, (rx0 + x + w + p) / W), min(1.0, (ry0 + y + h + p) / H)]
+
+
 def crop_region(image_path: str, bbox: list, out_path: str, *, pad: float = 0.0) -> CropResult:
     """정규화 bbox 영역을 잘라 저장. pad 는 양옆 여유(0~1 비율).
 
@@ -319,7 +405,8 @@ def redraw_with_ai(image_path: str, bbox: list | None = None, out_path: str = ""
 
 
 def process_figure(page_image_path: str, bbox: list, work_dir: str, *,
-                   model: str | None = None, redraw: bool = True, prefix: str = "fig") -> dict:
+                   model: str | None = None, redraw: bool = True, prefix: str = "fig",
+                   crop_only: bool = False) -> dict:
     """그림 1개 디지털화 공정(딥리서치 기반):
 
       ① 도형 영역 크롭 → ② 잡티/낙서 감지 후 인페인팅(OpenCV/LaMa 라우팅)
@@ -327,6 +414,11 @@ def process_figure(page_image_path: str, bbox: list, work_dir: str, *,
 
     반환 dict: {final, source(crop|inpaint|redraw), crop, cleaned?, redraw?, verdict?, *_error?}.
     final 은 항상 사용 가능한 '최선의' 이미지 경로다.
+
+    crop_only=True: ②③ 를 건너뛰고 순수 크롭만 반환한다. 깨끗한 디지털 인쇄 시험지
+    (손글씨·스캔 잡티 없음)에서는 낙서 감지가 인쇄된 라벨(ⓐⓑ)·점선 화살표를 오검출해
+    인페인팅으로 지우거나(도형 훼손), 재작도가 환각을 넣을 수 있으므로 원본 크롭이 가장
+    충실하다. 후속 Gemini 재작도(낙서 제거 지시 포함)의 입력으로도 원본 크롭이 적합하다.
     """
     from pathlib import Path as _P
     from .vision_claude import detect_scribbles
@@ -337,6 +429,9 @@ def process_figure(page_image_path: str, bbox: list, work_dir: str, *,
     crop_path = str(_P(work_dir) / f"{prefix}_crop.png")
     crop_region(page_image_path, bbox, crop_path, pad=0.01)
     result = {"bbox": bbox, "crop": crop_path, "final": crop_path, "source": "crop"}
+
+    if crop_only:
+        return result
 
     # ② 잡티 제거: 크롭 내부의 낙서/손글씨/직인을 감지해 인페인팅(자동 OpenCV/LaMa)
     try:

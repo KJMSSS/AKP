@@ -63,15 +63,21 @@ def _text_to_runs(text: str) -> list[dict]:
         from mathconv.latex_to_hwp import latex_to_hwp
 
     out: list[dict] = []
-    for r in mmd_to_runs(text):
-        if r.get("type") == "eqn":
-            res = latex_to_hwp(r.get("latex", ""))
-            if res.ok and res.script:
-                out.append({"type": "eqn", "hwp_script": res.script})
-            else:
-                out.append({"type": "text", "text": r.get("latex", "")})  # 폴백
-        elif r.get("text", "").strip() or r.get("text"):
-            out.append({"type": "text", "text": r["text"]})
+    # 줄 단위로 변환 — mmd_to_runs 는 공백뿐인 조각(수식 사이 '\n')을 버리므로,
+    # 여러 줄 셀(조건·과정 상자)의 줄 경계를 명시적 '\n' run 으로 보존한다
+    # (_split_lines 가 이 run 을 문단 경계로 사용).
+    for li, line in enumerate(text.split("\n")):
+        if li > 0:
+            out.append({"type": "text", "text": "\n"})
+        for r in mmd_to_runs(line):
+            if r.get("type") == "eqn":
+                res = latex_to_hwp(r.get("latex", ""))
+                if res.ok and res.script:
+                    out.append({"type": "eqn", "hwp_script": res.script})
+                else:
+                    out.append({"type": "text", "text": r.get("latex", "")})  # 폴백
+            elif r.get("text", "").strip() or r.get("text"):
+                out.append({"type": "text", "text": r["text"]})
     return out
 
 
@@ -127,15 +133,39 @@ def _layout_grid(norm_rows: list[list[dict]]):
     return ncols, nrows, placements
 
 
-def _cell_textlen(runs) -> int:
-    """셀 표시 길이 추정. 한글/전각은 2, 그 외 1로 근사. 수식은 스크립트 길이 반영."""
-    n = 0
-    for r in runs:
-        if r.get("type") == "eqn":
-            n += len(r.get("hwp_script") or r.get("latex") or "")
+def _split_lines(runs: list[dict]) -> list[list[dict]]:
+    """run 목록을 개행('\\n') 기준으로 줄(문단) 단위로 나눈다.
+
+    HWPX 에서 hp:t 안의 '\\n' 은 줄바꿈으로 렌더되지 않으므로, 여러 줄 셀(조건·과정
+    상자, <br> 든 표 셀)은 셀 subList 에 hp:p 를 줄 수만큼 넣어야 한다. 수식 run 은
+    통째로 현재 줄에 속한다."""
+    lines: list[list[dict]] = [[]]
+    for r in runs or []:
+        if r.get("type") == "text" and "\n" in (r.get("text") or ""):
+            parts = r["text"].split("\n")
+            for i, part in enumerate(parts):
+                if i > 0:
+                    lines.append([])
+                if part:
+                    lines[-1].append({"type": "text", "text": part})
         else:
-            n += sum(2 if ord(ch) > 0x1100 else 1 for ch in r.get("text", ""))
-    return n
+            lines[-1].append(r)
+    out = [ln for ln in lines if ln]          # 빈 줄 제거
+    return out or [[]]
+
+
+def _cell_textlen(runs) -> int:
+    """셀 표시 길이 추정(여러 줄이면 가장 긴 줄). 한글/전각 2, 그 외 1. 수식은 스크립트 길이."""
+    best = 0
+    for line in _split_lines(runs):
+        n = 0
+        for r in line:
+            if r.get("type") == "eqn":
+                n += len(r.get("hwp_script") or r.get("latex") or "")
+            else:
+                n += sum(2 if ord(ch) > 0x1100 else 1 for ch in r.get("text", ""))
+        best = max(best, n)
+    return best
 
 
 def _estimate_col_widths(placements, ncols: int, max_total: int) -> list[int]:
@@ -245,10 +275,13 @@ class TableBuilder:
             "id": "", "textDirection": "HORIZONTAL", "lineWrap": "BREAK",
             "vertAlign": "CENTER", "linkListIDRef": "0", "linkListNextIDRef": "0",
             "textWidth": "0", "textHeight": "0", "hasTextRef": "0", "hasNumRef": "0"})
-        cp = ET.SubElement(sub, _q("hp", "p"), {
-            "id": "0", "paraPrIDRef": para_pr, "styleIDRef": "0",
-            "pageBreak": "0", "columnBreak": "0", "merged": "0"})
-        self._fill_runs(cp, p["runs"], char_pr)
+        # 개행이 든 셀(조건·과정 상자, <br> 셀)은 줄마다 hp:p 하나 — hp:t 안 '\n' 은
+        # 한글에서 줄바꿈으로 렌더되지 않는다.
+        for line_runs in _split_lines(p["runs"]):
+            cp = ET.SubElement(sub, _q("hp", "p"), {
+                "id": "0", "paraPrIDRef": para_pr, "styleIDRef": "0",
+                "pageBreak": "0", "columnBreak": "0", "merged": "0"})
+            self._fill_runs(cp, line_runs, char_pr)
         # 자식 순서 엄수: subList → cellAddr → cellSpan → cellSz → cellMargin
         ET.SubElement(tc, _q("hp", "cellAddr"), {"colAddr": str(p["c"]), "rowAddr": str(p["r"])})
         ET.SubElement(tc, _q("hp", "cellSpan"), {"colSpan": str(cs), "rowSpan": str(rs)})

@@ -42,7 +42,9 @@ _SIMPLE = {
     "cdots": "cdots", "ldots": "dots", "dots": "dots", "vdots": "vdots",
     "ddots": "ddots", "angle": "angle", "perp": "perp", "parallel": "parallel",
     # 도형/논리 기호 (한국 시험지 빈출 — 미지원 폴백 방지)
-    "square": "□", "triangle": "△", "therefore": "∴", "because": "∵",
+    # \Box: 빈칸(□) 문제를 LLM 이 \Box 로 옮기는 사례 다수 (2026-07-19 실사고 5건)
+    "square": "□", "Box": "□", "blacksquare": "■",
+    "triangle": "△", "therefore": "∴", "because": "∵",
     "bigcirc": "○", "bigtriangleup": "△", "bigtriangledown": "▽",
     # 그리스 소문자
     "alpha": "alpha", "beta": "beta", "gamma": "gamma", "delta": "delta",

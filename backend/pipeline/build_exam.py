@@ -286,17 +286,20 @@ def build_exam(template_path: str, problems: list[dict], out_path: str, *,
         builder.add_block(blocks[1])
         # 표 주입(지문 직후): 구조화 grid 우선, 과대/복잡/실패는 이미지 폴백
         for tab in prob.get("tables", []) or []:
+            # 이미지 표는 '원본 크기'(width_mm = 크롭 픽셀÷DPI)로 삽입 — 단 폭(110mm)
+            # 고정 확대는 표가 원본보다 커져 페이지가 불어난다(exam-engine 이식).
+            tab_w = float(tab.get("width_mm") or 110)
             try:
                 if tab.get("source") == "struct" and tab.get("grid"):
                     builder.add_block(table_builder.build(tab["grid"]))
                     report.tables_inserted += 1
                 elif tab.get("image"):
-                    builder.add_figure(tab["image"], width_mm=110)
+                    builder.add_figure(tab["image"], width_mm=tab_w)
                     report.tables_inserted += 1
             except Exception as e:  # noqa: BLE001 (구조화 실패 → 이미지 폴백)
                 if tab.get("image"):
                     try:
-                        builder.add_figure(tab["image"], width_mm=110)
+                        builder.add_figure(tab["image"], width_mm=tab_w)
                         report.tables_inserted += 1
                     except Exception:
                         report.fallbacks.append({"latex": f"[표 {tab.get('label', '')}]", "reason": str(e)})

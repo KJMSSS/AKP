@@ -240,7 +240,8 @@ def cleanup_old_jobs() -> int:
 _PERSIST_KEYS = ("status", "dir", "src", "school", "code", "region", "subject", "exam_range",
                  "page_paths", "problems", "figures", "originals", "kinds", "usage", "pages",
                  "problem_count", "error", "rotations", "registry_key", "owner", "pdf_name",
-                 "drive_file_id", "result")
+                 "drive_file_id", "result",
+                 "auto_figures", "figure_candidates", "figure_warnings")
 
 
 def _save_state(job_id: str) -> None:
@@ -328,6 +329,7 @@ def _run_analysis(job_id: str) -> None:
     try:
         pages = j["_pages"]
         rot = j.get("rotations", {}) or {}
+        rotated = any(int(v or 0) % 360 for v in rot.values())
         from PIL import Image
         for pg in pages:
             ang = int(rot.get(str(pg.index), 0) or 0) % 360
@@ -338,29 +340,84 @@ def _run_analysis(job_id: str) -> None:
                     pg.width, pg.height = im.size
         # 회전은 파일에 이미 반영됨 — 재실행 시 같은 각도가 또 적용(이중 회전)되지 않게 소거
         j["rotations"] = {}
-        # 그림은 '사용자가 드래그로 선택'한 것만 넣는다 → 자동 감지/삽입 끔.
+        # 그림·표·그래프 자동 감지(exam-engine 이식 2026-07-19). 그림은 원본 크롭이
+        # 검수 UI 갤러리(auto_figures)에 문항 배정된 상태로 올라가고, 표는 Claude 가
+        # 내용을 구조화(grid)해 빌드 때 '한글 네이티브 표'로 직접 그린다(학원장 지시
+        # 2026-07-19). 구조화 실패·충실도 미달 표만 이미지 크롭으로 갤러리에 올라간다.
+        # Gemini 재작도는 기존처럼 카드에서 수동으로만(자동 재작도는 원본과 달라져 비활성).
+        # 디지털 PDF(회전 미적용)는 구조 기반 결정적 크롭(figure_pdf), 스캔은 VLM 폴백.
         # 구조화(발문/보기/수식/자모)는 정확도가 최우선이라 opus 사용(충실도>비용 방침).
         # 선(先)드레인 금지 — 반환값을 버리면 동시 요청의 미집계 토큰이 로그에서
         # 영영 빠져 총합이 깨진다(2026-07-06 QA). 귀속 노이즈는 감수, 총합은 보존.
         a = analyze(j["src"], pages=pages, school=j.get("school", ""),
-                    code=j.get("code", ""), detect_figs=False, auto_figures=False,
+                    code=j.get("code", ""), detect_figs=True, detect_tabs=True,
+                    auto_figures=True, crop_only=True, tables_as_image=False,
+                    gemini_redraw=False, structural=not rotated,
                     work_dir=j["dir"], model="claude-opus-4-8")
         usage = _drain_usage()
         cost = _log_usage(j.get("owner", ""), j.get("pdf_name", ""), "analyze",
                           usage, duration_s=time.time() - t0)
+        # 안전 드레인 — 분석 중 Gemini 호출이 없으면 0. 켜진 적 있던 경로 대비 유지.
+        gcost = _log_gemini_usage(j.get("owner", ""), j.get("pdf_name", ""))
+
+        # ── 감지·재작도 결과를 검수 UI 갤러리에 등록 ─────────────────────────
+        # j["figures"](fid→경로)가 갤러리의 단일 출처. 원본 크롭은 originals 에 보존해
+        # '다시 재작도' 입력·원본 비교에 쓰고, 표는 kinds 에 기록해 빌드에서 표 규칙
+        # (발문 중복 제거·단 폭)을 태운다. 미배정(problem_index=None)은 UI 가 배정을 강제.
+        figs = j.setdefault("figures", {})
+        kinds = j.setdefault("kinds", {})
+        origs = j.setdefault("originals", {})
+        auto_figs, warns, ui_cands = [], [], []
+        def _register(cand: dict, kind: str) -> None:
+            if cand.get("bbox"):
+                ui_cands.append({"page": cand.get("page"), "bbox": cand["bbox"]})
+            img = cand.get("image")
+            if not img:
+                warns.append(f"{(cand.get('page') or 0) + 1}쪽 {'표' if kind == 'table' else '그림'} "
+                             f"자동 추출 실패: {cand.get('error') or '이미지 없음'}")
+                return
+            fid = uuid.uuid4().hex[:8]
+            figs[fid] = img
+            crop = cand.get("crop")
+            if crop and crop != img:
+                origs[fid] = crop
+            if kind == "table":
+                kinds[fid] = "table"
+            entry = {"figure_id": fid, "page": cand.get("page"),
+                     "problem_index": cand.get("assigned_index"),
+                     "kind": kind, "source": cand.get("source")}
+            if cand.get("redraw_error"):   # 재작도 실패 → 크롭 폴백 상태(카드에서 재시도 가능)
+                entry["redraw_error"] = str(cand["redraw_error"])[:200]
+            auto_figs.append(entry)
+        for c in a.figure_candidates:
+            _register(c, "figure")
+        for t in a.table_candidates:
+            # 구조화(grid) 성공 표는 problems[].tables 에 실려 빌드가 한글 표로 직접
+            # 그린다 — 갤러리 등록 없음(이미지가 아니므로). 후보 박스 표시만 남긴다.
+            if t.get("grid"):
+                if t.get("bbox"):
+                    ui_cands.append({"page": t.get("page"), "bbox": t["bbox"]})
+                if t.get("assigned_index") is None:   # 미배정 grid 는 어디에도 안 들어감
+                    warns.append(f"{(t.get('page') or 0) + 1}쪽 표 인식됨(문항 미배정) — "
+                                 "필요하면 표 영역을 드래그로 크롭해 배정하세요.")
+                continue
+            _register(t, "table")   # 구조화 실패·충실도 미달 → 이미지 크롭으로 검수
+
         j.update(
             status="done",
             pages=[{"index": p.index, "width": p.width, "height": p.height} for p in a.pages],
             page_paths=[p.path for p in a.pages],
             problems=analysis_to_problems(a),
-            usage={**usage, "cost_usd": cost},
-            figure_candidates=[], auto_figures=[], figure_warnings=[],
+            usage={**usage, "cost_usd": cost + gcost, "gemini_cost_usd": gcost},
+            figure_candidates=ui_cands, auto_figures=auto_figs, figure_warnings=warns,
         )
         _save_state(job_id)
     except Exception as e:  # noqa: BLE001
         JOBS[job_id].update(status="error", error=f"{e}", trace=traceback.format_exc())
         _log_usage(j.get("owner", ""), j.get("pdf_name", ""), "analyze",
                    _drain_usage(), duration_s=time.time() - t0, status="error")
+        # 실패 전까지 성공한 자동 재작도(Gemini) 생성분도 집계(미드레인 잔류 방지)
+        _log_gemini_usage(j.get("owner", ""), j.get("pdf_name", ""), status="error")
         _mark_registry_error(job_id)
 
 
@@ -403,7 +460,7 @@ def api_run(job_id: str, request: Request, payload: dict = Body(default={})):
     payload: {"rotations": {"0": 90, "1": 0, ...}}  (페이지index → 시계방향 각도)
     """
     email = require_login(request)
-    _check_cost_cap(email)
+    _check_cost_cap(email)   # 분석은 Claude만 사용(자동 Gemini 재작도 비활성)
     j = _job(job_id)
     if not j:
         raise HTTPException(404, "job not found")
@@ -504,8 +561,9 @@ def api_redraw(request: Request, job_id: str = Body(...), figure_id: str = Body(
     # 재작도 전 이미지를 '원본 비교용'으로 보존(최초 1회) — 숫자/라벨 변조 검수용
     orig = j.setdefault("originals", {}).setdefault(figure_id, src)
     # 재작도 입력은 항상 '재작도 전' 이미지로 — 재작도본을 다시 입력하면 직전 시도의
-    # 환각(없는 글자 등)이 다음 결과로 누적된다.
-    if Path(src).name.startswith("redrawn_"):
+    # 환각(없는 글자 등)이 다음 결과로 누적된다. redrawn_*=수동 재작도본,
+    # *_gem.png=분석 단계 자동 재작도본(exam-engine 이식, 2026-07-19).
+    if Path(src).name.startswith("redrawn_") or Path(src).name.endswith("_gem.png"):
         src = orig
     out = str(Path(j["dir"]) / f"redrawn_{figure_id}.png")
     OPUS = "claude-opus-4-8"   # 구조 추출·검증은 가장 똑똑한 모델로(정확도 우선)
@@ -648,6 +706,9 @@ def api_build(job_id: str, request: Request, payload: dict = Body(...)):
     for p in problems:
         if p.get("figures"):
             p["figures"] = [f for f in p["figures"] if _fig_in_jobdir(f)]
+        if p.get("tables"):   # 표 이미지 폴백 경로도 동일 검증(임의 서버 경로 차단)
+            p["tables"] = [t for t in p["tables"] if isinstance(t, dict)
+                           and (not t.get("image") or _fig_in_jobdir(t["image"]))]
 
     # UI 갤러리(자동+수동)가 그림의 단일 출처 → 분석에서 붙은 figures 는 비우고
     # payload.figures(figure_id) 만 해당 문제에 매핑(이중삽입 방지)
@@ -667,6 +728,11 @@ def api_build(job_id: str, request: Request, payload: dict = Body(...)):
     if payload_figs is not None:
         for p in problems:
             p["figures"] = []
+            # 자동 표 중 '이미지 폴백'은 갤러리(auto_figures, kind=table)로 다시
+            # 들어오므로 소거(이중 삽입 방지). 구조화(grid) 성공 표는 갤러리에 없고
+            # 빌드가 한글 네이티브 표로 직접 그리므로 유지한다.
+            p["tables"] = [t for t in (p.get("tables") or [])
+                           if isinstance(t, dict) and t.get("grid")]
         kinds = j.setdefault("kinds", {})
         for f in payload_figs:
             if not isinstance(f, dict):
@@ -676,6 +742,9 @@ def api_build(job_id: str, request: Request, payload: dict = Body(...)):
                 # 표는 단 폭 가득(≈108mm), 그림은 기본 폭.
                 if _fig_kind(f) == "table":
                     kinds[fid] = "table"   # 재빌드/재작도에서도 표로 유지
+                    # 사용자가 직접 배정한 표 크롭이 자동 구조화(grid) 표를 교체
+                    # (같은 표가 네이티브+이미지로 두 번 들어가는 것 방지)
+                    problems[idx]["tables"] = []
                     item = {"path": fig_map[fid], "width_mm": 108.0, "max_height_mm": 200.0,
                             "kind": "table"}
                     # 표 내용이 발문에 텍스트로 중복되면 Claude 로 의미 대조 제거.

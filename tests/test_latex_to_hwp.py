@@ -48,6 +48,17 @@ def test_delimiters_stripped():
     assert "over" in r.script
 
 
+def test_box_blank_symbol():
+    # 빈칸(□) 인수분해 문제를 LLM 이 \Box 로 옮김 — 2026-07-19 실사고 5건
+    # (\Box x^2 - 16x + 4 등이 '미지원 명령: Box'로 확인필요 폴백)
+    r = latex_to_hwp(r"\Box x^2 - 16x + 4")
+    assert r.ok
+    assert "□" in r.script and "x^{2}" in r.script
+    r2 = latex_to_hwp(r"a^2 + \Box a + 64")
+    assert r2.ok
+    assert "□" in r2.script
+
+
 def test_unsupported_command_falls_back():
     r = latex_to_hwp(r"\unknowncommand{x}")
     assert not r.ok
