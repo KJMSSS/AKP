@@ -340,18 +340,20 @@ def _run_analysis(job_id: str) -> None:
                     pg.width, pg.height = im.size
         # 회전은 파일에 이미 반영됨 — 재실행 시 같은 각도가 또 적용(이중 회전)되지 않게 소거
         j["rotations"] = {}
-        # 그림·표·그래프 자동 감지(exam-engine 이식 2026-07-19). 그림은 원본 크롭이
-        # 검수 UI 갤러리(auto_figures)에 문항 배정된 상태로 올라가고, 표는 Claude 가
-        # 내용을 구조화(grid)해 빌드 때 '한글 네이티브 표'로 직접 그린다(학원장 지시
-        # 2026-07-19). 구조화 실패·충실도 미달 표만 이미지 크롭으로 갤러리에 올라간다.
+        # 표·상자 자동 감지(exam-engine 이식 2026-07-19): 표는 Claude 가 내용을
+        # 구조화(grid)해 빌드 때 '한글 네이티브 표'로 직접 그린다(학원장 지시 2026-07-19).
+        # 구조화 실패·충실도 미달 표만 이미지 크롭으로 갤러리에 올라간다.
+        # 그림 자동 감지·자동 크롭은 금지(detect_figs=False — 학원장 결정 2026-07-19):
+        # 그림은 검수자가 원본에서 '처음부터 드래그'로 직접 크롭한다. 자동 크롭은
+        # 삭제→재드래그 이중 작업만 만들고, guide.html 의 "그림은 자동으로 안
+        # 들어갑니다" 약속과도 어긋난다. AI 가 알아서 하는 건 표 작성뿐이다.
         # Gemini 재작도는 기존처럼 카드에서 수동으로만(자동 재작도는 원본과 달라져 비활성).
-        # 디지털 PDF(회전 미적용)는 구조 기반 결정적 크롭(figure_pdf), 스캔은 VLM 폴백.
         # 구조화(발문/보기/수식/자모)는 정확도가 최우선이라 opus 사용(충실도>비용 방침).
         # 선(先)드레인 금지 — 반환값을 버리면 동시 요청의 미집계 토큰이 로그에서
         # 영영 빠져 총합이 깨진다(2026-07-06 QA). 귀속 노이즈는 감수, 총합은 보존.
         a = analyze(j["src"], pages=pages, school=j.get("school", ""),
-                    code=j.get("code", ""), detect_figs=True, detect_tabs=True,
-                    auto_figures=True, crop_only=True, tables_as_image=False,
+                    code=j.get("code", ""), detect_figs=False, detect_tabs=True,
+                    auto_figures=False, crop_only=True, tables_as_image=False,
                     gemini_redraw=False, structural=not rotated,
                     work_dir=j["dir"], model="claude-opus-4-8")
         usage = _drain_usage()
@@ -628,7 +630,7 @@ def api_redraw(request: Request, job_id: str = Body(...), figure_id: str = Body(
     # 폴백: 구조 스펙 → matplotlib 코드 재작도(검증 1회)
     from pipeline.figure_ai import redraw_via_spec, redraw_figure_verified, RedrawError
     try:
-        path, spec = redraw_via_spec(src, out, model=OPUS)
+        path, _ = redraw_via_spec(src, out, model=OPUS)
         j["figures"][figure_id] = path
         _save_state(job_id)
         _log_redraw()
