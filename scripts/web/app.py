@@ -207,6 +207,13 @@ async def guide_page():
     return HTMLResponse((_HERE / "static" / "guide.html").read_text(encoding="utf-8"))
 
 
+@app.get("/guide/admin", response_class=HTMLResponse)
+async def guide_admin_page(request: Request):
+    """관리자(학원장)용 운영 설명서 — 사용자·한도·비용 관리. 관리자만 열람."""
+    require_admin(request)
+    return HTMLResponse((_HERE / "static" / "guide_admin.html").read_text(encoding="utf-8"))
+
+
 @app.get("/api/usage")
 async def api_usage(request: Request):
     require_login(request)
